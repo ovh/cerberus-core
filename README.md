@@ -23,7 +23,7 @@ Then, you just need to run it with your abuse email inbox settings (over IMAPS):
 
 and browse `http://127.0.0.1:6060` with default login admin:admin , and voila
 
-![cerberus](https://raw.githubusercontent.com/ovh/cerberus-core/devel/doc/source/cerberus.gif)
+![cerberus](https://raw.githubusercontent.com/ovh/cerberus-core/devel/doc/source/cerberus.gif?token=AQVCyzi29XLlKOim8_VoCJjYEWyoY1Gaks5Wx0qqwA%3D%3D)
 
 If something goes wrong, enter the docker and check the logs in `/home/cerberus/cerberus-core/*.log`
 
