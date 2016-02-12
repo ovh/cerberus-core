@@ -1,0 +1,2 @@
+* * * * * root supervisorctl restart workflow
+*/15 * * * * root supervisorctl restart stats

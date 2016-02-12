@@ -1,0 +1,815 @@
+[
+{
+  "fields": {
+    "username": "abuse.robot",
+    "first_name": "",
+    "last_name": "",
+    "is_active": true,
+    "is_superuser": false,
+    "is_staff": true,
+    "last_login": "2016-02-03T15:05:54.467",
+    "groups": [],
+    "user_permissions": [],
+    "password": "",
+    "email": "",
+    "date_joined": "2016-02-03T15:05:54.467"
+  },
+  "model": "auth.user",
+  "pk": 43
+},
+{
+  "fields": {
+    "username": "user",
+    "first_name": "",
+    "last_name": "",
+    "is_active": true,
+    "is_superuser": false,
+    "is_staff": true,
+    "last_login": "1970-01-01T01:00:00",
+    "groups": [],
+    "user_permissions": [],
+    "password": "pbkdf2_sha256$12000$3OngZs3XKxyC$yv1U8vOgBmExcMvF8OOhpfEsZRIU3H0lHKvlgnYxduw=",
+    "email": "",
+    "date_joined": "2016-02-03T15:06:10.516"
+  },
+  "model": "auth.user",
+  "pk": 44
+},
+{
+  "fields": {
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "is_active": true,
+    "is_superuser": true,
+    "is_staff": true,
+    "last_login": "2016-02-04T14:46:44.524",
+    "groups": [],
+    "user_permissions": [],
+    "password": "pbkdf2_sha256$12000$Yt4xOi4QGLss$ClAlu9lxiW3KcLqmdGjKG3Ah1ufAH2a/XxtJC9qRlg8=",
+    "email": "",
+    "date_joined": "2016-02-03T15:06:25.765"
+  },
+  "model": "auth.user",
+  "pk": 45
+},
+{
+  "fields": {
+    "name": "Test",
+    "module": "VPS",
+    "level": "42"
+  },
+  "model": "abuse.serviceaction",
+  "pk": 59
+},
+{
+  "fields": {
+    "description": "Copyright",
+    "label": "Copyright"
+  },
+  "model": "abuse.category",
+  "pk": "Copyright"
+},
+{
+  "fields": {
+    "description": "Illegal",
+    "label": "Illegal"
+  },
+  "model": "abuse.category",
+  "pk": "Illegal"
+},
+{
+  "fields": {
+    "description": "Intrusion",
+    "label": "Intrusion"
+  },
+  "model": "abuse.category",
+  "pk": "Intrusion"
+},
+{
+  "fields": {
+    "description": "Malware",
+    "label": "Malware"
+  },
+  "model": "abuse.category",
+  "pk": "Malware"
+},
+{
+  "fields": {
+    "description": "Network Attack",
+    "label": "Network Attack"
+  },
+  "model": "abuse.category",
+  "pk": "Network Attack"
+},
+{
+  "fields": {
+    "description": "Other",
+    "label": "Other"
+  },
+  "model": "abuse.category",
+  "pk": "Other"
+},
+{
+  "fields": {
+    "description": "Phishing",
+    "label": "Phishing"
+  },
+  "model": "abuse.category",
+  "pk": "Phishing"
+},
+{
+  "fields": {
+    "description": "Spam",
+    "label": "Spam"
+  },
+  "model": "abuse.category",
+  "pk": "Spam"
+},
+{
+  "fields": {
+    "codename": "phishing:autoclosed",
+    "level": 0,
+    "name": "phishing:autoclosed",
+    "tagType": "Ticket"
+  },
+  "model": "abuse.tag",
+  "pk": 24
+},
+{
+  "fields": {
+    "codename": "phishing:autoreopened",
+    "level": 0,
+    "name": "phishing:autoreopened",
+    "tagType": "Ticket"
+  },
+  "model": "abuse.tag",
+  "pk": 25
+},
+{
+  "fields": {
+    "codename": "phishing:autoblocked",
+    "level": 0,
+    "name": "phishing:autoblocked",
+    "tagType": "Report"
+  },
+  "model": "abuse.tag",
+  "pk": 32
+},
+{
+  "fields": {
+    "codename": "distrust:0:autoarchive",
+    "level": 0,
+    "name": "distrust:0:autoarchive",
+    "tagType": "Provider"
+  },
+  "model": "abuse.tag",
+  "pk": 36
+},
+{
+  "fields": {
+    "codename": "distrust:1:attach_if_exists",
+    "level": 0,
+    "name": "distrust:1:attach_if_exists",
+    "tagType": "Provider"
+  },
+  "model": "abuse.tag",
+  "pk": 37
+},
+{
+  "fields": {
+    "codename": "phishing:toblock",
+    "level": 0,
+    "name": "phishing:toblock",
+    "tagType": "Report"
+  },
+  "model": "abuse.tag",
+  "pk": 46
+},
+{
+  "fields": {
+    "codename": "distrust:2:no_phishtocheck",
+    "level": 0,
+    "name": "distrust:2:no_phishtocheck",
+    "tagType": "Provider"
+  },
+  "model": "abuse.tag",
+  "pk": 65
+},
+{
+  "fields": {
+    "codename": "never_auto_ack",
+    "level": 0,
+    "name": "never_auto_ack",
+    "tagType": "Provider"
+  },
+  "model": "abuse.tag",
+  "pk": 66
+},
+{
+  "fields": {
+    "codename": "fixed_by_isp"
+  },
+  "model": "abuse.resolution",
+  "pk": 9
+},
+{
+  "fields": {
+    "codename": "fixed_by_customer"
+  },
+  "model": "abuse.resolution",
+  "pk": 10
+},
+{
+  "fields": {
+    "codename": "no_more_content"
+  },
+  "model": "abuse.resolution",
+  "pk": 14
+},
+{
+  "fields": {
+    "codename": "invalid"
+  },
+  "model": "abuse.resolution",
+  "pk": 17
+},
+{
+  "fields": {
+    "codename": "expired"
+  },
+  "model": "abuse.resolution",
+  "pk": 18
+},
+{
+  "fields": {
+    "name": "Read-only",
+    "actions": [
+      59
+    ]
+  },
+  "model": "abuse.profile",
+  "pk": 1
+},
+{
+  "fields": {
+    "name": "Beginner",
+    "actions": [
+      59
+    ]
+  },
+  "model": "abuse.profile",
+  "pk": 2
+},
+{
+  "fields": {
+    "name": "Advanced",
+    "actions": [
+      59
+    ]
+  },
+  "model": "abuse.profile",
+  "pk": 4
+},
+{
+  "fields": {
+    "name": "Expert",
+    "actions": [
+      59
+    ]
+  },
+  "model": "abuse.profile",
+  "pk": 5
+},
+{
+  "fields": {
+    "lang": "EN",
+    "body": "Hello,\n\nThank you for taking the time to contact the {{ brand }} Abuse Team, this message confirms that we did receive your report, and created the Abuse Ticket #{{ publicId }} to reference it.\nAfter a careful examination of the elements you communicated to us, it appears that the abusive content your message is referring to is either no longer online, or not/no longer hosted on an IP of the {{ brand }} network.\nHence, your Abuse Ticket #{{ publicId }} is now closed.\n\nCordially,\n\nThe {{ brand }} Abuse team.",
+    "name": "[plaintiff] NO_MORE_CONTENT",
+    "codename": "no_more_content",
+    "subject": "[Abuse #{{ publicId }}]",
+    "recipientType": "Plaintiff"
+  },
+  "model": "abuse.mailtemplate",
+  "pk": 35
+},
+{
+  "fields": {
+    "lang": "EN",
+    "body": "Hello,\n\nYour abuse case #{{ publicId }} linked to the service {{ service }} is now closed.\n\nCordially,\n\nThe {{ brand }} Abuse Team",
+    "name": "[customer-auto] TICKET_CLOSED",
+    "codename": "ticket_closed",
+    "subject": "[Abuse #{{ publicId }}]",
+    "recipientType": "Defendant"
+  },
+  "model": "abuse.mailtemplate",
+  "pk": 44
+},
+{
+  "fields": {
+    "lang": "EN",
+    "body": "Hello,\n\nThank you for taking the time to contact the {{ brand }} Abuse Team, this message confirms that we did receive your report, and created the Abuse Ticket #{{ publicId }} to reference it.\n\n{{ brand }} conducts its activities in conformity with applicable laws, we forbid any use of our products that don't conform to our general terms and conditions of services.\n\nIt's important to note that most of our services are rented \"unmanaged\" to our customers. This means that we only have physical access to the server and cannot access its content (no root, administrator, or user access). We are technically unable to modify or delete content, or making an abusive behavior stop by intervening directly on the server, as it is not managed by us.\n\nWe will however transmit the technical information of your report to the customer managing the infrastructure concerned, and we will follow this ticket to its resolution.\n\nCordially,\n\nThe {{ brand }} Abuse Team.",
+    "name": "[plaintiff] ACK_REPORT_RECEIVED",
+    "codename": "ack_report_received",
+    "subject": "[Abuse #{{ publicId }}]",
+    "recipientType": "Plaintiff"
+  },
+  "model": "abuse.mailtemplate",
+  "pk": 47
+},
+{
+  "fields": {
+    "lang": "EN",
+    "body": "Hello,\n\nIt has been brought to our attention that you're hosting a phishing webpage on your service {{ service }}.\n\nA malicious person has probably taken control of all or part of your website, and injected this page without your knowledge.\nThis kind of webpage is made to steal personal information from victims by impersonating well-known legitimage websites (such as banks, e-commerce websites or others).\n\nPlease delete these phishing webpages and secure your service (CMS update, system update, password change) to ensure it cannot be hacked again.\n\nWhen you have fixed the problem, please answer to this e-mail address.\n\nCordially,\n\nThe {{ brand }} Abuse team.",
+    "name": "[customer-auto] PHISHING_BLOCKED",
+    "codename": "phishing_blocked",
+    "subject": "[Abuse #{{ publicId }}]",
+    "recipientType": "Defendant"
+  },
+  "model": "abuse.mailtemplate",
+  "pk": 48
+},
+{
+  "fields": {
+    "lang": "EN",
+    "body": "Hello,\n\nYou recently submitted a report which led to the opening of the Abuse Ticket #{{ publicId }}\n\nFor your information, this ticked has been resolved and is now closed.\n\nKind regards,\n\nThe {{ brand }} Abuse Team.",
+    "name": "[plaintiff] CASE_CLOSED",
+    "codename": "case_closed",
+    "subject": "[Abuse #{{ publicId }}]",
+    "recipientType": "Plaintiff"
+  },
+  "model": "abuse.mailtemplate",
+  "pk": 50
+},
+{
+  "fields": {
+    "lang": "EN",
+    "body": "Hello,\n\nDue to the absence of answer from your side, concerning the hosting of one or several phishing webpages that were previously reported to you on your service {{ service }}, we are forced to put your service offline to stop the abuse.\n\nIMPORTANT: please delete these phishing webpages AND secure your service (CMS update, system update, password change, etc.).\n\nIt is crucial to NOT put your service back online (using your customer panel) before ensuring that it's properly secured, otherwise it'll be hacked again and the abuse will come back, in which case we could be forced to take additional measures to keep the {{ brand }} network safe.\n\nCordially,\n\nThe {{ brand }} Abuse team.",
+    "name": "[customer-auto] PHISHING_SERVICE_BLOCKED",
+    "codename": "phishing_service_blocked",
+    "subject": "[Abuse #{{ publicId }}]",
+    "recipientType": "Defendant"
+  },
+  "model": "abuse.mailtemplate",
+  "pk": 51
+},
+{
+  "fields": {
+    "codename": "resolution",
+    "value": 12
+  },
+  "model": "abuse.ticketactionparams",
+  "pk": 1
+},
+{
+  "fields": {
+    "codename": "resolution",
+    "value": 10
+  },
+  "model": "abuse.ticketactionparams",
+  "pk": 4
+},
+{
+  "fields": {
+    "codename": "resolution",
+    "value": 11
+  },
+  "model": "abuse.ticketactionparams",
+  "pk": 5
+},
+{
+  "fields": {
+    "codename": "resolution",
+    "value": 9
+  },
+  "model": "abuse.ticketactionparams",
+  "pk": 10
+},
+{
+  "fields": {
+    "codename": "resolution",
+    "value": 17
+  },
+  "model": "abuse.ticketactionparams",
+  "pk": 29
+},
+{
+  "fields": {
+    "codename": "resolution",
+    "value": 18
+  },
+  "model": "abuse.ticketactionparams",
+  "pk": 30
+},
+{
+  "fields": {
+    "codename": "snoozeDuration",
+    "value": 1962000
+  },
+  "model": "abuse.ticketactionparams",
+  "pk": 31
+},
+{
+  "fields": {
+    "codename": "close_with_resolution"
+  },
+  "model": "abuse.ticketaction",
+  "pk": 1
+},
+{
+  "fields": {
+    "codename": "waiting_answer"
+  },
+  "model": "abuse.ticketaction",
+  "pk": 2
+},
+{
+  "fields": {
+    "codename": "action_then_close"
+  },
+  "model": "abuse.ticketaction",
+  "pk": 3
+},
+{
+  "fields": {
+    "codename": "action_then_waiting_answer"
+  },
+  "model": "abuse.ticketaction",
+  "pk": 4
+},
+{
+  "fields": {
+    "codename": "waiting_answer_then_action"
+  },
+  "model": "abuse.ticketaction",
+  "pk": 5
+},
+{
+  "fields": {
+    "codename": "pause_ticket"
+  },
+  "model": "abuse.ticketaction",
+  "pk": 7
+},
+{
+  "fields": {
+    "codename": "waiting_answer_then_action_and_close"
+  },
+  "model": "abuse.ticketaction",
+  "pk": 11
+},
+{
+  "fields": {
+    "action": 1,
+    "params": [
+      4
+    ]
+  },
+  "model": "abuse.ticketworkflowpresetconfig",
+  "pk": 31
+},
+{
+  "fields": {
+    "action": 1,
+    "params": [
+      1
+    ]
+  },
+  "model": "abuse.ticketworkflowpresetconfig",
+  "pk": 32
+},
+{
+  "fields": {
+    "action": 1,
+    "params": [
+      5
+    ]
+  },
+  "model": "abuse.ticketworkflowpresetconfig",
+  "pk": 34
+},
+{
+  "fields": {
+    "action": 1,
+    "params": [
+      4
+    ]
+  },
+  "model": "abuse.ticketworkflowpresetconfig",
+  "pk": 40
+},
+{
+  "fields": {
+    "action": 1,
+    "params": [
+      4
+    ]
+  },
+  "model": "abuse.ticketworkflowpresetconfig",
+  "pk": 46
+},
+{
+  "fields": {
+    "action": 1,
+    "params": [
+      10
+    ]
+  },
+  "model": "abuse.ticketworkflowpresetconfig",
+  "pk": 49
+},
+{
+  "fields": {
+    "action": 1,
+    "params": [
+      10
+    ]
+  },
+  "model": "abuse.ticketworkflowpresetconfig",
+  "pk": 84
+},
+{
+  "fields": {
+    "action": 1,
+    "params": [
+      10
+    ]
+  },
+  "model": "abuse.ticketworkflowpresetconfig",
+  "pk": 85
+},
+{
+  "fields": {
+    "action": 1,
+    "params": [
+      29
+    ]
+  },
+  "model": "abuse.ticketworkflowpresetconfig",
+  "pk": 86
+},
+{
+  "fields": {
+    "action": 1,
+    "params": [
+      30
+    ]
+  },
+  "model": "abuse.ticketworkflowpresetconfig",
+  "pk": 87
+},
+{
+  "fields": {
+    "action": 11,
+    "params": [
+      4,
+      31
+    ]
+  },
+  "model": "abuse.ticketworkflowpresetconfig",
+  "pk": 88
+},
+{
+  "fields": {
+    "action": 11,
+    "params": [
+      4,
+      31
+    ]
+  },
+  "model": "abuse.ticketworkflowpresetconfig",
+  "pk": 89
+},
+{
+  "fields": {
+    "orderId": 2,
+    "templates": [],
+    "name": "Silent fixed",
+    "codename": "silent_fixed",
+    "config": 31,
+    "groupId": 0
+  },
+  "model": "abuse.ticketworkflowpreset",
+  "pk": 6
+},
+{
+  "fields": {
+    "orderId": 4,
+    "templates": [],
+    "name": "Silent invalid",
+    "codename": "silent_invalid",
+    "config": 86,
+    "groupId": 0
+  },
+  "model": "abuse.ticketworkflowpreset",
+  "pk": 7
+},
+{
+  "fields": {
+    "orderId": 5,
+    "templates": [],
+    "name": "Silent expire",
+    "codename": "silent_expire",
+    "config": 87,
+    "groupId": 0
+  },
+  "model": "abuse.ticketworkflowpreset",
+  "pk": 8
+},
+{
+  "fields": {
+    "orderId": 1,
+    "templates": [
+      44
+    ],
+    "name": "Thx & Close",
+    "codename": "13._thanks_&_close",
+    "config": 40,
+    "groupId": 0
+  },
+  "model": "abuse.ticketworkflowpreset",
+  "pk": 11
+},
+{
+  "fields": {
+    "orderId": 0,
+    "templates": [
+      44,
+      50
+    ],
+    "name": "Thx & close +ack",
+    "codename": "thx_&_close_+ack",
+    "config": 46,
+    "groupId": 0
+  },
+  "model": "abuse.ticketworkflowpreset",
+  "pk": 15
+},
+{
+  "fields": {
+    "orderId": 3,
+    "templates": [],
+    "name": "SILENT FIX BY ISP",
+    "codename": "silent_fix_isp",
+    "config": 85,
+    "groupId": 0
+  },
+  "model": "abuse.ticketworkflowpreset",
+  "pk": 18
+},
+{
+  "fields": {
+    "category": "Copyright",
+    "profile": 5,
+    "user": 45
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1197
+},
+{
+  "fields": {
+    "category": "Illegal",
+    "profile": 5,
+    "user": 45
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1198
+},
+{
+  "fields": {
+    "category": "Intrusion",
+    "profile": 5,
+    "user": 45
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1199
+},
+{
+  "fields": {
+    "category": "Malware",
+    "profile": 5,
+    "user": 45
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1200
+},
+{
+  "fields": {
+    "category": "Network Attack",
+    "profile": 5,
+    "user": 45
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1201
+},
+{
+  "fields": {
+    "category": "Other",
+    "profile": 5,
+    "user": 45
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1202
+},
+{
+  "fields": {
+    "category": "Phishing",
+    "profile": 5,
+    "user": 45
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1203
+},
+{
+  "fields": {
+    "category": "Spam",
+    "profile": 5,
+    "user": 45
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1204
+},
+{
+  "fields": {
+    "category": "Copyright",
+    "profile": 2,
+    "user": 44
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1205
+},
+{
+  "fields": {
+    "category": "Illegal",
+    "profile": 2,
+    "user": 44
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1206
+},
+{
+  "fields": {
+    "category": "Intrusion",
+    "profile": 2,
+    "user": 44
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1207
+},
+{
+  "fields": {
+    "category": "Malware",
+    "profile": 2,
+    "user": 44
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1208
+},
+{
+  "fields": {
+    "category": "Network Attack",
+    "profile": 2,
+    "user": 44
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1209
+},
+{
+  "fields": {
+    "category": "Other",
+    "profile": 2,
+    "user": 44
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1210
+},
+{
+  "fields": {
+    "category": "Phishing",
+    "profile": 2,
+    "user": 44
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1211
+},
+{
+  "fields": {
+    "category": "Spam",
+    "profile": 2,
+    "user": 44
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1212
+},
+{
+  "fields": {
+    "content": "Hello world",
+    "date": "2016-02-03T15:08:14.051",
+    "title": "Test",
+    "tags": [],
+    "author": 45
+  },
+  "model": "abuse.news",
+  "pk": 45
+}
+]
