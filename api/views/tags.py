@@ -32,9 +32,9 @@ tag_views = Blueprint('tag_views', __name__)
 
 
 @tag_views.route('/api/tags', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_all_tags():
     """ Returns all abuse tags
     """
@@ -46,9 +46,9 @@ def get_all_tags():
 
 
 @tag_views.route('/api/tags/types', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_tag_type():
     """ Get status list for ticket or report
     """
@@ -56,9 +56,9 @@ def get_tag_type():
 
 
 @tag_views.route('/api/tags/<tag>', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_tag(tag=None):
     """ Return infos for a given tag
     """
@@ -67,11 +67,11 @@ def get_tag(tag=None):
 
 
 @tag_views.route('/api/tags', methods=['POST'])
-@catch_500
 @jsonify
 @token_required
 @admin_required
 @json_required
+@catch_500
 def create_tag():
     """ Create a new tags
     """
@@ -81,11 +81,11 @@ def create_tag():
 
 
 @tag_views.route('/api/tags/<tag>', methods=['PUT'])
-@catch_500
 @jsonify
 @token_required
 @admin_required
 @json_required
+@catch_500
 def update_tag(tag=None):
     """ Update an existing tag
     """
@@ -95,10 +95,10 @@ def update_tag(tag=None):
 
 
 @tag_views.route('/api/tags/<tag>', methods=['DELETE'])
-@catch_500
 @jsonify
 @token_required
 @admin_required
+@catch_500
 def delete_tag(tag=None):
     """ Delete a given tag
     """

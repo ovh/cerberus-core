@@ -32,9 +32,9 @@ provider_views = Blueprint('provider_views', __name__)
 
 
 @provider_views.route('/api/providers', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_providers():
     """ Get list of providers
 
@@ -48,11 +48,11 @@ def get_providers():
 
 
 @provider_views.route('/api/providers', methods=['POST'])
-@catch_500
 @jsonify
 @token_required
 @admin_required
 @json_required
+@catch_500
 def create_provider():
     """ Create a new provider
     """
@@ -62,10 +62,10 @@ def create_provider():
 
 
 @provider_views.route('/api/providers/<provider>', methods=['PUT', 'DELETE'])
-@catch_500
 @jsonify
 @token_required
 @admin_required
+@catch_500
 def update_provider(provider=None):
     """ Update a given provider
     """
@@ -78,11 +78,11 @@ def update_provider(provider=None):
 
 
 @provider_views.route('/api/providers/<provider>/tags', methods=['POST'])
-@catch_500
 @jsonify
 @token_required
 @admin_required
 @json_required
+@catch_500
 def add_provider_tag(provider=None):
     """ Add tag to provider
     """
@@ -92,10 +92,10 @@ def add_provider_tag(provider=None):
 
 
 @provider_views.route('/api/providers/<provider>/tags/<tag>', methods=['DELETE'])
-@catch_500
 @jsonify
 @token_required
 @admin_required
+@catch_500
 def delete_provider_tag(provider=None, tag=None):
     """ Remove provider tag
     """

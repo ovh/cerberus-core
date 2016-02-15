@@ -32,9 +32,9 @@ preset_views = Blueprint('preset_views', __name__)
 
 
 @preset_views.route('/api/presets', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_all_presets():
     """ Get all Abuse mail temapltes
     """
@@ -46,11 +46,11 @@ def get_all_presets():
 
 
 @preset_views.route('/api/presets', methods=['POST'])
-@catch_500
 @jsonify
 @token_required
 @admin_required
 @json_required
+@catch_500
 def create_preset():
     """ Get all Abuse mail temapltes
     """
@@ -60,9 +60,9 @@ def create_preset():
 
 
 @preset_views.route('/api/presets/<preset>', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_preset(preset=None):
     """ Get given preset info
     """
@@ -71,11 +71,11 @@ def get_preset(preset=None):
 
 
 @preset_views.route('/api/presets/<preset>', methods=['PUT'])
-@catch_500
 @jsonify
 @token_required
 @admin_required
 @json_required
+@catch_500
 def update_preset(preset=None):
     """ Get given preset info
     """
@@ -85,10 +85,10 @@ def update_preset(preset=None):
 
 
 @preset_views.route('/api/presets/<preset>', methods=['DELETE'])
-@catch_500
 @jsonify
 @token_required
 @admin_required
+@catch_500
 def delete_preset(preset=None):
     """ Get given preset info
     """
@@ -97,11 +97,11 @@ def delete_preset(preset=None):
 
 
 @preset_views.route('/api/presets/order', methods=['PUT'])
-@catch_500
 @jsonify
 @token_required
 @admin_required
 @json_required
+@catch_500
 def order_presets():
     """ Update preset order for display
     """
