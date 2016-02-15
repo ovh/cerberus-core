@@ -12,12 +12,19 @@ Contents:
    :maxdepth: 3
 
     worker
+    models
+    adapters
     api
+    default
+    event
+    factory
+    utils
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
+* :ref:`routingtable`
 * :ref:`modindex`
 * :ref:`search`
 
