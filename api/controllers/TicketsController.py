@@ -235,7 +235,7 @@ def add_search_filters(filters, query):
     if IP_CIDR_RE.match(query):
         try:  # Try to parse IP/CIDR search
             network = IPNetwork(query)
-            if not network.size > 4096:
+            if network.size <= 4096:
                 search_query = ' '.join([str(host) for host in network.iter_hosts()])
                 search_query = search_query if search_query else query
         except (AttributeError, IndexError, AddrFormatError, AddrConversionError):

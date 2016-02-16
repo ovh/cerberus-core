@@ -59,6 +59,9 @@ class ParsedEmail(dict):
     """
         An abuse parsed_email (syntactic sugar of dict), not using namedtuple because of dynamic setattr
     """
+    def __init__(self):
+        self.category = 'Other'
+
     def __getattr__(self, name):
         if name in self:
             return self[name]

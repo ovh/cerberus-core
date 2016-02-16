@@ -201,30 +201,30 @@ class CustomerDaoBase(object):
         raise NotImplementedError("'%s' object does not implement the method 'get_customer_services'" % (cls))
 
 
-"""
-    A Defendant : (see abuse.models to customize your DEFENDANT_FIELDS)
-
-    {
-        'email': 'john.doe@example.com',
-        'spareEmail': 'backup@domain.tld',
-        'customerId': 'john.doe.123456',  # reference to customer uid in enterprise CRM/DB
-        'firstname': 'John',
-        'name': 'Doe',
-        'country': 'FR',
-        'billingCountry': 'FR',
-        'address': '1 rue de la mer',
-        'city': 'Paris',
-        'zip': '75016',
-        'phone': '+33123456789',
-        'lang': 'FR',
-        'legalForm': 'individual' ('corporation', 'individual' ...),
-        'organisation': None,
-        'creationDate': datetime.datetime(2010, 01, 01, 0, 0),
-        'isVIP': False,
-        'isInternal': False,  (can be an internal customer)
-        'state': 'active',  ('closed', 'blocked' ...)
-    }
-"""
+###
+#     A Defendant : (see abuse.models to customize your DEFENDANT_FIELDS)
+#
+#     {
+#         'email': 'john.doe@example.com',
+#         'spareEmail': 'backup@domain.tld',
+#         'customerId': 'john.doe.123456',  # reference to customer uid in enterprise CRM/DB
+#         'firstname': 'John',
+#         'name': 'Doe',
+#         'country': 'FR',
+#         'billingCountry': 'FR',
+#         'address': '1 rue de la mer',
+#         'city': 'Paris',
+#         'zip': '75016',
+#         'phone': '+33123456789',
+#         'lang': 'FR',
+#         'legalForm': 'individual' ('corporation', 'individual' ...),
+#         'organisation': None,
+#         'creationDate': datetime.datetime(2010, 01, 01, 0, 0),
+#         'isVIP': False,
+#         'isInternal': False,  (can be an internal customer)
+#         'state': 'active',  ('closed', 'blocked' ...)
+#     }
+###
 
 
 class DefendantClass(dict):
@@ -251,18 +251,18 @@ class DefendantClass(dict):
             raise AttributeError("No such attribute: " + name)
 
 
-"""
-    A Service : (see abuse.models to customize your SERVICE_FIELDS)
-
-    {
-        'serviceId': '123456',  # reference to service uid in enterprise CRM/DB
-        'name': 'example',
-        'domain': 'www.example.com',
-        'componentType': 'HOSTING',
-        'componentSubType': 'WEB',
-        'reference': 'hosting.pro.2016',
-    }
-"""
+###
+#    A Service : (see abuse.models to customize your SERVICE_FIELDS)
+#
+#    {
+#        'serviceId': '123456',  # reference to service uid in enterprise CRM/DB
+#        'name': 'example',
+#        'domain': 'www.example.com',
+#        'componentType': 'HOSTING',
+#        'componentSubType': 'WEB',
+#        'reference': 'hosting.pro.2016',
+#    }
+###
 
 
 class ServiceClass(dict):
