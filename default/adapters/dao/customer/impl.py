@@ -69,7 +69,7 @@ class DefaultCustomerDao(CustomerDaoBase):
             :rtype: dict
             :raises CustomerDaoException: if any error occur
         """
-        response = {}
+        response = []
         if ips:  # Totally absurd example, just keep managed IPs
             ips = [ip_addr for ip_addr in ips if utils.get_ip_network(ip_addr) == 'managed']
             if ips:
@@ -154,7 +154,7 @@ class DefaultCustomerDao(CustomerDaoBase):
 
 def get_default_struct(service, defendant, ips=None, urls=None, fqdn=None):
     """
-        Init returne struct
+        Init returned struct
     """
     return [{
         'service': service,

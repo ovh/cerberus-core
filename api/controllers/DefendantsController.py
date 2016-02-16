@@ -33,6 +33,7 @@ import GeneralController
 from abuse.models import Category, Defendant, DefendantComment, Stat, Tag
 from adapters.dao.customer.abstract import CustomerDaoException
 from factory.factory import ImplementationFactory
+from utils import schema
 
 DEFENDANT_FIELDS = [fld.name for fld in Defendant._meta.fields]
 
@@ -66,7 +67,8 @@ def show(defendant_id):
 
     try:
         defendant_infos = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_customer_infos(defendant['customerId'])
-    except CustomerDaoException:
+        schema.valid_adapter_response('CustomerDaoBase', 'get_customer_infos', defendant_infos)
+    except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
         pass
 
     if defendant_infos:
@@ -148,7 +150,8 @@ def get_or_create(defendant_id=None, customer_id=None):
     if customer_id:
         try:
             defendant_infos = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_customer_infos(customer_id)
-        except CustomerDaoException:
+            schema.valid_adapter_response('CustomerDaoBase', 'get_customer_infos', defendant_infos)
+        except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
             return None
 
         if not defendant_infos:
@@ -209,7 +212,8 @@ def get_defendant_services(customer_id):
     """
     try:
         response = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_customer_services(customer_id)
-    except CustomerDaoException as ex:
+        schema.valid_adapter_response('CustomerDaoBase', 'get_customer_services', response)
+    except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound) as ex:
         return 500, {'status': 'Internal Server Error', 'code': 500, 'message': str(ex)}
 
     return 200, response

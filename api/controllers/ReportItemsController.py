@@ -44,7 +44,7 @@ from abuse.models import ItemScreenshotFeedback, Report, ReportItem, Service
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.phishing.abstract import PhishingServiceException
 from factory.factory import ImplementationFactory
-from utils import utils
+from utils import schema, utils
 
 socket.setdefaulttimeout(5)
 ITEM_FIELDS = [f.name for f in ReportItem._meta.fields]
@@ -369,7 +369,8 @@ def get_defendant_from_item(item):
                 urls=[sub_host],
                 fqdn=[sub_host],
             )
-        except CustomerDaoException:
+            schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
+        except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
             return 503, {'status': 'Service unavailable', 'code': 503, 'message': 'Unknown exception while identifying defendant'}
 
         if services:
