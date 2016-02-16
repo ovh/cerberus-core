@@ -30,7 +30,8 @@ class DefaultPhishingService(PhishingServiceBase):
     """
         Default Implementation of PhishingServiceBase
     """
-    def ping_url(self, url, country=None):
+    @staticmethod
+    def ping_url(url, country=None):
         """
             Ping given url
 
@@ -42,7 +43,8 @@ class DefaultPhishingService(PhishingServiceBase):
         """
         return PingResponse(0, '200', 'OK', 'OK')
 
-    def get_screenshots(self, url, limit=10):
+    @staticmethod
+    def get_screenshots(url, limit=10):
         """
             Get screenshots for given url
         """
@@ -77,7 +79,8 @@ class DefaultPhishingService(PhishingServiceBase):
         """
         pass
 
-    def is_screenshot_viewed(self, screenshot_id):
+    @staticmethod
+    def is_screenshot_viewed(screenshot_id):
         """
             In get_screenshots, a screenshotId is returned for each screenshot.
             If your screenshotting API exposed this screenshot (as proof), it can

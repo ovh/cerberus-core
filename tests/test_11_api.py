@@ -27,7 +27,7 @@ import shutil
 from django.conf import settings
 from mock import patch
 
-from abuse.models import Category, Report
+from abuse.models import Category
 from api.api import APP
 from tests import GlobalTestCase
 
@@ -56,11 +56,7 @@ class ApiTestCase(GlobalTestCase):
 
         with open('tests/samples/sample3', 'r') as file_d:
             content = file_d.read()
-
-        report.create_from_email(email_content=content, send_ack=False)
-        self.assertEqual(1, Report.objects.count())
-        self._cerberus_report = Report.objects.all()[:1][0]
-        self._cerberus_ticket = self._cerberus_report.ticket
+            report.create_from_email(email_content=content, send_ack=False)
 
         tester = APP.test_client(self)
         response = tester.post(
@@ -68,7 +64,6 @@ class ApiTestCase(GlobalTestCase):
             data=json.dumps({'name': settings.GENERAL_CONFIG['bot_user'], 'password': 'test'}),
             headers={'content-type': 'application/json'},
         )
-        self.assertEqual(response.status_code, 200)
         token = json.loads(response.get_data())['token']
 
         response = tester.get(
@@ -113,11 +108,7 @@ class ApiTestCase(GlobalTestCase):
 
         with open('tests/samples/sample3', 'r') as file_d:
             content = file_d.read()
-
-        report.create_from_email(email_content=content, send_ack=False)
-        self.assertEqual(1, Report.objects.count())
-        self._cerberus_report = Report.objects.all()[:1][0]
-        self._cerberus_ticket = self._cerberus_report.ticket
+            report.create_from_email(email_content=content, send_ack=False)
 
         tester = APP.test_client(self)
         response = tester.post(
@@ -125,7 +116,6 @@ class ApiTestCase(GlobalTestCase):
             data=json.dumps({'name': settings.GENERAL_CONFIG['bot_user'], 'password': 'test'}),
             headers={'content-type': 'application/json'},
         )
-        self.assertEqual(response.status_code, 200)
         token = json.loads(response.get_data())['token']
 
         response = tester.get(
@@ -159,19 +149,14 @@ class ApiTestCase(GlobalTestCase):
 
         with open('tests/samples/sample3', 'r') as file_d:
             content = file_d.read()
-
-        report.create_from_email(email_content=content, send_ack=False)
-        self.assertEqual(1, Report.objects.count())
-        self._cerberus_report = Report.objects.all()[:1][0]
-        self._cerberus_ticket = self._cerberus_report.ticket
-
+            report.create_from_email(email_content=content, send_ack=False)
         tester = APP.test_client(self)
+
         response = tester.post(
             '/api/auth',
             data=json.dumps({'name': settings.GENERAL_CONFIG['bot_user'], 'password': 'test'}),
             headers={'content-type': 'application/json'},
         )
-        self.assertEqual(response.status_code, 200)
         token = json.loads(response.get_data())['token']
 
         params = {
@@ -248,11 +233,7 @@ class ApiTestCase(GlobalTestCase):
 
         with open('tests/samples/sample3', 'r') as file_d:
             content = file_d.read()
-
-        report.create_from_email(email_content=content, send_ack=False)
-        self.assertEqual(1, Report.objects.count())
-        self._cerberus_report = Report.objects.all()[:1][0]
-        self._cerberus_ticket = self._cerberus_report.ticket
+            report.create_from_email(email_content=content, send_ack=False)
 
         tester = APP.test_client(self)
         response = tester.post(
@@ -260,7 +241,6 @@ class ApiTestCase(GlobalTestCase):
             data=json.dumps({'name': settings.GENERAL_CONFIG['bot_user'], 'password': 'test'}),
             headers={'content-type': 'application/json'},
         )
-        self.assertEqual(response.status_code, 200)
         token = json.loads(response.get_data())['token']
 
         response = tester.get(

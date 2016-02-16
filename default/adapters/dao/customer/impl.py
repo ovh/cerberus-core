@@ -57,7 +57,8 @@ class DefaultCustomerDao(CustomerDaoBase):
     """
         Default implementation of CustomerDaoBase
     """
-    def get_services_from_items(self, urls=None, ips=None, fqdn=None):
+    @staticmethod
+    def get_services_from_items(urls=None, ips=None, fqdn=None):
         """
             Map service/defendant for given items (provided by cerberus parser)
 
@@ -77,7 +78,8 @@ class DefaultCustomerDao(CustomerDaoBase):
             response = get_default_struct(DEFAULT_SERVICE, JOHN_DOE, ips=[], urls=urls, fqdn=[])
         return response
 
-    def get_customer_infos(self, customer_id):
+    @staticmethod
+    def get_customer_infos(customer_id):
         """
             Get customer infos
 
@@ -91,7 +93,8 @@ class DefaultCustomerDao(CustomerDaoBase):
         else:
             raise CustomerDaoException('Customer not found')
 
-    def get_service_infos(self, service_id):
+    @staticmethod
+    def get_service_infos(service_id):
         """
             Get service infos
 
@@ -105,7 +108,8 @@ class DefaultCustomerDao(CustomerDaoBase):
         else:
             raise CustomerDaoException('Customer not found')
 
-    def get_customer_services(self, customer_id):
+    @staticmethod
+    def get_customer_services(customer_id):
         """
             Get all services for given customer.
 

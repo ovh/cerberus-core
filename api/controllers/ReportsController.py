@@ -519,10 +519,9 @@ def bulk_add(body, user, method):
             transaction.rollback()
             return code, resp
 
-    if 'status' in body['properties']:
-        if body['properties']['status'].lower() not in STATUS:
-            transaction.rollback()
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Status not supported'}
+    if 'status' in body['properties'] and body['properties']['status'].lower() not in STATUS:
+        transaction.rollback()
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Status not supported'}
 
     # Update tags
     if 'tags' in body['properties'] and isinstance(body['properties']['tags'], list):

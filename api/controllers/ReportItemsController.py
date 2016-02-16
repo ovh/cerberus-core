@@ -254,22 +254,12 @@ def create(body, user):
         Create a new report item
     """
     try:
-        for key in body.keys():
-            if key not in ITEM_FIELDS:
-                body.pop(key, None)
-        body.pop('date', None)
-
-        body['report'] = Report.objects.get(id=body['report'])
-        code, resp = get_defendant_from_item(body)
+        code, resp = __get_item_infos(body, user)
         if code != 200:
             return code, resp
-        update_item_infos(body)
-        code, resp = update_item_report_and_ticket(body, resp['customerId'], resp['service'], user)
-        if code != 200:
-            return code, resp
-        item, created = ReportItem.objects.get_or_create(**body)
-        if body['report'].ticket:
-            GeneralController.log_action(body['report'].ticket, user, 'add item')
+        item, created = ReportItem.objects.get_or_create(**resp)
+        if resp['report'].ticket:
+            GeneralController.log_action(resp['report'].ticket, user, 'add item')
     except (AttributeError, FieldError, IntegrityError, KeyError, ObjectDoesNotExist) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
     if not created:
@@ -287,26 +277,38 @@ def update(item_id, body, user):
         return 404, {'status': 'Not Found', 'code': 404}
 
     try:
-        for key in body.keys():
-            if key not in ITEM_FIELDS:
-                body.pop(key, None)
-        body.pop('date', None)
-
-        body['report'] = Report.objects.get(id=body['report'])
-        code, resp = get_defendant_from_item(body)
+        code, resp = __get_item_infos(body, user)
         if code != 200:
             return code, resp
-        update_item_infos(body)
-        code, resp = update_item_report_and_ticket(body, resp['customerId'], resp['service'], user)
-        if code != 200:
-            return code, resp
-        ReportItem.objects.filter(pk=item.pk).update(**body)
+        ReportItem.objects.filter(pk=item.pk).update(**resp)
         item = ReportItem.objects.get(pk=item.pk)
-        if body['report'].ticket:
-            GeneralController.log_action(body['report'].ticket, user, 'update item')
+        if resp['report'].ticket:
+            GeneralController.log_action(resp['report'].ticket, user, 'update item')
     except (AttributeError, FieldError, IntegrityError, KeyError, ObjectDoesNotExist):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
     return show(item_id)
+
+
+def __get_item_infos(body, user):
+
+    item_infos = body
+
+    for key in item_infos.keys():
+        if key not in ITEM_FIELDS:
+            item_infos.pop(key, None)
+    item_infos.pop('date', None)
+
+    item_infos['report'] = Report.objects.get(id=item_infos['report'])
+    code, resp = get_defendant_from_item(item_infos)
+    if code != 200:
+        return code, resp
+
+    update_item_infos(item_infos)
+    code, resp = update_item_report_and_ticket(item_infos, resp['customerId'], resp['service'], user)
+    if code != 200:
+        return code, resp
+
+    return 200, item_infos
 
 
 def delete_from_report(item_id, rep, user):

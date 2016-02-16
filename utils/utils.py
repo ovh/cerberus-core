@@ -50,7 +50,6 @@ from rq import Queue
 from rq_scheduler import Scheduler
 from simplejson import JSONDecodeError
 
-import ips
 from abuse.models import User
 from logger import get_logger
 
@@ -58,6 +57,7 @@ Logger = get_logger(os.path.basename(__file__))
 
 CHARSETS = ('iso-8859-1', 'iso-8859-15', 'ascii', 'utf-16', 'windows-1252', 'cp850', 'iso-8859-11')
 CERBERUS_USERS = User.objects.all().values_list('username', flat=True)
+
 IPS_NETWORKS = {}
 
 queue = Queue(connection=Redis())
@@ -380,21 +380,8 @@ def get_ip_network(ip_str):
     except (AddrConversionError, AddrFormatError):
         return None
 
-    if not len(IPS_NETWORKS):
-        _read_ips_networks()
-
     for brand, networks in IPS_NETWORKS.iteritems():
         for net in networks:
             if net.netmask.value & ip_addr.value == net.value:
                 return brand
     return None
-
-
-def _read_ips_networks():
-    """
-        Read all known ip networks
-    """
-    for key, val in ips.IPS_NETWORKS.iteritems():
-        IPS_NETWORKS[key] = []
-        for ip_addr in val:
-            IPS_NETWORKS[key].append(netaddr.IPNetwork(ip_addr))
