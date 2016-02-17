@@ -107,7 +107,8 @@ So tickets can have multilple reports/providers.
 
 All the effective jobs are done with ticket: customer interaction (emails), action on service ...
 
-There's an specific/automatic workflow for phishing ticket/report described in `doc/source/phishing.png`
+There's an specific/automatic workflow for **phishing** ticket/report described in `doc/source/phishing.png`.
+A "Phishing-trusted reporter" is a provider with an `apiKey` (see `abuse/models.py`).
 
 You can see full cerberus models's relationship in `doc/source/models.png`.
 

@@ -222,7 +222,7 @@ def __create_with_services(abuse_report, filename, services):
         # If attached to new or exising
         if ticket:
 
-            if report.provider.trusted and report.category.name.lower() == 'phishing' and is_there_some_urls:
+            if report.provider.apiKey and report.category.name.lower() == 'phishing' and is_there_some_urls:
                 phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
 
             report.ticket = Ticket.objects.get(id=ticket.id)

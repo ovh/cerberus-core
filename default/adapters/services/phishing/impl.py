@@ -95,7 +95,7 @@ class DefaultPhishingService(PhishingServiceBase):
 
     def block_url(self, url, report):
         """
-            Post feedback
+            Block/remove a phishing url
 
             :param str url: The URL to block
             :param Report report: The associated report
