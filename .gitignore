@@ -1,3 +1,7 @@
 *.pyc
 *.swp
 doc/build
+*ovh*
+ovh
+ovh/
+ovh/*

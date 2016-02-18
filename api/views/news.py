@@ -32,9 +32,9 @@ news_views = Blueprint('news_views', __name__)
 
 
 @news_views.route('/api/news', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_all_news():
     """ Get abuse news
 
@@ -48,9 +48,9 @@ def get_all_news():
 
 
 @news_views.route('/api/news/<news>', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_news(news=None):
     """ Get a given news
     """
@@ -59,10 +59,11 @@ def get_news(news=None):
 
 
 @news_views.route('/api/news', methods=['POST'])
-@catch_500
 @jsonify
 @token_required
 @json_required
+@catch_500
+@jsonify
 def create_news():
     """ Post a news
     """
@@ -73,10 +74,10 @@ def create_news():
 
 
 @news_views.route('/api/news/<news>', methods=['PUT'])
-@catch_500
 @jsonify
 @token_required
 @json_required
+@catch_500
 def update_news(news=None):
     """ Update a given new
     """
@@ -87,10 +88,10 @@ def update_news(news=None):
 
 
 @news_views.route('/api/news/<news>', methods=['DELETE'])
-@catch_500
 @jsonify
 @token_required
 @admin_required
+@catch_500
 def delete_news(news=None):
     """ Delete a given new
     """

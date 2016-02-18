@@ -45,7 +45,7 @@ class PhishingServiceBase(object):
         - 'ping' an url
         - get screenshots for an url (for example taken by Selenium)
         - post feedback: is the url is really a phishing page or not (for example to improve a Machine Learning system)
-        - block url: a way, your way, to block/remove a phishing url
+        - block url: a way, your way, to block/remove a phishing url (https://github.com/ovh/phishing-mitigation for example)
 
         The only exception allowed to be raised is ..py:exception:: PhishingServiceException
 
@@ -129,7 +129,7 @@ class PhishingServiceBase(object):
     @abc.abstractmethod
     def block_url(self, url, report):
         """
-            Post block_url
+            Block/remove a phishing url
 
             :param str url: The URL to block
 

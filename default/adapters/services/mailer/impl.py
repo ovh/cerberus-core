@@ -175,7 +175,8 @@ class DefaultMailerService(MailerServiceBase):
         recipient = settings.EMAIL_FETCHER['cerberus_email'] % (ticket.publicId, 'test', 'test') if not sender else sender
         self.__update_emails_db(ticket.publicId, sender, recipient, subject, body, int(time()))
 
-    def prefetch_email_from_template(self, ticket, template_codename, lang='EN', acknowledged_report=None):
+    @staticmethod
+    def prefetch_email_from_template(ticket, template_codename, lang='EN', acknowledged_report=None):
         """
             Try to fill email template with ticket meta
 

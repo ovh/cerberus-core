@@ -34,7 +34,8 @@ class DefaultActionService(ActionServiceBase):
         Default implementation of ActionServiceBase
     """
 
-    def apply_action_on_service(self, ticket, action, ip_addr=None, user=None):
+    @staticmethod
+    def apply_action_on_service(ticket, action, ip_addr=None, user=None):
         """
             Apply given action on service
 
@@ -58,7 +59,8 @@ class DefaultActionService(ActionServiceBase):
 
         return ActionResult(todo_id='123456', status='ok', comment='ok')
 
-    def get_action_for_timeout(self, ticket):
+    @staticmethod
+    def get_action_for_timeout(ticket):
         """
             Returns action to apply when phishing ticket timeout
 
@@ -78,7 +80,8 @@ class DefaultActionService(ActionServiceBase):
 
         return action
 
-    def list_actions_for_ticket(self, ticket):
+    @staticmethod
+    def list_actions_for_ticket(ticket):
         """
             List all available `abuse.models.ServiceAction` for a Cerberus ticket
 

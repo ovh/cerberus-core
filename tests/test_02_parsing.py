@@ -327,3 +327,26 @@ class TestParser(GlobalTestCase):
 
         template = self.email_parser.get_template(parsed_email.provider)
         self.assertEqual(r'(?:Problem\s*:\s*)(.*)', template['category']['pattern'])
+
+    def test_multiple_recipients(self):
+
+        sample = self.samples['sample9']
+        content = sample.read()
+        parsed_email = self.email_parser.parse(content)
+
+        self.assertEqual(4, len(parsed_email.recipients))
+        self.assertIn('stephane@test.com', parsed_email.recipients)
+        self.assertIn('some.inbox@isp.com', parsed_email.recipients)
+        self.assertIn('other.inbox@isp.com', parsed_email.recipients)
+        self.assertIn('ticket+vhfblctkds.4c8c@abuse.isp.com', parsed_email.recipients)
+
+    def test_multiple_with_cc(self):
+
+        sample = self.samples['sample10']
+        content = sample.read()
+        parsed_email = self.email_parser.parse(content)
+
+        self.assertEqual(3, len(parsed_email.recipients))
+        self.assertIn('abuse@isp.com', parsed_email.recipients)
+        self.assertIn('simon.vasseur@corp.ovh.com', parsed_email.recipients)
+        self.assertIn('vincent.malguy@corp.ovh.com', parsed_email.recipients)

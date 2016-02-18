@@ -157,10 +157,9 @@ def check_perms(**kwargs):
         except ValueError:
             code = 400
             response = {'status': 'Bad Request', 'code': 400, 'message': 'Report ID is integer'}
-    if 'defendant' in kwargs and kwargs['method'] != 'GET':
-        if not AbusePermission.objects.filter(user=user.id, profile__name__in=['Beginner', 'Advanced', 'Expert']).count():
-            code = 403
-            response = {'status': 'Forbidden', 'code': 403, 'message': 'Forbidden'}
+    if 'defendant' in kwargs and kwargs['method'] != 'GET' and not AbusePermission.objects.filter(user=user.id, profile__name__in=['Beginner', 'Advanced', 'Expert']).count():
+        code = 403
+        response = {'status': 'Forbidden', 'code': 403, 'message': 'Forbidden'}
     return code, response
 
 
@@ -363,7 +362,7 @@ def add_ticket_resolution(body):
     """ Add a ticket resolution
     """
     try:
-        resolution, created = Resolution.objects.get_or_create(codename=body['codename'])
+        _, created = Resolution.objects.get_or_create(codename=body['codename'])
         if not created:
             return 409, {'status': 'Conflict', 'code': 409, 'message': 'Ticket resolution already exists'}
     except (AttributeError, ValueError, KeyError):

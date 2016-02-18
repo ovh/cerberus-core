@@ -34,9 +34,9 @@ defendant_views = Blueprint('defendant_views', __name__)
 
 
 @defendant_views.route('/api/defendants', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_defendants():
     """ Get Abuse defendants
     """
@@ -45,9 +45,9 @@ def get_defendants():
 
 
 @defendant_views.route('/api/defendants/top20', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_defendant_top20():
     """ Get Abuse defendants top20
     """
@@ -56,9 +56,9 @@ def get_defendant_top20():
 
 
 @defendant_views.route('/api/defendants/<defendant>', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_defendant(defendant=None):
     """ Get a defendant
     """
@@ -67,11 +67,11 @@ def get_defendant(defendant=None):
 
 
 @defendant_views.route('/api/defendants/<defendant>/comments', methods=['POST'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
 @json_required
+@catch_500
 def add_comment(defendant=None):
     """ Add comment to defendant
     """
@@ -82,9 +82,9 @@ def add_comment(defendant=None):
 
 
 @defendant_views.route('/api/defendants/<defendant>/services', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_defendant_services(defendant=None):
     """
         Get services for a given defendant
@@ -94,10 +94,10 @@ def get_defendant_services(defendant=None):
 
 
 @defendant_views.route('/api/defendants/<defendant>/comments/<comment>', methods=['PUT', 'DELETE'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def update_or_delete_comment(defendant=None, comment=None):
     """ Update or delete defendant comments
     """
@@ -112,11 +112,11 @@ def update_or_delete_comment(defendant=None, comment=None):
 
 
 @defendant_views.route('/api/defendants/<defendant>/tags', methods=['POST'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
 @json_required
+@catch_500
 def add_defendant_tag(defendant=None):
     """ Add tag to defendant
     """
@@ -127,10 +127,10 @@ def add_defendant_tag(defendant=None):
 
 
 @defendant_views.route('/api/defendants/<defendant>/tags/<tag>', methods=['DELETE'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def delete_defendant_tag(defendant=None, tag=None):
     """ Remove defendant tag
     """
@@ -140,9 +140,9 @@ def delete_defendant_tag(defendant=None, tag=None):
 
 
 @defendant_views.route('/api/stats/tickets/<defendant>', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_defendant_tickets_stats(defendant=None):
     """ Get tickets stats for a given defendant
     """
@@ -151,9 +151,9 @@ def get_defendant_tickets_stats(defendant=None):
 
 
 @defendant_views.route('/api/stats/reports/<defendant>', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_defendant_reports_stats(defendant=None):
     """
         Get reports stats for a given defendant

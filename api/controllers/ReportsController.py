@@ -211,7 +211,7 @@ def add_search_filters(filters, query):
     if IP_CIDR_RE.match(query):
         try:
             network = IPNetwork(query)
-            if not network.size > 4096:
+            if network.size <= 4096:
                 search_query = ' '.join([str(host) for host in network.iter_hosts()])
                 search_query = search_query if search_query else query
         except (AttributeError, IndexError, AddrFormatError, AddrConversionError):
@@ -473,13 +473,14 @@ def get_all_attachments(**kwargs):
     return 200, [dict(document) for document in attached], nb_record_filtered
 
 
-def get_attachment(attachment_id):
+def get_attachment(report_id, attachment_id):
     """ Get attachment
     """
     try:
+        Report.objects.get(id=report_id)
         attachment = AttachedDocument.objects.get(id=attachment_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Attachment not found'}
+        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Report or attachment not found'}
 
     resp = None
     try:
@@ -519,10 +520,9 @@ def bulk_add(body, user, method):
             transaction.rollback()
             return code, resp
 
-    if 'status' in body['properties']:
-        if body['properties']['status'].lower() not in STATUS:
-            transaction.rollback()
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Status not supported'}
+    if 'status' in body['properties'] and body['properties']['status'].lower() not in STATUS:
+        transaction.rollback()
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Status not supported'}
 
     # Update tags
     if 'tags' in body['properties'] and isinstance(body['properties']['tags'], list):

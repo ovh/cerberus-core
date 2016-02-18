@@ -204,7 +204,7 @@ def get_all_report_attachments(report=None):
 def get_report_attachment(report=None, attachment=None):
     """ Get attached documents for a report
     """
-    code, resp = ReportsController.get_attachment(attachment)
+    code, resp = ReportsController.get_attachment(report, attachment)
     if code != 200:
         return make_response(json.dumps(resp), code, {'content-type': 'application/json'})
 

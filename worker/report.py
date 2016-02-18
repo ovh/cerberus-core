@@ -38,7 +38,7 @@ from adapters.services.storage.abstract import StorageServiceException
 from factory.factory import ImplementationFactory
 from parsing import regexp
 from parsing.parser import EmailParser
-from utils import utils
+from utils import schema, utils
 from worker import Logger
 
 Parser = EmailParser()
@@ -87,8 +87,9 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
             ips=abuse_report.ips,
             fqdn=abuse_report.fqdn
         )
+        schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
     except CustomerDaoException as ex:
-        Logger.error(unicode('Exception while identifying defendants from items mail %s - %s ' % (filename, ex)))
+        Logger.error(unicode('Exception while identifying defendants from items for mail %s -> %s ' % (filename, str(ex))))
         raise CustomerDaoException(ex)
 
     # Create report(s) with identified services
@@ -98,7 +99,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         else:
             created_reports = __create_with_services(abuse_report, filename, services)
     except StorageServiceException as ex:
-        Logger.error(unicode('Exception while creating report(s) from mail %s -> %s' % (filename, str(ex))))
+        Logger.error(unicode('Exception while creating report(s) for mail %s -> %s' % (filename, str(ex))))
         raise StorageServiceException(ex)
 
     # Index to SearchService
@@ -222,7 +223,7 @@ def __create_with_services(abuse_report, filename, services):
         # If attached to new or exising
         if ticket:
 
-            if report.provider.trusted and report.category.name.lower() == 'phishing' and is_there_some_urls:
+            if report.provider.apiKey and report.category.name.lower() == 'phishing' and is_there_some_urls:
                 phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
 
             report.ticket = Ticket.objects.get(id=ticket.id)

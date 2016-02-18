@@ -235,7 +235,7 @@ def add_search_filters(filters, query):
     if IP_CIDR_RE.match(query):
         try:  # Try to parse IP/CIDR search
             network = IPNetwork(query)
-            if not network.size > 4096:
+            if network.size <= 4096:
                 search_query = ' '.join([str(host) for host in network.iter_hosts()])
                 search_query = search_query if search_query else query
         except (AttributeError, IndexError, AddrFormatError, AddrConversionError):
@@ -819,7 +819,7 @@ def pause_ticket(ticket, body):
 
     # Delay jobs
     delay = timedelta(seconds=ticket.pauseDuration)
-    __delay_jobs(ticket, delay, back=False)
+    utils.queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=False)
 
     return 200, {'status': 'OK', 'code': 200, 'message': 'Ticket paused for %d hour(s)' % (ticket.pauseDuration)}
 
@@ -829,7 +829,7 @@ def unpause_ticket(ticket):
     """
     # Delay jobs
     delay = timedelta(seconds=ticket.pauseDuration) - (datetime.now() - ticket.pauseStart)
-    __delay_jobs(ticket, delay, back=True)
+    utils.queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=True)
 
     if ticket.previousStatus == 'WaitingAnswer' and ticket.snoozeDuration and ticket.snoozeStart:
         ticket.snoozeDuration = ticket.snoozeDuration + (datetime.now() - ticket.pauseStart).seconds
@@ -839,29 +839,6 @@ def unpause_ticket(ticket):
     ticket.previousStatus = 'Paused'
 
     return 200, {'status': 'OK', 'code': 200, 'message': 'Ticket unpaused'}
-
-
-def __delay_jobs(ticket, delay, back=True):
-    """ Delay jobs for pause/unpaused
-    """
-    list_of_job_instances = utils.scheduler.get_jobs(
-        until=timedelta(days=5),
-        with_times=True
-    )
-
-    for job in ticket.jobs.all():
-        if job.asynchronousJobId in utils.scheduler:
-            for scheduled_job in list_of_job_instances:
-                if scheduled_job[0].id == job.asynchronousJobId:
-                    if back:
-                        date = scheduled_job[1] - delay
-                    else:
-                        date = scheduled_job[1] + delay
-                    utils.scheduler.change_execution_time(
-                        scheduled_job[0],
-                        date
-                    )
-                    break
 
 
 @transaction.commit_manually

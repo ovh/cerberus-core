@@ -34,9 +34,9 @@ ticket_views = Blueprint('ticket_views', __name__)
 
 
 @ticket_views.route('/api/tickets', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_tickets():
     """ Get all abuse tickets
 
@@ -51,9 +51,9 @@ def get_tickets():
 
 
 @ticket_views.route('/api/my-tickets', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_user_tickets():
     """ Get abuse tickets for logged user
 
@@ -68,9 +68,9 @@ def get_user_tickets():
 
 
 @ticket_views.route('/api/tickets/todo', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def get_todo_tickets():
     """ Get all abuse todo tickets
     """
@@ -80,10 +80,10 @@ def get_todo_tickets():
 
 
 @ticket_views.route('/api/tickets/<ticket>', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def get_ticket(ticket=None):
     """ Get a given ticket
     """
@@ -93,10 +93,10 @@ def get_ticket(ticket=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/items', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def get_ticket_items(ticket=None):
     """ Get all items for a given ticket
 
@@ -110,10 +110,10 @@ def get_ticket_items(ticket=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/items/<item>', methods=['PUT', 'DELETE'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def update_ticket_item(ticket=None, item=None):
     """ Delete an item
     """
@@ -127,10 +127,10 @@ def update_ticket_item(ticket=None, item=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/proof', methods=['GET', 'POST'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def get_ticket_proof(ticket=None):
     """ Get all proof for a given ticket
     """
@@ -144,9 +144,9 @@ def get_ticket_proof(ticket=None):
 
 
 @ticket_views.route('/api/tickets/bulk', methods=['PUT', 'DELETE'])
-@catch_500
 @jsonify
 @token_required
+@catch_500
 def bulk_add_tickets():
     """ Bulk add on tickets
     """
@@ -160,10 +160,10 @@ def bulk_add_tickets():
 
 
 @ticket_views.route('/api/tickets/<ticket>/proof/<proof>', methods=['PUT', 'DELETE'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def update_ticket_proof(ticket=None, proof=None):
     """ Update ticket proof
     """
@@ -177,11 +177,11 @@ def update_ticket_proof(ticket=None, proof=None):
 
 
 @ticket_views.route('/api/tickets', methods=['POST'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
 @json_required
+@catch_500
 def create_ticket():
     """ Post a new ticket
     """
@@ -192,11 +192,11 @@ def create_ticket():
 
 
 @ticket_views.route('/api/tickets/<ticket>', methods=['PUT'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
 @json_required
+@catch_500
 def update_ticket(ticket=None):
     """ Update an existing ticket
     """
@@ -207,11 +207,11 @@ def update_ticket(ticket=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/snoozeDuration', methods=['PATCH'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
 @json_required
+@catch_500
 def update_ticket_snooze(ticket=None):
     """ Update ticket snoozeDuration
     """
@@ -222,11 +222,11 @@ def update_ticket_snooze(ticket=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/pauseDuration', methods=['PATCH'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
 @json_required
+@catch_500
 def update_ticket_pause(ticket=None):
     """ Update ticket pauseDuration
     """
@@ -237,11 +237,11 @@ def update_ticket_pause(ticket=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/defendant', methods=['PUT'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
 @json_required
+@catch_500
 def update_ticket_defendant(ticket=None):
     """ Update ticket defendant
     """
@@ -252,10 +252,10 @@ def update_ticket_defendant(ticket=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/emails', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def get_mails(ticket=None):
     """ Get all emails sent and received for this ticket
     """
@@ -264,11 +264,11 @@ def get_mails(ticket=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/status/<status>', methods=['PUT'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
 @json_required
+@catch_500
 def update_status(ticket=None, status=None):
     """ Update ticket status
     """
@@ -282,10 +282,10 @@ def update_status(ticket=None, status=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/templates/<template>', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def get_ticket_prefetched_template(ticket=None, template=None):
     """ Get a template prefetched with ticket infos
     """
@@ -294,10 +294,10 @@ def get_ticket_prefetched_template(ticket=None, template=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/presets/<preset>', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def get_ticket_prefetched_preset(ticket=None, preset=None):
     """ Get a template prefetched with ticket infos
     """
@@ -306,11 +306,11 @@ def get_ticket_prefetched_preset(ticket=None, preset=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/tags', methods=['POST'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
 @json_required
+@catch_500
 def add_ticket_tag(ticket=None):
     """ Add tag to ticket
     """
@@ -321,10 +321,10 @@ def add_ticket_tag(ticket=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/tags/<tag>', methods=['DELETE'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def delete_ticket_tag(ticket=None, tag=None):
     """ Remove ticket tag
     """
@@ -334,11 +334,11 @@ def delete_ticket_tag(ticket=None, tag=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/interact', methods=['POST'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
 @json_required
+@catch_500
 def interact(ticket=None):
     """ Magic endpoint to save operator's time
     """
@@ -349,10 +349,10 @@ def interact(ticket=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/actions/list', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def get_actions(ticket=None):
     """
         List all available actions
@@ -363,10 +363,10 @@ def get_actions(ticket=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/jobs', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def get_jobs(ticket=None):
     """
         Get actions status
@@ -376,11 +376,11 @@ def get_jobs(ticket=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/jobs', methods=['POST'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
 @json_required
+@catch_500
 def schedule_job(ticket=None):
     """
         Schedule action
@@ -394,10 +394,10 @@ def schedule_job(ticket=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/jobs/<job>', methods=['DELETE'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def cancel_job(ticket=None, job=None):
     """
         Cancel action
@@ -408,11 +408,11 @@ def cancel_job(ticket=None, job=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/comments', methods=['POST'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
 @json_required
+@catch_500
 def add_comment(ticket=None):
     """ Add comment to ticket
     """
@@ -423,10 +423,10 @@ def add_comment(ticket=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/comments/<comment>', methods=['PUT', 'DELETE'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def update_or_delete_comment(ticket=None, comment=None):
     """ Update or delete ticket comments
     """
@@ -441,10 +441,10 @@ def update_or_delete_comment(ticket=None, comment=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/providers', methods=['GET'])
-@catch_500
 @jsonify
 @token_required
 @perm_required
+@catch_500
 def get_providers(ticket=None):
     """ Get ticket's providers
     """

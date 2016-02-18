@@ -59,6 +59,9 @@ class ParsedEmail(dict):
     """
         An abuse parsed_email (syntactic sugar of dict), not using namedtuple because of dynamic setattr
     """
+    def __init__(self):
+        self.category = 'Other'
+
     def __getattr__(self, name):
         if name in self:
             return self[name]
@@ -336,23 +339,19 @@ def get_recipients_from_headers(headers):
         :rtype: list
         :returns: The list of recipients
     """
-    keys = ['To', 'Cc']
     recipients = []
 
-    for key in keys:
-        if key in headers and headers[key] is not None:
+    for key in ['To', 'Cc']:
+        if headers.get(key):
             decodefrag = decode_header(headers[key])
             for line, encoding in decodefrag:
                 enc = 'utf-8' if encoding is None else encoding
                 recps = line.decode(enc, 'replace').split(',')
-
-            for recp in recps:
-                line = regexp.EMAIL.search(recp)
-                if line is not None:
-                    recipient = str(line.group(1)).lower()
-                    recipients.append(recipient)
-
-    return recipients
+                for recp in recps:
+                    line = regexp.EMAIL.search(recp)
+                    if line is not None:
+                        recipients.append(str(line.group(1)).lower())
+    return list(set(recipients))
 
 
 def get_date_from_headers(headers):
