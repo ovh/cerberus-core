@@ -27,7 +27,7 @@ import traceback
 from functools import wraps
 from json import dumps
 
-from django.db import DatabaseError
+from django.db import DatabaseError, InterfaceError, OperationalError
 from flask import Response, request
 from werkzeug.contrib.cache import SimpleCache
 
@@ -130,7 +130,7 @@ def catch_500(func):
     def check_exception(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except DatabaseError as ex:
+        except (DatabaseError, InterfaceError, OperationalError) as ex:
             _reset_database_connection()
             return _throw_exception(ex, 'Database connection lost, please retry')
         except Exception as ex:
