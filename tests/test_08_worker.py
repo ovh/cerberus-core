@@ -96,7 +96,7 @@ class TestWorkers(GlobalTestCase):
         self.assertEqual(1, Report.objects.count())
         report = Report.objects.all()[:1][0]
         self.assertTrue(report.defendant)
-        self.assertEqual('Doe', report.defendant.name)
+        self.assertEqual('Doe', report.defendant.details.name)
         self.assertTrue(report.service)
         self.assertFalse(report.ticket)
         self.assertFalse(report.attachedDocumentRelatedReport.count())

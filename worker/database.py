@@ -31,8 +31,8 @@ from django.core.exceptions import MultipleObjectsReturned, ValidationError
 from django.db import IntegrityError
 from django.db.models import Q, ObjectDoesNotExist
 
-from abuse.models import (Category, Defendant, EmailFilterTag, History,
-                          Provider, Report, Service, Tag, Ticket, UrlStatus,
+from abuse.models import (Category, DefendantRevision, Defendant, EmailFilterTag, History,
+                          DefendantHistory, Provider, Report, Service, Tag, Ticket, UrlStatus,
                           User)
 from adapters.services.kpi.abstract import KPIServiceException
 from factory.factory import ImplementationFactory
@@ -42,8 +42,16 @@ from worker import Logger
 
 BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
 LOCK = 'pg_lock'
-DEFENDANT_FIELDS = [f.name for f in Defendant._meta.fields]
+DEFENDANT_REVISION_FIELDS = [f.name for f in DefendantRevision._meta.fields]
 SERVICE_FIELDS = [f.name for f in Service._meta.fields]
+
+
+class MultipleDefendantWithSameCustomerId(Exception):
+    """
+        Raise if there's multiple defendant with same customerId in DB
+    """
+    def __init__(self, message):
+        super(MultipleDefendantWithSameCustomerId, self).__init__(message)
 
 
 def insert_url_status(item, direct_status, proxied_status, http_code, score):
@@ -117,22 +125,25 @@ def get_or_create_defendant(defendant_infos):
     """
         Create defendant or get it if exists
     """
-    valid_infos = {}
-    for key, value in defendant_infos.iteritems():
-        if key in DEFENDANT_FIELDS:
-            valid_infos[key] = value
+    revision_infos = {k: v for k, v in defendant_infos.iteritems() if k in DEFENDANT_REVISION_FIELDS}
+    customer_id = defendant_infos.pop('customerId')
 
     with advisory_lock(LOCK):
-        tags = Defendant.objects.filter(~Q(tags=None), customerId=valid_infos['customerId']).values_list('tags', flat=True)
         try:
-            defendant, created = Defendant.objects.get_or_create(**valid_infos)
-            if created and tags:
-                defendant.tags = tags
+            revision, created = DefendantRevision.objects.get_or_create(**revision_infos)
+            defendants = Defendant.objects.filter(customerId=customer_id)
+            if len(defendants) > 1:
+                raise MultipleDefendantWithSameCustomerId('for customerId %s' % str(customer_id))
+            if len(defendants):
+                defendant = defendants[0]
+            else:
+                defendant = Defendant.objects.create(customerId=customer_id, details=revision)
+            if created:
+                defendant.revision = revision
                 defendant.save()
-        except MultipleObjectsReturned:
-            defendant = Defendant.objects.filter(customerId=valid_infos['customerId'])[0]
+                DefendantHistory.objects.create(defendant=defendant, revision=revision)
         except ValidationError as ex:
-            raise ValidationError(ex + " " + str(valid_infos))
+            raise ValidationError(ex + " " + str(revision_infos))
     return defendant
 
 

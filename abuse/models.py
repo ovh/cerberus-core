@@ -153,7 +153,7 @@ class Defendant(models.Model):
         by a `abuse.models.Plaintiff` or a `abuse.models.Provider`
     """
     customerId = TruncatedCharField(db_index=True, null=False, max_length=255)
-    revision = models.ForeignKey(DefendantRevision, null=False)
+    details = models.ForeignKey(DefendantRevision, null=False)
     tags = models.ManyToManyField(Tag, null=True)
 
 

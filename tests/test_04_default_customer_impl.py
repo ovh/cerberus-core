@@ -76,6 +76,6 @@ class TestDefaultCustomerDaoImpl(GlobalTestCase):
         """
             Test get_service_infos
         """
-        defendant = self._impl.get_service_infos('123456')
-        self.assertEqual('example', defendant.name)
+        service = self._impl.get_service_infos('123456')
+        self.assertEqual('example', service.name)
         self.assertRaises(CustomerDaoException, lambda: self._impl.get_customer_infos('654321'))

@@ -61,7 +61,7 @@ def check_if_all_down(report=None, last=5):
     if not items:
         return False
 
-    country = report.defendant.country if report.defendant else 'FR'
+    country = report.defendant.details.country if report.defendant else 'FR'
 
     for item in items:
         __update_item_status(item, country)
@@ -246,9 +246,9 @@ def block_url_and_mail(ticket_id=None, report_id=None):
             ImplementationFactory.instance.get_singleton_of('PhishingServiceBase').block_url(item.rawItem, item.report)
 
     database.add_phishing_blocked_tag(report)
-    __send_email(ticket, report.defendant.email, settings.CODENAMES['phishing_blocked'], report.defendant.lang)
+    __send_email(ticket, report.defendant.details.email, settings.CODENAMES['phishing_blocked'], report.defendant.details.lang)
     ticket = Ticket.objects.get(id=ticket.id)
-    database.log_action_on_ticket(ticket, 'send an email to %s' % (ticket.defendant.email))
+    database.log_action_on_ticket(ticket, 'send an email to %s' % (ticket.defendant.details.email))
 
     ticket_snooze = settings.GENERAL_CONFIG['phishing']['wait']
     if not ticket.status == 'WaitingAnswer' and not ticket.snoozeDuration and not ticket.snoozeStart:
@@ -290,7 +290,7 @@ def __close_phishing_ticket(ticket, reason=settings.CODENAMES['fixed_customer'],
     else:
         template = settings.CODENAMES['ticket_closed']
 
-    __send_email(ticket, ticket.defendant.email, template, lang=ticket.defendant.lang)
+    __send_email(ticket, ticket.defendant.details.email, template, lang=ticket.defendant.details.lang)
 
     actions = []
     resolution = Resolution.objects.get(codename=reason)
@@ -329,7 +329,7 @@ def timeout(ticket_id=None):
         Logger.error(unicode('Ticket %d cannot be found in DB. Skipping...' % (ticket_id)))
         return
 
-    if ticket.defendant.isInternal or ticket.defendant.isVIP:
+    if ticket.defendant.details.isInternal or ticket.defendant.details.isVIP:
         Logger.error(unicode("Ticket's defendant %s is internal or VIP, skipping" % (ticket.defendant.customerId)))
         ticket.status = ticket.previousStatus
         ticket.status = 'ActionError'
