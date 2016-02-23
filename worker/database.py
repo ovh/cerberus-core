@@ -139,6 +139,8 @@ def get_or_create_defendant(defendant_infos):
             else:
                 defendant = Defendant.objects.create(customerId=customer_id, details=revision)
             if created:
+                defendant.details = revision
+                defendant.save()
                 DefendantHistory.objects.create(defendant=defendant, revision=revision)
         except ValidationError as ex:
             raise ValidationError(ex + " " + str(revision_infos))

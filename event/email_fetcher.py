@@ -123,7 +123,7 @@ def push_task_to_worker(filename, email):
         'report.create_from_email',
         email_content=email,
         filename=filename,
-        timeout=86000,
+        timeout=3600,
     )
     Logger.info(unicode('Task for email %s successfully created' % (filename)))
 
