@@ -33,17 +33,6 @@ from decorators import (catch_500, json_required, jsonify, perm_required,
 defendant_views = Blueprint('defendant_views', __name__)
 
 
-@defendant_views.route('/api/defendants', methods=['GET'])
-@jsonify
-@token_required
-@catch_500
-def get_defendants():
-    """ Get Abuse defendants
-    """
-    code, resp = DefendantsController.index()
-    return code, resp
-
-
 @defendant_views.route('/api/defendants/top20', methods=['GET'])
 @jsonify
 @token_required

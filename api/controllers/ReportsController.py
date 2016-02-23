@@ -120,8 +120,8 @@ def __generate_request_filters(filters, user):
         'providerEmail': 'provider__email',
         'providerTag': 'provider__tags__name',
         'defendantCustomerId': 'defendant__customerId',
-        'defendantCountry': 'defendant__country',
-        'defendantEmail': 'defendant__email',
+        'defendantCountry': 'defendant__details__country',
+        'defendantEmail': 'defendant__details__email',
         'defendantTag': 'defendant__tags__name',
         'itemRawItem': 'reportItemRelatedReport__rawItem',
         'itemIpReverse': 'reportItemRelatedReport__ipReverse',
@@ -348,7 +348,7 @@ def update_defendant(body, report):
     """
     # Convert defendant object in body to Defendant db object
     try:
-        defendant = DefendantsController.get_or_create(defendant_id=body['defendant']['id'], customer_id=body['defendant']['customerId'])
+        defendant = DefendantsController.get_or_create(customer_id=body['defendant']['customerId'])
         body['defendant'] = defendant.id
         if not defendant:
             return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Defendant not found'}

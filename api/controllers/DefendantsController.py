@@ -24,33 +24,19 @@
 
 from time import mktime, time
 
-from django.core.exceptions import FieldError, MultipleObjectsReturned
+from django.core.exceptions import FieldError
 from django.db import IntegrityError
 from django.db.models import Q, Count, ObjectDoesNotExist
 from django.forms.models import model_to_dict
 
 import GeneralController
-from abuse.models import Category, Defendant, DefendantComment, Stat, Tag
+from abuse.models import (Category, Defendant, DefendantComment, Stat, Tag,
+                          DefendantRevision, DefendantHistory)
 from adapters.dao.customer.abstract import CustomerDaoException
 from factory.factory import ImplementationFactory
 from utils import schema
 
 DEFENDANT_FIELDS = [fld.name for fld in Defendant._meta.fields]
-
-
-def index():
-    """
-        Get all defendants
-    """
-    defendants = Defendant.objects.filter().values('tags', *DEFENDANT_FIELDS)
-
-    for defendant in defendants:
-        if defendant.get('creationDate', None):
-            defendant['creationDate'] = defendant['creationDate'].strftime("%d/%m/%y")
-        tags = Defendant.objects.get(id=defendant['id']).tags.all()
-        defendant['tags'] = [model_to_dict(tag) for tag in tags]
-
-    return 200, [dict(d) for d in defendants]
 
 
 def show(defendant_id):
@@ -62,36 +48,42 @@ def show(defendant_id):
     except (ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404}
 
-    defendant = model_to_dict(defendant)
-    defendant_infos = None
+    defendant_dict = model_to_dict(defendant)
+    defendant_dict.update(model_to_dict(defendant.details))
+    fresh_defendant_infos = None
 
+    # BTW, refresh defendant infos
     try:
-        defendant_infos = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_customer_infos(defendant['customerId'])
-        schema.valid_adapter_response('CustomerDaoBase', 'get_customer_infos', defendant_infos)
+        fresh_defendant_infos = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_customer_infos(defendant.customerId)
+        schema.valid_adapter_response('CustomerDaoBase', 'get_customer_infos', fresh_defendant_infos)
+        fresh_defendant_infos.pop('customerId', None)
+        revision, created = DefendantRevision.objects.get_or_create(**fresh_defendant_infos)
+        if created:
+            defendant.details = revision
+            defendant.save()
+            DefendantHistory.objects.create(defendant=defendant, revision=revision)
+            defendant = Defendant.objects.get(id=defendant_id)
     except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
         pass
 
-    if defendant_infos:
-        for key in ['state', 'email']:
-            if defendant_infos.get(key) and defendant_infos.get(key) != defendant.get(key):
-                defendant[key] = defendant_infos.get(key)
+    defendant_dict.update(model_to_dict(defendant.details))
 
     # Add comments
-    defendant['comments'] = [{
+    defendant_dict['comments'] = [{
         'id': c.comment.id,
         'user': c.comment.user.username,
         'date': mktime(c.comment.date.timetuple()),
         'comment': c.comment.comment
-    } for c in DefendantComment.objects.filter(defendant=defendant_id).order_by('-comment__date')]
+    } for c in DefendantComment.objects.filter(defendant=defendant.id).order_by('-comment__date')]
 
-    if defendant.get('creationDate', None):
-        defendant['creationDate'] = defendant['creationDate'].strftime("%d/%m/%y")
+    if defendant_dict.get('creationDate', None):
+        defendant_dict['creationDate'] = defendant_dict['creationDate'].strftime("%d/%m/%y")
 
     # Add tags
-    tags = Defendant.objects.get(id=defendant['id']).tags.all()
-    defendant['tags'] = [model_to_dict(tag) for tag in tags]
+    tags = Defendant.objects.get(id=defendant.id).tags.all()
+    defendant_dict['tags'] = [model_to_dict(tag) for tag in tags]
 
-    return 200, defendant
+    return 200, defendant_dict
 
 
 def add_tag(defendant_id, body, user):
@@ -139,36 +131,28 @@ def remove_tag(defendant_id, tag_id, user):
     return code, resp
 
 
-def get_or_create(defendant_id=None, customer_id=None):
+def get_or_create(customer_id=None):
     """
         Get or create defendant
         Attach previous tag if updated defendant infos
     """
-    defendant_infos = {}
-    if defendant_id:
-        defendant_infos['id'] = defendant_id
-    if customer_id:
+    if not customer_id:
+        return None
+
+    defendant = None
+    try:
+        defendant = Defendant.objects.get(customerId=customer_id)
+    except (TypeError, ObjectDoesNotExist):
         try:
-            defendant_infos = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_customer_infos(customer_id)
-            schema.valid_adapter_response('CustomerDaoBase', 'get_customer_infos', defendant_infos)
+            revision_infos = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_customer_infos(customer_id)
+            schema.valid_adapter_response('CustomerDaoBase', 'get_customer_infos', revision_infos)
+            revision_infos.pop('customerId', None)
         except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
             return None
 
-        if not defendant_infos:
-            return None
-    try:
-        defendant = Defendant.objects.get(**defendant_infos)
-    except (TypeError, ObjectDoesNotExist):
-        if not customer_id:
-            return None
-        defendant_infos.pop('id', None)
-        tags = Defendant.objects.filter(~Q(tags=None), customerId=customer_id).values_list('tags', flat=True)
-        defendant = Defendant.objects.create(**defendant_infos)
-        if tags:
-            defendant.tags = tags
-            defendant.save()
-    except MultipleObjectsReturned:
-        defendant = Defendant.objects.filter(customerId=customer_id)[0]
+        revision, _ = DefendantRevision.objects.get_or_create(**revision_infos)
+        defendant = Defendant.objects.create(customerId=customer_id, details=revision)
+        DefendantHistory.objects.create(defendant=defendant, revision=revision)
 
     return defendant
 
@@ -184,22 +168,22 @@ def get_defendant_top20(**kwargs):
 
     if filtr:
         res = Defendant.objects.values(
-            'id', 'customerId', 'email'
+            'id', 'customerId', 'details__email'
         ).annotate(
             count=Count('%sDefendant' % (filtr))
         ).filter(
-            ~Q(**{'%sDefendant__status' % (filtr): 'Closed'})
+            ~Q(**{'%sDefendant__details__status' % (filtr): 'Closed'})
         ).order_by('-count')[:20]
         res = [dict(r) for r in res]
     else:
         res = {'report': [], 'ticket': []}
         for filtr in res.keys():
             res[filtr] = Defendant.objects.values(
-                'id', 'customerId', 'email'
+                'id', 'customerId', 'details__email'
             ).annotate(
                 count=Count('%sDefendant' % (filtr))
             ).filter(
-                ~Q(**{'%sDefendant__status' % (filtr): 'Closed'})
+                ~Q(**{'%sDefendant__details__status' % (filtr): 'Closed'})
             ).order_by('-count')[:20]
             res[filtr] = [dict(r) for r in res[filtr]]
 
