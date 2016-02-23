@@ -157,35 +157,21 @@ def get_or_create(customer_id=None):
     return defendant
 
 
-def get_defendant_top20(**kwargs):
+def get_defendant_top20():
     """ Get top 20 defendant with open tickets/reports
     """
-    filtr = None
-    if kwargs.get('filters'):
-        if kwargs['filters'] not in ['ticket', 'report']:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid filter'}
-        filtr = kwargs['filters']
-
-    if filtr:
-        res = Defendant.objects.values(
+    res = {'report': [], 'ticket': []}
+    for filtr in res.keys():
+        res[filtr] = Defendant.objects.values(
             'id', 'customerId', 'details__email'
         ).annotate(
             count=Count('%sDefendant' % (filtr))
         ).filter(
-            ~Q(**{'%sDefendant__details__status' % (filtr): 'Closed'})
+            ~Q(**{'%sDefendant__status__in' % (filtr): ['Archived', 'Closed']})
         ).order_by('-count')[:20]
-        res = [dict(r) for r in res]
-    else:
-        res = {'report': [], 'ticket': []}
-        for filtr in res.keys():
-            res[filtr] = Defendant.objects.values(
-                'id', 'customerId', 'details__email'
-            ).annotate(
-                count=Count('%sDefendant' % (filtr))
-            ).filter(
-                ~Q(**{'%sDefendant__details__status' % (filtr): 'Closed'})
-            ).order_by('-count')[:20]
-            res[filtr] = [dict(r) for r in res[filtr]]
+        for defendant in res[filtr]:
+            defendant['email'] = defendant.pop('details__email')
+        res[filtr] = [dict(r) for r in res[filtr]]
 
     return 200, res
 

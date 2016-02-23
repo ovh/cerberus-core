@@ -40,7 +40,7 @@ defendant_views = Blueprint('defendant_views', __name__)
 def get_defendant_top20():
     """ Get Abuse defendants top20
     """
-    code, resp = DefendantsController.get_defendant_top20(filters=request.args.get('filters'))
+    code, resp = DefendantsController.get_defendant_top20()
     return code, resp
 
 
