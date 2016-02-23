@@ -186,10 +186,9 @@ def __format_report_response(reports):
 
         # Flat foreign models
         if rep.get('defendant'):
-            rep['defendant'] = model_to_dict(Defendant.objects.get(id=rep['defendant']))
-            for key, val in rep['defendant'].iteritems():
-                if isinstance(val, datetime):
-                    rep['defendant'][key] = time.mktime(val.timetuple())
+            defendant = Defendant.objects.get(id=rep['defendant'])
+            rep['defendant'] = model_to_dict(defendant)
+            rep['defendant']['email'] = defendant.details.email
         if rep.get('plaintiff'):
             rep['plaintiff'] = model_to_dict(Plaintiff.objects.get(id=rep['plaintiff']))
         if rep.get('service'):

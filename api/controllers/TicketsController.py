@@ -213,10 +213,9 @@ def __format_ticket_response(tickets):
 
         # Flat foreign models
         if ticket.get('defendant'):
-            ticket['defendant'] = model_to_dict(Defendant.objects.get(id=ticket['defendant']))
-            for key, val in ticket['defendant'].iteritems():
-                if isinstance(val, datetime):
-                    ticket['defendant'][key] = time.mktime(val.timetuple())
+            defendant = Defendant.objects.get(id=ticket['defendant'])
+            ticket['defendant'] = model_to_dict(defendant)
+            ticket['defendant']['email'] = defendant.details.email
         if ticket.get('service'):
             ticket['service'] = model_to_dict(Service.objects.get(id=ticket['service']))
         if ticket.get('treatedBy'):
