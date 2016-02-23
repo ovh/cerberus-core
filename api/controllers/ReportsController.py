@@ -489,7 +489,7 @@ def get_attachment(report_id, attachment_id):
             resp = {
                 'raw': b64encode(raw),
                 'filetype': str(attachment.filetype),
-                'filename': str(attachment.name),
+                'filename': attachment.name.encode('utf-8'),
             }
     except StorageServiceException:
         pass
