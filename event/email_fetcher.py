@@ -62,36 +62,24 @@ USER = settings.EMAIL_FETCHER['login']
 PASS = settings.EMAIL_FETCHER['pass']
 
 
-class FetchEmail(Thread):
+def push_email(uid, email, queue):
     """
-        Pop one email, save content to storage service
-        and push a parsing task
+        Push to Storage Service
+        Add a worker task
     """
-    def __init__(self, uid, email, queue):
-        Thread.__init__(self)
-        self._uid = uid
-        self._email = email
-        self._queue = queue
+    filename = hashlib.sha256(email).hexdigest()
+    Logger.debug(unicode('New mail - UID %s - HASH %s' % (uid, filename)), extra={'hash': filename})
 
-    def run(self):
-        """
-            Fetch email
-            Push to Storage Service
-            Add a worker task
-        """
-        filename = hashlib.sha256(self._email).hexdigest()
-        Logger.debug(unicode('New mail - UID %s - HASH %s' % (self._uid, filename)), extra={'hash': filename})
+    for chset in CHARSETS:
+        try:
+            email = email.decode(chset).encode('utf-8')
+            break
+        except UnicodeError:
+            Logger.debug(str('error while decoding email with charset %s' % (chset,)))
 
-        for chset in CHARSETS:
-            try:
-                self._email = self._email.decode(chset).encode('utf-8')
-                break
-            except UnicodeError:
-                Logger.debug(str('error while decoding email with charset %s' % (chset,)))
-
-        push_to_storage_service(filename, self._email)
-        push_task_to_worker(filename, self._email)
-        self._queue.get(self._uid)
+    push_to_storage_service(filename, email)
+    push_task_to_worker(filename, email)
+    queue.get(uid)
 
 
 def push_to_storage_service(filename, email):
@@ -162,7 +150,7 @@ class EmailFetcher(object):
                 queue.put(uid)
 
             for uid, email in messages.iteritems():
-                thread = FetchEmail(uid, email, queue)
+                thread = Thread(target=push_email, args=(uid, email, queue))
                 threads.append(thread)
                 thread.start()
 
@@ -183,7 +171,7 @@ class EmailFetcher(object):
         _, data = self._imap_conn.uid('search', None, 'ALL')
         messages = data[0].split()
 
-        for message_uid in messages[:20]:
+        for message_uid in messages[:50]:
             _, data = self._imap_conn.uid('fetch', message_uid, '(RFC822)')
             body = data[0][1]
             response[message_uid] = body
