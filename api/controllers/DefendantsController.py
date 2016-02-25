@@ -57,12 +57,14 @@ def show(defendant_id):
         fresh_defendant_infos = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_customer_infos(defendant.customerId)
         schema.valid_adapter_response('CustomerDaoBase', 'get_customer_infos', fresh_defendant_infos)
         fresh_defendant_infos.pop('customerId', None)
-        revision, created = DefendantRevision.objects.get_or_create(**fresh_defendant_infos)
-        if created:
-            defendant.details = revision
-            defendant.save()
+        if DefendantRevision.objects.filter(**fresh_defendant_infos).count():
+            revision = DefendantRevision.objects.filter(**fresh_defendant_infos).last()
+        else:
+            revision = DefendantRevision.objects.create(**fresh_defendant_infos)
             DefendantHistory.objects.create(defendant=defendant, revision=revision)
-            defendant = Defendant.objects.get(id=defendant_id)
+        defendant.details = revision
+        defendant.save()
+        defendant = Defendant.objects.get(id=defendant_id)
     except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
         pass
 
