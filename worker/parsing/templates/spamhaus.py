@@ -34,7 +34,7 @@ TEMPLATE = {
         'ips': {
             'pattern': r'(?:IP\/cidr\s*:\s*)' + regexp.IPV4,
         },
-        'log': {
+        'logs': {
             'pattern': r'(?:is explained at the url\s*:\s*)' + regexp.URL,
         },
         'category': {

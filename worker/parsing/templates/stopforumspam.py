@@ -34,7 +34,7 @@ TEMPLATE = {
         'ips': {
             'pattern': r'IP Number\s*' + regexp.IPV4,
         },
-        'log': {
+        'logs': {
             'pattern': r'Link\s*' + regexp.URL,
         },
         'category': {

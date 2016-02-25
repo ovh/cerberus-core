@@ -37,7 +37,7 @@ TEMPLATE = {
         'urls': {
             'pattern': r'(?:URL\s*:\s*)' + regexp.URL,
         },
-        'log': {
+        'logs': {
             'pattern': r'(?:feedback_url\s*:\s*)' + regexp.URL,
         },
         'category': {

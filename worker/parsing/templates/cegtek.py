@@ -34,7 +34,7 @@ TEMPLATE = {
         'ips': {
             'pattern': r'Unauthorized IP Address\s*:\s*' + regexp.IPV4,
         },
-        'log': {
+        'logs': {
             'pattern': r'Direct Settlement Link\s*:\s*' + regexp.URL,
         },
         'category': {
