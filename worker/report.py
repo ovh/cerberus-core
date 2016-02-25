@@ -38,13 +38,12 @@ from adapters.services.storage.abstract import StorageServiceException
 from factory.factory import ImplementationFactory
 from parsing import regexp
 from parsing.parser import EmailParser
-from utils import schema, utils
+from utils import pglocks, schema, utils
 from worker import Logger
 
 Parser = EmailParser()
 
 
-@transaction.atomic
 def create_from_email(email_content=None, filename=None, lang='EN', send_ack=False):
     """ Create Cerberus report(s) based on email content
 
@@ -60,6 +59,14 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         :raises StorageServiceException: if exception while accessing storage
 
     """
+    # This function use a lock/commit_on_succes on db when creating reports
+    #
+    # Huge block of code are under transaction, why ? Because it's important to
+    # rollback if ANYTHING goes wrong in the report creation workflow.
+    #
+    # But concurrent transactions (with multiple workers), on defendant/service creation
+    # for example, can result in unconsistent data. So a pg_lock is used.
+
     if not email_content:
         Logger.error(unicode('Missing email content'))
         return
@@ -97,7 +104,8 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         if not services:
             created_reports = [__create_without_services(abuse_report, filename)]
         else:
-            created_reports = __create_with_services(abuse_report, filename, services)
+            with pglocks.advisory_lock('cerberus_lock'):
+                created_reports = __create_with_services(abuse_report, filename, services)
     except StorageServiceException as ex:
         Logger.error(unicode('Exception while creating report(s) for mail %s -> %s' % (filename, str(ex))))
         raise StorageServiceException(ex)
@@ -108,7 +116,6 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
 
     # Send acknowledgement to provider (only if send_ack = True and report is attached to a ticket)
     for report in created_reports:
-
         if send_ack and report.ticket:
             try:
                 __send_ack(report, lang=lang)
@@ -118,14 +125,15 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
     Logger.info(unicode('All done successfully for email %s' % (filename)))
 
 
+@transaction.atomic
 def __create_without_services(abuse_report, filename, create_if_trusted=True):
     """
         Create report in Cerberus
 
-        :param `ParsedEmail` abuse_report: The `ParsedEmail`
+        :param `worker.parsing.parser.ParsedEmail` abuse_report: The `worker.parsing.parser.ParsedEmail`
         :param str filename: The filename of the email
-        :rtype: `Report`
-        :returns: The Cerberus `Report`
+        :rtype: `abuse.models.Report`
+        :returns: The Cerberus `abuse.models.Report`
     """
     report = Report.objects.create(**{
         'provider': database.get_or_create_provider(abuse_report.provider),
@@ -166,6 +174,7 @@ def __create_without_services(abuse_report, filename, create_if_trusted=True):
     return report
 
 
+@transaction.atomic
 def __create_with_services(abuse_report, filename, services):
     """
         Create report(s), ticket(s), item(s), defendant(s), service(s), attachment(s) in Cerberus
@@ -174,7 +183,7 @@ def __create_with_services(abuse_report, filename, services):
         :param str filename: The filename of the email
         :param dict services: The identified service(s) (see adapters/dao/customer/abstract.py)
         :rtype: list
-        :returns: The list of Cerberus `Report` created
+        :returns: The list of Cerberus `abuse.models.Report` created
     """
     created_reports = []
 
@@ -237,9 +246,6 @@ def __create_with_services(abuse_report, filename, services):
 
 def __index_report_to_searchservice(parsed_email, filename, reports_id):
     """ Index a report to the SearchService
-
-        :param Object report: A report instance
-        :param list attachments: List of email attachments
     """
     try:
         Logger.debug(unicode('Pushing email %s document to SearchService' % (filename)))
@@ -256,7 +262,7 @@ def __index_report_to_searchservice(parsed_email, filename, reports_id):
 def __send_ack(report, lang=None):
     """ Send acknoledgement to provider
 
-        :param Object report: A report instance
+        :param `abuse.models.Report` report: A `abuse.models.Report` instance
         :param string lang: The langage to use
     """
     if settings.TAGS['no_autoack'] not in report.provider.tags.all().values_list('name', flat=True):
@@ -300,7 +306,7 @@ def __insert_items(report_id, items):
 def __save_attachments(report, attachments):
     """ Upload email attachments to StorageService and keep a reference in Cerberus
 
-        :param object report: A report instance
+        :param `abuse.models.Report` report: A `abuse.models.Report` instance
         :param list attachments: A list of dict {'filename': 'test.pdf', 'data': '...', 'type': 'application/pdf'}
     """
     for attachment in attachments:
@@ -335,7 +341,7 @@ def __add_report_tags(report, recipients):
     """
         Add tags to report based on provider, subject etc ...
 
-        :param `Report` report: The Cerberus `Report` instance
+        :param `abuse.models.Report` report: A `abuse.models.Report` instance
         :param list recipients: The list of recipients
     """
     tags = database.get_tags(report.provider, recipients, report.subject, report.body)
@@ -349,7 +355,7 @@ def __get_attributes_based_on_tags(report, recipients):
     """
         Get specific attributes based on provider's tags
 
-        :param `Report` report: The Cerberus `Report` instance
+        :param `abuse.models.Report` report: A `abuse.models.Report` instance
         :param list recipients: The list of recipients
         :rtype: tuple
         :returns: tuple of bool (autoarchive, attach_only, no_phishtocheck)
@@ -403,9 +409,9 @@ def __do_phishing_workflow(report, no_phishtocheck):
 def __get_ticket_if_answer(abuse_report, filename):
     """ Check if the email is a ticket's answer
 
-        :param dict abuse_report: The abuse report
+        :param `worker.parsing.parser.ParsedEmail` abuse_report: The ParsedEmail
         :return: the corresponding ticket
-        :rtype: object
+        :rtype: `abuse.models.Ticket`
     """
     Logger.debug(
         unicode('New email from %s' % (abuse_report.provider)),
@@ -460,8 +466,8 @@ def __update_ticket_if_answer(ticket, abuse_report, filename):
         - append response to ticket's email thread
         - save attachments
 
-        :param `Ticket` ticket: A Cerberus `Ticket` instance
-        :param `ParsedEmail` abuse_report: The ParsedEmail
+        :param `abuse.models.Ticket` ticket: A Cerberus `abuse.models.Ticket` instance
+        :param `worker.parsing.parser.ParsedEmail` abuse_report: The ParsedEmail
         :param str filename: The filename of the email
     """
     Logger.debug(
