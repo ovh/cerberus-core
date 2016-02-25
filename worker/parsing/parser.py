@@ -38,6 +38,7 @@ from email.Header import decode_header
 from email.Parser import Parser
 from email.utils import mktime_tz, parsedate_tz
 
+from bs4 import BeautifulSoup
 from django.conf import settings
 from django.db.models import ObjectDoesNotExist
 
@@ -490,7 +491,7 @@ def __clean_item(item):
     return item
 
 
-def get_online_logs(parsed_email):
+def get_online_logs(logs):
     """ Try to get online logs and add it to attachments
 
         :param `worker.parsing.parser.ParsedEmail` parsed_email: The parsed email
@@ -499,8 +500,8 @@ def get_online_logs(parsed_email):
     """
     attachment = {'type': 'text/plain', 'filename': 'online_logs.txt'}
     try:
-        response = utils.request_wrapper(parsed_email.logs[0], method='GET', as_json=False)
-        soup = BeautifulSoup(response)
+        response = utils.request_wrapper(logs[0], method='GET', as_json=False)
+        soup = BeautifulSoup(response.text)
         for script in soup(['script', 'style']):
             script.extract()
         text = soup.get_text()
