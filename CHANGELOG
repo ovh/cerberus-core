@@ -1,3 +1,20 @@
+2016-02-26
+
+* fix(readme): cerberus ux img
+* update(parsing): add acns
+* update(parser): add new template
+* fix(parsing): provider's log
+* improve(fetcher): simplify threading
+* improve(worker): move db lock to ensure customerId uniqueness
+* fix(api): defendant infos refresh
+* improve(search): in response, add email in defendant object
+* fix(api): utf-8 attachments
+* add(test): for new defendant models (and fix)
+* fix(api): defendant top20
+* feat(): new defendant model on API
+* feat(*): new defendant models for workers
+* update(model): new classes for revision/history
+
 2016-02-18
 
 * update(): new ux dist
