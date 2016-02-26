@@ -1,3 +1,16 @@
+2016-02-18
+
+* update(): new ux dist
+* feat(ticket): move ticket pause/unpause code from api to worker
+* feat(*): data validation with voluptuous for CustomerDaoBase
+* update(doc)
+* fix(): catch more db connection error exceptions
+* update(phishing): adapters and README
+* fix(parsing): unusual way to arrange "to" recipients
+* fix(): pep8 compliance
+* fix(): SonarQube compliance
+* update(api/views): decorators order
+
 (1.0.0) - 2016-02-12
 
 * Initial commit
