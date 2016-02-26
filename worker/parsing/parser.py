@@ -115,23 +115,24 @@ class EmailParser(object):
         setattr(parsed_email, 'ack', is_email_ack(parsed_email.provider, parsed_email.subject, body))
 
         content_to_parse = parsed_email.subject + '\n' + parsed_email.body
+
+        # Try to identify items/category with templates based on provider/recipients/keyword infos
         emails = [parsed_email.provider]
         if parsed_email.recipients:
             emails = parsed_email.recipients + emails
 
-        if 'x-arf' in content_to_parse.lower():
-            emails += ['x-arf']
+        for keyword in ['acns', 'x-arf']:
+            if keyword in content_to_parse.lower():
+                emails.append(keyword)
+        emails.append('default')
 
-        template = None
+        # Finally order is [recipients, provider, keywords, default]
         for email in emails:
             template = self.get_template(email)
             if template:
                 self.update_parsed_email(parsed_email, content_to_parse, template)
-
-        # If not find any relevant informations, use default template
-        if not parsed_email.urls and not parsed_email.ips:
-            template = self._templates['default']
-            self.update_parsed_email(parsed_email, content_to_parse, template)
+                if any((parsed_email.urls, parsed_email.ips, parsed_email.fqdn)):
+                    break
 
         # Checking if a default category is set for this provider
         try:

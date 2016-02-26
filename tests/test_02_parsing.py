@@ -357,6 +357,7 @@ class TestParser(GlobalTestCase):
             'spamhaus': 'notification@spamhaus.org',
             'bitninja': 'incident-report@bitninja.io',
             'nfoservers': 'ddos-response@nfoservers.com',
+            'lexsicom': 'cert-soc@lexsi.com',
         }
 
         for file_name, email in providers.iteritems():
