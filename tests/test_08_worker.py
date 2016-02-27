@@ -29,7 +29,7 @@ from django.conf import settings
 from mock import patch
 
 from abuse.models import (ServiceAction, ContactedProvider, Defendant, Report,
-                          Resolution, Stat, Ticket, User)
+                          DefendantHistory, Resolution, Stat, Ticket, User)
 from adapters.services.phishing.abstract import PingResponse
 from factory.factory import ImplementationFactory
 from tests import GlobalTestCase
@@ -96,7 +96,7 @@ class TestWorkers(GlobalTestCase):
         self.assertEqual(1, Report.objects.count())
         report = Report.objects.all()[:1][0]
         self.assertTrue(report.defendant)
-        self.assertEqual('Doe', report.defendant.name)
+        self.assertEqual('Doe', report.defendant.details.name)
         self.assertTrue(report.service)
         self.assertFalse(report.ticket)
         self.assertFalse(report.attachedDocumentRelatedReport.count())
@@ -299,3 +299,25 @@ class TestWorkers(GlobalTestCase):
         )
         ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
         self.assertEqual('Closed', ticket.status)
+
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_defendant_details_change(self, mock_rq):
+        """
+            Test defendant revision/history modification
+        """
+        from worker import report
+        mock_rq.return_value = None
+        sample = self._samples['sample2']
+        content = sample.read()
+        report.create_from_email(email_content=content)
+        defendant = Report.objects.all()[:1][0].defendant
+        self.assertEqual(1, DefendantHistory.objects.filter(defendant=defendant).count())
+        self.assertEqual(1, defendant.details.id)
+        defendant.details.name = 'Test'
+        defendant.details.save()
+        defendant.save()
+        report.create_from_email(email_content=content)
+        defendant = Report.objects.all()[:1][0].defendant
+        self.assertEqual(2, DefendantHistory.objects.filter(defendant=defendant).count())
+        self.assertEqual(2, defendant.details.id)
+        self.assertEqual('Doe', defendant.details.name)

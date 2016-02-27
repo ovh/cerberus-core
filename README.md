@@ -4,7 +4,7 @@
 
 This tool aims to help ISP manage abuse on their network by providing
 a set of tools such as an email parser and classification, a ticketing
-system, an API and an UX for operators (with cerberux-ux project).
+system, an API and an UX for operators (with cerberus-ux project).
 
 This tool can be easily expanded by implementing new `python-rq`jobs.
 
@@ -23,13 +23,13 @@ Then, you just need to run it with your abuse email inbox settings (over IMAPS):
 
 and browse `http://127.0.0.1:6060` with default login admin:admin , and voila
 
-![cerberus](https://raw.githubusercontent.com/ovh/cerberus-core/devel/doc/source/cerberus.gif?token=AQVCyzi29XLlKOim8_VoCJjYEWyoY1Gaks5Wx0qqwA%3D%3D)
+![cerberus](https://i.imgur.com/psafNaK.gif)
 
 If something goes wrong, enter the docker and check the logs in `/home/cerberus/cerberus-core/*.log`
 
 ### The manual way ###
 
-To setup cerberus-core, you'll need:
+This project is mainly based on **Django**, **Flask**, **RQ** and **Rq-Scheduler**. To setup cerberus-core, you'll need:
 
  * A Linux environment
  * Python 2.7+
@@ -46,7 +46,7 @@ When all of these requirements are met, you can install the tool:
  2. install python dependencies (`apt-get install python-dev python-pip`)
  3. Run `pip install -r requirements/common.txt` in order to setup dependencies
 
-**Take a look at docker directory** for further informations.
+You should **take a look at docker directory** for further informations.
 
 ## Running ##
 
@@ -81,7 +81,7 @@ A Defendant has suscribed to one or more services(s) (product(s)) your company o
 
 ### Provider ###
 
-The source of the email. It can be direclty the plaintiff or an representative third party.
+The source of the email. It can be directly the plaintiff or an representative third party.
 
 ### Report ###
 
@@ -93,7 +93,7 @@ One or more reports + one Category. It cans bel linked to a defendant/service, s
 
 ### Item ###
         
-Fraudulent item found in an email.
+Fraudulent URL/IP/FQDN found in an email.
 
 ### Action ###
 
@@ -101,9 +101,11 @@ An action on a customer's service (suspend, shutdown, breach of contract).
 
 ## Workflow ##
 
-An email can generates one or more reports (if multiple defendants are identified). Just on if no defendant is identified.
-These reports can be attached to existing ticket or create it if the provider is "trusted".
-So tickets can have multilple reports/providers.
+An email can generates one or more reports (if multiple defendants are identified). Just one if no defendant is identified.
+These reports can be attached to existing ticket or create one if the provider is "trusted".
+So tickets can have multiple reports/providers.
+
+So **not all reports are attached to tickets**. It's important, operators **process tickets, not reports**. Reports add weight to tickets.
 
 All the effective jobs are done with ticket: customer interaction (emails), action on service ...
 

@@ -28,9 +28,10 @@ from time import mktime
 
 from django.conf import settings
 
-from abuse.models import Defendant, Service
+from abuse.models import DefendantRevision, Service
 
-DEFENDANT_FIELDS = [f.name for f in Defendant._meta.fields]
+DEFENDANT_REVISION_FIELDS = [f.name for f in DefendantRevision._meta.fields]
+DEFENDANT_REVISION_FIELDS.extend(('customerId',))
 SERVICE_FIELDS = [f.name for f in Service._meta.fields]
 FORMAT = settings.GENERAL_CONFIG['customer_dao_datetime_format']
 
@@ -202,12 +203,12 @@ class CustomerDaoBase(object):
 
 
 ###
-#     A Defendant : (see abuse.models to customize your DEFENDANT_FIELDS)
+#     A DefendantClass : (see abuse.models to customize your DEFENDANT_REVISION_FIELDS)
 #
 #     {
-#         'email': 'john.doe@example.com',
-#         'spareEmail': 'backup@domain.tld',
 #         'customerId': 'john.doe.123456',  # reference to customer uid in enterprise CRM/DB
+#         'email': 'john.doe@example.com',  <-- REVISION_FIELDS (actual infos in your enterprise CRM/DB)
+#         'spareEmail': 'backup@domain.tld',
 #         'firstname': 'John',
 #         'name': 'Doe',
 #         'country': 'FR',
@@ -238,7 +239,7 @@ class DefendantClass(dict):
             raise AttributeError("No such attribute: " + name)
 
     def __setattr__(self, name, value):
-        if name in DEFENDANT_FIELDS:
+        if name in DEFENDANT_REVISION_FIELDS or name == 'customerId':
             try:  # Try to convert exported (from internal CRM/API/DB) datetime info format to timestamp
                 self[name] = int(mktime(datetime.strptime(value, FORMAT).timetuple()))
             except (TypeError, ValueError):

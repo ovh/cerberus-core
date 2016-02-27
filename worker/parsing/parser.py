@@ -38,7 +38,7 @@ from email.Header import decode_header
 from email.Parser import Parser
 from email.utils import mktime_tz, parsedate_tz
 
-import html2text
+from bs4 import BeautifulSoup
 from django.conf import settings
 from django.db.models import ObjectDoesNotExist
 
@@ -85,10 +85,6 @@ class EmailParser(object):
 
     def __init__(self):
         self._parser = Parser()
-        self._html2text = html2text.HTML2Text()
-        self._html2text.ignore_images = True
-        self._html2text.images_to_alt = True
-        self._html2text.ignore_links = True
         self._templates = self.__load_templates()
 
     def parse(self, content):
@@ -96,7 +92,7 @@ class EmailParser(object):
             Parse a raw email
 
             :param str content: The raw email
-            :rtype: `ParsedEmail`
+            :rtype: `worker.parsing.parser.ParsedEmail`
             :returns: The parsed email
         """
 
@@ -119,23 +115,24 @@ class EmailParser(object):
         setattr(parsed_email, 'ack', is_email_ack(parsed_email.provider, parsed_email.subject, body))
 
         content_to_parse = parsed_email.subject + '\n' + parsed_email.body
+
+        # Try to identify items/category with templates based on provider/recipients/keyword infos
         emails = [parsed_email.provider]
         if parsed_email.recipients:
             emails = parsed_email.recipients + emails
 
-        if 'x-arf' in content_to_parse.lower():
-            emails += ['x-arf']
+        for keyword in ['acns', 'x-arf']:
+            if keyword in content_to_parse.lower():
+                emails.append(keyword)
+        emails.append('default')
 
-        template = None
+        # Finally order is [recipients, provider, keywords, default]
         for email in emails:
             template = self.get_template(email)
             if template:
                 self.update_parsed_email(parsed_email, content_to_parse, template)
-
-        # If not find any relevant informations, use default template
-        if not parsed_email.urls and not parsed_email.ips:
-            template = self._templates['default']
-            self.update_parsed_email(parsed_email, content_to_parse, template)
+                if any((parsed_email.urls, parsed_email.ips, parsed_email.fqdn)):
+                    break
 
         # Checking if a default category is set for this provider
         try:
@@ -159,15 +156,11 @@ class EmailParser(object):
         if parsed_email.category not in CATEGORIES:
             parsed_email.category = DEFAULT_CATEGORY
 
-        # Provider links to online logs/parsed_emails
+        # if Provider provide link to online logs, get it
         if parsed_email.logs:
-            attachment = {'type': 'text/plain', 'filename': 'online_logs.txt'}
-            try:
-                response = utils.request_wrapper(parsed_email.logs[0], method='GET', as_json=False)
-                attachment['data'] = self._html2text.handle(response.text).encode('utf-8')
-                parsed_email.attachments.append(attachment)
-            except utils.RequestException:
-                pass
+            logs = get_online_logs(parsed_email.logs)
+            if logs:
+                parsed_email.attachments.append(logs)
 
         clean_parsed_email_items(parsed_email)
         return parsed_email
@@ -462,7 +455,7 @@ def clean_parsed_email_items(parsed_email):
     """
         Remove extra stuff from Report items
 
-        :param `ParsedEmail` parsed_email: The parsed email
+        :param `worker.parsing.parser.ParsedEmail` parsed_email: The parsed email
     """
     for attrib in [a for a in ['urls', 'ips', 'fqdn'] if getattr(parsed_email, a)]:
         setattr(parsed_email, attrib, [__clean_item(item) for item in getattr(parsed_email, attrib)])
@@ -484,7 +477,7 @@ def clean_parsed_email_items(parsed_email):
 def __clean_item(item):
     """ Remove extra stuff from item
 
-        :param str item: A `ParsedEmail` item
+        :param str item: A `worker.parsing.parser.ParsedEmail` item
         :rtype: str
         :returns: The cleaned item
     """
@@ -497,6 +490,28 @@ def __clean_item(item):
     item = item.replace('[.]', '.')
     item = re.sub(r'([^:])/{2,}', r'\1/', item)
     return item
+
+
+def get_online_logs(logs):
+    """ Try to get online logs and add it to attachments
+
+        :param `worker.parsing.parser.ParsedEmail` parsed_email: The parsed email
+        :rtype: dict
+        :returns: The attachment of None if failed to retreive
+    """
+    attachment = {'type': 'text/plain', 'filename': 'online_logs.txt'}
+    try:
+        response = utils.request_wrapper(logs[0], method='GET', as_json=False)
+        soup = BeautifulSoup(response.text)
+        for script in soup(['script', 'style']):
+            script.extract()
+        text = soup.get_text()
+        text = re.sub('\n\n+', '\n\n', text)
+        text = re.sub('  +', '  ', text)
+        attachment['data'] = text.encode('utf-8')
+        return attachment
+    except (UnicodeDecodeError, UnicodeEncodeError, utils.RequestException):
+        return None
 
 
 def is_email_ack(provider, subject, body):

@@ -125,8 +125,8 @@ def __generate_request_filters(filters, user=None, treated_by=None):
         'reportsTag': 'reportTicket__tags__name',
         'treatedBy': 'treatedBy__username',
         'defendantCustomerId': 'defendant__customerId',
-        'defendantCountry': 'defendant__country',
-        'defendantEmail': 'defendant__email',
+        'defendantCountry': 'defendant__details__country',
+        'defendantEmail': 'defendant__details__email',
         'defendantTag': 'defendant__tags__name',
         'providerEmail': 'reportTicket__provider__email',
         'providerTag': 'reportTicket__provider__tags__name',
@@ -213,10 +213,9 @@ def __format_ticket_response(tickets):
 
         # Flat foreign models
         if ticket.get('defendant'):
-            ticket['defendant'] = model_to_dict(Defendant.objects.get(id=ticket['defendant']))
-            for key, val in ticket['defendant'].iteritems():
-                if isinstance(val, datetime):
-                    ticket['defendant'][key] = time.mktime(val.timetuple())
+            defendant = Defendant.objects.get(id=ticket['defendant'])
+            ticket['defendant'] = model_to_dict(defendant)
+            ticket['defendant']['email'] = defendant.details.email
         if ticket.get('service'):
             ticket['service'] = model_to_dict(Service.objects.get(id=ticket['service']))
         if ticket.get('treatedBy'):
@@ -360,10 +359,7 @@ def create(report, user):
     defendant = None
     if report.defendant:
         try:
-            defendant = DefendantsController.get_or_create(
-                defendant_id=report.defendant.id,
-                customer_id=report.defendant.customerId
-            )
+            defendant = DefendantsController.get_or_create(customer_id=report.defendant.customerId)
             if not defendant:
                 return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Defendant not found'}
         except KeyError:
@@ -592,7 +588,7 @@ def update_ticket_defendant(ticket, defendant):
             report.save()
     else:
         try:
-            defendant_obj = DefendantsController.get_or_create(defendant_id=int(defendant['id']), customer_id=defendant['customerId'])
+            defendant_obj = DefendantsController.get_or_create(customer_id=defendant['customerId'])
             if not defendant_obj:
                 return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Defendant not found'}
         except KeyError:

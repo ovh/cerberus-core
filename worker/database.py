@@ -31,19 +31,25 @@ from django.core.exceptions import MultipleObjectsReturned, ValidationError
 from django.db import IntegrityError
 from django.db.models import Q, ObjectDoesNotExist
 
-from abuse.models import (Category, Defendant, EmailFilterTag, History,
-                          Provider, Report, Service, Tag, Ticket, UrlStatus,
+from abuse.models import (Category, DefendantRevision, Defendant, EmailFilterTag, History,
+                          DefendantHistory, Provider, Report, Service, Tag, Ticket, UrlStatus,
                           User)
 from adapters.services.kpi.abstract import KPIServiceException
 from factory.factory import ImplementationFactory
 from parsing import regexp
-from utils.pglocks import advisory_lock
 from worker import Logger
 
 BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
-LOCK = 'pg_lock'
-DEFENDANT_FIELDS = [f.name for f in Defendant._meta.fields]
+DEFENDANT_REVISION_FIELDS = [f.name for f in DefendantRevision._meta.fields]
 SERVICE_FIELDS = [f.name for f in Service._meta.fields]
+
+
+class MultipleDefendantWithSameCustomerId(Exception):
+    """
+        Raise if there's multiple defendant with same customerId in DB
+    """
+    def __init__(self, message):
+        super(MultipleDefendantWithSameCustomerId, self).__init__(message)
 
 
 def insert_url_status(item, direct_status, proxied_status, http_code, score):
@@ -117,22 +123,29 @@ def get_or_create_defendant(defendant_infos):
     """
         Create defendant or get it if exists
     """
-    valid_infos = {}
-    for key, value in defendant_infos.iteritems():
-        if key in DEFENDANT_FIELDS:
-            valid_infos[key] = value
+    revision_infos = {k: v for k, v in defendant_infos.iteritems() if k in DEFENDANT_REVISION_FIELDS}
+    customer_id = defendant_infos.pop('customerId')
 
-    with advisory_lock(LOCK):
-        tags = Defendant.objects.filter(~Q(tags=None), customerId=valid_infos['customerId']).values_list('tags', flat=True)
-        try:
-            defendant, created = Defendant.objects.get_or_create(**valid_infos)
-            if created and tags:
-                defendant.tags = tags
-                defendant.save()
-        except MultipleObjectsReturned:
-            defendant = Defendant.objects.filter(customerId=valid_infos['customerId'])[0]
-        except ValidationError as ex:
-            raise ValidationError(ex + " " + str(valid_infos))
+    try:
+        created = False
+        if DefendantRevision.objects.filter(**revision_infos).count():
+            revision = DefendantRevision.objects.filter(**revision_infos).last()
+        else:
+            revision = DefendantRevision.objects.create(**revision_infos)
+            created = True
+        defendants = Defendant.objects.filter(customerId=customer_id)
+        if len(defendants) > 1:
+            raise MultipleDefendantWithSameCustomerId('for customerId %s' % str(customer_id))
+        if len(defendants) == 1:
+            defendant = defendants.first()
+        else:
+            defendant = Defendant.objects.create(customerId=customer_id, details=revision)
+        if created:
+            defendant.details = revision
+            defendant.save()
+            DefendantHistory.objects.create(defendant=defendant, revision=revision)
+    except ValidationError as ex:
+        raise ValidationError(ex + " " + str(revision_infos))
     return defendant
 
 
@@ -144,12 +157,10 @@ def get_or_create_service(service_infos):
     for key, value in service_infos.iteritems():
         if key in SERVICE_FIELDS:
             valid_infos[key] = value
-
-    with advisory_lock(LOCK):
-        try:
-            service, _ = Service.objects.get_or_create(**valid_infos)
-        except MultipleObjectsReturned:
-            service = Service.objects.filter(name=valid_infos['name'])[0]
+    try:
+        service, _ = Service.objects.get_or_create(**valid_infos)
+    except MultipleObjectsReturned:
+        service = Service.objects.filter(name=valid_infos['name'])[0]
     return service
 
 
@@ -159,16 +170,15 @@ def search_ticket(defendant, category, service):
     """
     ticket = None
 
-    with advisory_lock(LOCK):
-        tickets = Ticket.objects.filter(
-            ~(Q(status='Closed')),
-            defendant=defendant,
-            category=category,
-            service=service,
-            update=True
-        )
-        if len(tickets):
-            ticket = tickets[0]
+    tickets = Ticket.objects.filter(
+        ~(Q(status='Closed')),
+        defendant=defendant,
+        category=category,
+        service=service,
+        update=True
+    )
+    if len(tickets):
+        ticket = tickets[0]
     return ticket
 
 
@@ -176,36 +186,35 @@ def create_ticket(defendant, category, service, provider, attach_new=True):
     """
         Create ticket
     """
-    with advisory_lock(LOCK):
-        # While publicId is not valid
-        while True:
-            try:
-                public_id = ''.join(random.sample(string.ascii_uppercase.translate(None, 'AEIOUY'), 10))
-                ticket = Ticket.objects.create(
-                    publicId=public_id,
-                    creationDate=datetime.now(),
+    # While publicId is not valid
+    while True:
+        try:
+            public_id = ''.join(random.sample(string.ascii_uppercase.translate(None, 'AEIOUY'), 10))
+            ticket = Ticket.objects.create(
+                publicId=public_id,
+                creationDate=datetime.now(),
+                defendant=defendant,
+                category=category,
+                service=service,
+                update=True,
+            )
+            if all((defendant, service, category)) and attach_new:
+                Report.objects.filter(
+                    service=service,
                     defendant=defendant,
                     category=category,
-                    service=service,
-                    update=True,
+                    ticket=None,
+                    status='New'
+                ).update(
+                    ticket=ticket,
+                    status='Attached',
                 )
-                if all((defendant, service, category)) and attach_new:
-                    Report.objects.filter(
-                        service=service,
-                        defendant=defendant,
-                        category=category,
-                        ticket=None,
-                        status='New'
-                    ).update(
-                        ticket=ticket,
-                        status='Attached',
-                    )
-                ticket.priority = provider.priority if provider.priority else 'Normal'
-                ticket.save()
-                log_new_ticket(ticket)
-                break
-            except (IntegrityError, ValueError):
-                continue
+            ticket.priority = provider.priority if provider.priority else 'Normal'
+            ticket.save()
+            log_new_ticket(ticket)
+            break
+        except (IntegrityError, ValueError):
+            continue
     return ticket
 
 

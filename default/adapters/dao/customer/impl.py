@@ -29,28 +29,28 @@ from adapters.dao.customer.abstract import (CustomerDaoBase,
                                             DefendantClass, ServiceClass)
 from utils import utils
 
-JOHN_DOE = DefendantClass(
-    email='john.doe@example.com',
-    customerId='john.doe.42',
-    firstname='John',
-    name='Doe',
-    city='Paris',
-    country='FR',
-    address='1 rue de la mer',
-    zip='75000',
-    lang='FR',
-    creationDate=datetime.fromtimestamp(1444336416),
-    state='active',
-)
+JOHN_DOE = {
+    'email': 'john.doe@example.com',
+    'customerId': 'john.doe.42',
+    'firstname': 'John',
+    'name': 'Doe',
+    'city': 'Paris',
+    'country': 'FR',
+    'address': '1 rue de la mer',
+    'zip': '75000',
+    'lang': 'FR',
+    'creationDate': datetime.fromtimestamp(1444336416),
+    'state': 'active',
+}
 
-DEFAULT_SERVICE = ServiceClass(
-    serviceId='123456',
-    name='example',
-    domain='www.example.com',
-    componentType='HOSTING',
-    componentSubType='WEB',
-    reference='hosting.pro.2016',
-)
+DEFAULT_SERVICE = {
+    'serviceId': '123456',
+    'name': 'example',
+    'domain': 'www.example.com',
+    'componentType': 'HOSTING',
+    'componentSubType': 'WEB',
+    'reference': 'hosting.pro.2016',
+}
 
 
 class DefaultCustomerDao(CustomerDaoBase):
@@ -73,9 +73,9 @@ class DefaultCustomerDao(CustomerDaoBase):
         if ips:  # Totally absurd example, just keep managed IPs
             ips = [ip_addr for ip_addr in ips if utils.get_ip_network(ip_addr) == 'managed']
             if ips:
-                response = get_default_struct(DEFAULT_SERVICE, JOHN_DOE, ips=ips, urls=[], fqdn=[])
+                response = get_default_struct(ServiceClass(DEFAULT_SERVICE), DefendantClass(**JOHN_DOE), ips=ips, urls=[], fqdn=[])
         elif urls:
-            response = get_default_struct(DEFAULT_SERVICE, JOHN_DOE, ips=[], urls=urls, fqdn=[])
+            response = get_default_struct(ServiceClass(DEFAULT_SERVICE), DefendantClass(**JOHN_DOE), ips=[], urls=urls, fqdn=[])
         return response
 
     @staticmethod
@@ -88,8 +88,8 @@ class DefaultCustomerDao(CustomerDaoBase):
             :rtype: `adapters.dao.customer.abstract.DefendantClass`
             :raises CustomerDaoException: if any error occur
         """
-        if customer_id == JOHN_DOE.customerId:
-            return JOHN_DOE
+        if customer_id == JOHN_DOE['customerId']:
+            return DefendantClass(**JOHN_DOE)
         else:
             raise CustomerDaoException('Customer not found')
 
@@ -103,8 +103,8 @@ class DefaultCustomerDao(CustomerDaoBase):
             :rtype: `adapters.dao.customer.abstract.ServiceClass`
             :raises CustomerDaoException: if any error occur
         """
-        if service_id == DEFAULT_SERVICE.serviceId:
-            return DEFAULT_SERVICE
+        if service_id == DEFAULT_SERVICE['serviceId']:
+            return ServiceClass(**DEFAULT_SERVICE)
         else:
             raise CustomerDaoException('Customer not found')
 

@@ -137,8 +137,8 @@ PARSING = {
 REDIS = {
     'user': os.getenv('REDIS_USER'),
     'password': os.getenv('REDIS_PASS'),
-    'host': os.getenv('REDIS_HOST'),
-    'port': os.getenv('REDIS_PORT'),
+    'host': os.getenv('REDIS_HOST', '127.0.0.1'),
+    'port': os.getenv('REDIS_PORT', 6379),
     'name': os.getenv('REDIS_NAME'),
 }
 

@@ -84,6 +84,6 @@ def valid_adapter_response(base_name, func_name, data):
     try:
         Schemas[base_name][func_name](data)
     except (KeyError, TypeError, ValueError):
-        raise SchemaNotFound('schema not found for %s.%s' % (base_name, func_name))
+        raise SchemaNotFound('Schema not found for %s.%s' % (base_name, func_name))
     except (Invalid, MultipleInvalid):
-        raise InvalidFormatError('given data is not compliant to %s.%s schema' % (base_name, func_name))
+        raise InvalidFormatError('Given data is not compliant to %s.%s schema' % (base_name, func_name))

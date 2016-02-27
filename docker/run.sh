@@ -2,6 +2,7 @@
 
 /etc/init.d/redis-server start
 /etc/init.d/postgresql start
+a2enmod rewrite
 a2enmod proxy
 a2enmod proxy_http
 /etc/init.d/apache2 start

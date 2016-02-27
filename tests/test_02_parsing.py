@@ -350,3 +350,28 @@ class TestParser(GlobalTestCase):
         self.assertIn('abuse@isp.com', parsed_email.recipients)
         self.assertIn('simon.vasseur@corp.ovh.com', parsed_email.recipients)
         self.assertIn('vincent.malguy@corp.ovh.com', parsed_email.recipients)
+
+    def test_specific_template(self):
+
+        providers = {
+            'spamhaus': 'notification@spamhaus.org',
+            'bitninja': 'incident-report@bitninja.io',
+            'nfoservers': 'ddos-response@nfoservers.com',
+            'lexsicom': 'cert-soc@lexsi.com',
+        }
+
+        for file_name, email in providers.iteritems():
+            sample = self.samples[file_name]
+            content = sample.read()
+            headers = self.email_parser.get_headers(content)
+            sender = parser.get_sender_from_headers(headers)
+            template = self.email_parser.get_template(sender)
+            self.assertEqual(self.email_parser._templates[email], template)
+
+            subject = parser.get_subject_from_headers(headers)
+            body, attachments = self.email_parser.get_body_and_attachments(content)
+            content = subject + '\n' + body
+
+            parsed_email = parser.ParsedEmail()
+            self.email_parser.update_parsed_email(parsed_email, content, template=template)
+            self.assertIn('1.2.3.4', parsed_email.ips)

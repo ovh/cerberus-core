@@ -122,14 +122,12 @@ class EmailFilterTag(models.Model):
     tags = models.ManyToManyField(Tag, null=False)
 
 
-class Defendant(models.Model):
+class DefendantRevision(models.Model):
     """
-        A person or entity (one of your customer) accused of something illegal
-        by a `abuse.models.Plaintiff` or a `abuse.models.Provider`
+        Effective detailed informations for a `abuse.models.Defendant`
     """
     email = models.EmailField(db_index=True, null=False, max_length=255)
     spareEmail = models.EmailField(db_index=True, null=True, max_length=255)
-    customerId = TruncatedCharField(db_index=True, null=False, max_length=255)
     firstname = TruncatedCharField(null=True, max_length=255)
     name = TruncatedCharField(null=True, max_length=255)
     city = TruncatedCharField(null=True, max_length=255)
@@ -147,7 +145,25 @@ class Defendant(models.Model):
     isGS = models.BooleanField(null=False, default=False)
     isInternal = models.BooleanField(null=False, default=False)
     state = TruncatedCharField(null=True, max_length=255)
+
+
+class Defendant(models.Model):
+    """
+        A person or entity (one of your customer) accused of something illegal
+        by a `abuse.models.Plaintiff` or a `abuse.models.Provider`
+    """
+    customerId = TruncatedCharField(db_index=True, null=False, max_length=255)
+    details = models.ForeignKey(DefendantRevision, null=False)
     tags = models.ManyToManyField(Tag, null=True)
+
+
+class DefendantHistory(models.Model):
+    """
+        Keep history of `abuse.models.Defendant`/`abuse.models.DefendantRevision` mapping
+    """
+    defendant = models.ForeignKey(Defendant, null=False)
+    revision = models.ForeignKey(DefendantRevision, null=False)
+    date = models.DateTimeField(auto_now=True)
 
 
 class Plaintiff(models.Model):

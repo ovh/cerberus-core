@@ -29,16 +29,16 @@ sys.path.insert(0, PARENTDIR)
 import regexp
 
 TEMPLATE = {
-    'email': 'notification@spamhaus.org',
+    'email': 'incident-report@bitninja.io',
     'regexp': {
         'ips': {
-            'pattern': r'(?:IP\/cidr\s*:\s*)' + regexp.IPV4,
+            'pattern': r'(?:COMING FROM YOUR NETWORK\.\s*\(IP\s*address\s*)' + regexp.IPV4,
         },
         'logs': {
-            'pattern': r'(?:is explained at the url\s*:\s*)' + regexp.URL,
+            'pattern': r'(?:logs about the detected malicious attempt in the incident report\s*:\s*)' + regexp.URL,
         },
         'category': {
-            'pattern': r'(?:Problem\s*:\s*)(.*)',
+            'pattern': r'((.|\n|\r|\t)*)',
             'transform': True
         },
     },
