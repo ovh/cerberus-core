@@ -182,7 +182,7 @@ def search_ticket(defendant, category, service):
     return ticket
 
 
-def create_ticket(defendant, category, service, provider, attach_new=True):
+def create_ticket(defendant, category, service, priority='Normal', attach_new=True):
     """
         Create ticket
     """
@@ -196,9 +196,10 @@ def create_ticket(defendant, category, service, provider, attach_new=True):
                 defendant=defendant,
                 category=category,
                 service=service,
+                priority=priority,
                 update=True,
             )
-            if all((defendant, service, category)) and attach_new:
+            if all((defendant, service, category)) and attach_new:   # Automatically attach similar reports
                 Report.objects.filter(
                     service=service,
                     defendant=defendant,
@@ -209,8 +210,6 @@ def create_ticket(defendant, category, service, provider, attach_new=True):
                     ticket=ticket,
                     status='Attached',
                 )
-            ticket.priority = provider.priority if provider.priority else 'Normal'
-            ticket.save()
             log_new_ticket(ticket)
             break
         except (IntegrityError, ValueError):

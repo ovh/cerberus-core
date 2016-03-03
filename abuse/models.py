@@ -512,9 +512,19 @@ class ItemScreenshotFeedback(models.Model):
 
 class ContactedProvider(models.Model):
     """
-        This models is usefull to save which provider have been contacted
+        This model is usefull to save which provider have been contacted
         for a `abuse.models.Ticket`
     """
     ticket = models.ForeignKey(Ticket, null=False, related_name='contactedProviders')
     provider = models.ForeignKey(Provider, null=False)
     date = models.DateTimeField(auto_now=True, null=False)
+
+
+class ReportThreshold(models.Model):
+    """
+        Automatically creates ticket if there are more than
+        `threshold` new reports created during `interval` for same (category/defendant/service)
+    """
+    category = models.ForeignKey(Category, null=False)
+    threshold = models.IntegerField(null=False)
+    interval = models.IntegerField(null=False)

@@ -22,15 +22,17 @@
     Report functions for worker
 """
 import hashlib
+from collections import Counter
 from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import ObjectDoesNotExist
+from django.db.models import ObjectDoesNotExist, Q
 
 import database
 import phishing
-from abuse.models import AttachedDocument, Report, ReportItem, Ticket
+from abuse.models import (AttachedDocument, Report, ReportItem,
+                          ReportThreshold, Ticket, Defendant, Service)
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.mailer.abstract import MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
@@ -164,7 +166,8 @@ def __create_without_services(abuse_report, filename, create_if_trusted=True):
         report.status = 'Archived'
     else:
         if abuse_report.trusted and create_if_trusted:
-            ticket = database.create_ticket(report.defendant, report.category, report.service, report.provider)
+            priority = report.provider.priority if report.provider.priority else 'Normal'
+            ticket = database.create_ticket(report.defendant, report.category, report.service, priority=priority)
             action = 'create this ticket with report %d from %s (%s ...)'
             database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
             report.ticket = ticket
@@ -532,3 +535,32 @@ def archive_if_timeout(report_id=None):
     report.status = 'Archived'
     report.save()
     Logger.info(unicode('Report %d successfully archived' % (report_id)))
+
+
+def create_ticket_with_threshold():
+    """
+        Automatically creates ticket if there are more than `abuse.models.ReportThreshold.threshold`
+        new reports created during `abuse.models.ReportThreshold.interval` for same (category/defendant/service)
+    """
+    log_msg = 'threshold : Checking report threshold for category %s, threshold %d, interval %d seconds'
+
+    for threshold in ReportThreshold.objects.all():
+        Logger.info(unicode(log_msg % (threshold.category.name, threshold.threshold, threshold.interval)))
+        reports = Report.objects.filter(
+            ~Q(defendant=None),
+            ~Q(service=None),
+            category=threshold.category,
+            status='New'
+        ).values_list(
+            'defendant__customerId',
+            'service__name'
+        )
+        reports = Counter(reports)
+        for data, count in reports.iteritems():
+            nb_tickets = Ticket.objects.filter(~Q(status='Closed'), defendant__customerId=data[0], service__name=data[1]).count()
+            if count > threshold.threshold and not nb_tickets:
+                Logger.info(unicode('threshold: Tuple %s match, creating ticket' % str(data)))
+                service = Service.objects.filter(name=data[1]).last()
+                defendant = Defendant.objects.filter(customerId=data[0]).last()
+                ticket = database.create_ticket(defendant, threshold.category, service)
+                Logger.info(unicode('threshold: ticket %s has been created' % (ticket.id)))

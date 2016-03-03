@@ -165,7 +165,8 @@ def __create_ticket(report, denied_by):
     """
         Create ticket
     """
-    ticket = database.create_ticket(report.defendant, report.category, report.service, report.provider, attach_new=False)
+    priority = report.provider.priority if report.provider.priority else 'Normal'
+    ticket = database.create_ticket(report.defendant, report.category, report.service, priority=priority, attach_new=False)
     action = 'create this ticket with report %d from %s (%s ...)'
     database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
 
