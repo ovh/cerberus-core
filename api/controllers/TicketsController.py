@@ -842,12 +842,12 @@ def bulk_add(body, user, method):
     """
         Add or update infos for multiple tickets
     """
-    code, resp = __check_bulk_conformance(body, user, method)
+    code, tickets = __check_bulk_conformance(body, user, method)
     if code != 200:
         transaction.rollback()
-        return code, resp
+        return code, tickets
 
-    for ticket in resp:
+    for ticket in tickets:
         assign_if_not(ticket, user)
 
     # Update status
@@ -860,7 +860,7 @@ def bulk_add(body, user, method):
         valid_fields = ['pauseDuration', 'resolution']
         properties = {k: v for k, v in body['properties'].iteritems() if k in valid_fields}
 
-        for ticket in resp:
+        for ticket in tickets:
             code, resp = update_status(ticket.id, body['properties']['status'], properties, user)
             if code != 200:
                 transaction.rollback()
@@ -868,7 +868,7 @@ def bulk_add(body, user, method):
 
     # Update tags
     if 'tags' in body['properties'] and isinstance(body['properties']['tags'], list):
-        for ticket in resp:
+        for ticket in tickets:
             for tag in body['properties']['tags']:
                 code, resp = add_tag(ticket.id, tag, user)
                 if code != 200:
@@ -880,7 +880,7 @@ def bulk_add(body, user, method):
     valid_fields.extend(['moderation', 'protected', 'escalated', 'update', 'pauseDuration'])
     properties = {k: v for k, v in body['properties'].iteritems() if k in valid_fields}
 
-    for ticket in resp:
+    for ticket in tickets:
         code, resp = update(ticket.id, properties, user)
         if code != 200:
             transaction.rollback()
@@ -895,15 +895,15 @@ def bulk_delete(body, user, method):
     """
         Delete infos from multiple tickets
     """
-    code, resp = __check_bulk_conformance(body, user, method)
+    code, tickets = __check_bulk_conformance(body, user, method)
     if code != 200:
         transaction.rollback()
-        return code, resp
+        return code, tickets
 
     # Update tags
     try:
         if 'tags' in body['properties'] and isinstance(body['properties']['tags'], list):
-            for ticket in resp:
+            for ticket in tickets:
                 for tag in body['properties']['tags']:
                     code, resp = remove_tag(ticket.id, tag['id'], user)
                     if code != 200:
