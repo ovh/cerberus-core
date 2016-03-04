@@ -273,7 +273,7 @@ def __close_phishing_ticket(ticket, reason=settings.CODENAMES['fixed_customer'],
     """
         Close ticket and add autoclosed Tag
     """
-    # Send email to already contacted Provider(s)
+    # Send "case closed" email to already contacted Provider(s)
     providers_emails = ContactedProvider.objects.filter(ticket_id=ticket.id).values_list('provider__email', flat=True).distinct()
 
     for email in providers_emails:
@@ -291,6 +291,7 @@ def __close_phishing_ticket(ticket, reason=settings.CODENAMES['fixed_customer'],
     else:
         template = settings.CODENAMES['ticket_closed']
 
+    # Send "ticket closed" email to defendant
     __send_email(ticket, ticket.defendant.details.email, template, lang=ticket.defendant.details.lang)
 
     actions = []
@@ -350,8 +351,10 @@ def timeout(ticket_id=None):
         Logger.error(unicode('Ticket %d service %s: action not found, exiting ...' % (ticket_id, ticket.service.componentType)))
         return
 
+    # Maybe customer fixed, closing ticket
     if is_all_down_for_ticket(ticket):
-        Logger.info(unicode('All items are down for ticket %d, Skipping ..' % (ticket_id)))
+        Logger.info(unicode('All items are down for ticket %d, closing ticket' % (ticket_id)))
+        __close_phishing_ticket(ticket, reason=settings.CODENAMES['fixed_by_customer'], service_blocked=False)
         return
 
     Logger.info(unicode('Executing action %s for ticket %d' % (action.name, ticket_id)))
