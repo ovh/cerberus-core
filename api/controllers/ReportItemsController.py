@@ -89,11 +89,12 @@ def get_items_infos(**kwargs):
 
     where = reduce(operator.and_, where)
 
+    # If backend is PostgreSQL, a simple distinct('rawItem') do the job
     try:
-        count = ReportItem.objects.filter(where, report__in=kwargs['reps']).distinct().count()
-        items = ReportItem.objects.filter(where, report__in=kwargs['reps']).distinct()
-        items = items[(offset - 1) * limit:limit * offset]
-        len(items)  # Force django to evaluate query now
+        count = ReportItem.objects.filter(where, report__in=kwargs['reps']).values_list('rawItem', flat=True).distinct().count()
+        raw_items = ReportItem.objects.filter(where, report__in=kwargs['reps']).values_list('rawItem', flat=True).distinct()
+        raw_items = raw_items[(offset - 1) * limit:limit * offset]
+        items = [ReportItem.objects.filter(where, report__in=kwargs['reps'], rawItem=raw).last() for raw in raw_items]
     except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex)}
 
