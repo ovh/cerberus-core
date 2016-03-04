@@ -48,8 +48,6 @@ def show(defendant_id):
     except (ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404}
 
-    defendant_dict = model_to_dict(defendant)
-    defendant_dict.update(model_to_dict(defendant.details))
     fresh_defendant_infos = None
 
     # BTW, refresh defendant infos
@@ -68,7 +66,11 @@ def show(defendant_id):
     except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
         pass
 
-    defendant_dict.update(model_to_dict(defendant.details))
+    # Flat details
+    defendant_dict = model_to_dict(defendant)
+    details = model_to_dict(defendant.details)
+    details.pop('id')  # Else override defendant id with details id ....
+    defendant_dict.update(details)
 
     # Add comments
     defendant_dict['comments'] = [{
