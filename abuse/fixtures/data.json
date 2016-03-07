@@ -243,6 +243,13 @@
 },
 {
   "fields": {
+    "codename": "forward_acns"
+  },
+  "model": "abuse.resolution",
+  "pk": 20
+},
+{
+  "fields": {
     "name": "Read-only",
     "actions": [
       59
@@ -308,7 +315,7 @@
 {
   "fields": {
     "lang": "EN",
-    "body": "Hello,\n\nThank you for taking the time to contact the {{ brand }} Abuse Team, this message confirms that we did receive your report, and created the Abuse Ticket #{{ publicId }} to reference it.\n\n{{ brand }} conducts its activities in conformity with applicable laws, we forbid any use of our products that don't conform to our general terms and conditions of services.\n\nIt's important to note that most of our services are rented \"unmanaged\" to our customers. This means that we only have physical access to the server and cannot access its content (no root, administrator, or user access). We are technically unable to modify or delete content, or making an abusive behavior stop by intervening directly on the server, as it is not managed by us.\n\nWe will however transmit the technical information of your report to the customer managing the infrastructure concerned, and we will follow this ticket to its resolution.\n\nCordially,\n\nThe {{ brand }} Abuse Team.",
+    "body": "Hello,\n\nThank you for taking the time to contact the {{ brand }} Abuse Team, this message confirms that we did receive your report ...",
     "name": "[plaintiff] ACK_REPORT_RECEIVED",
     "codename": "ack_report_received",
     "subject": "[Abuse #{{ publicId }}]",
@@ -320,7 +327,7 @@
 {
   "fields": {
     "lang": "EN",
-    "body": "Hello,\n\nIt has been brought to our attention that you're hosting a phishing webpage on your service {{ service }}.\n\nA malicious person has probably taken control of all or part of your website, and injected this page without your knowledge.\nThis kind of webpage is made to steal personal information from victims by impersonating well-known legitimage websites (such as banks, e-commerce websites or others).\n\nPlease delete these phishing webpages and secure your service (CMS update, system update, password change) to ensure it cannot be hacked again.\n\nWhen you have fixed the problem, please answer to this e-mail address.\n\nCordially,\n\nThe {{ brand }} Abuse team.",
+    "body": "Hello,\n\nIt has been brought to our attention that you're hosting a phishing webpage on your service {{ service }} ...",
     "name": "[customer-auto] PHISHING_BLOCKED",
     "codename": "phishing_blocked",
     "subject": "[Abuse #{{ publicId }}]",
@@ -344,7 +351,7 @@
 {
   "fields": {
     "lang": "EN",
-    "body": "Hello,\n\nDue to the absence of answer from your side, concerning the hosting of one or several phishing webpages that were previously reported to you on your service {{ service }}, we are forced to put your service offline to stop the abuse.\n\nIMPORTANT: please delete these phishing webpages AND secure your service (CMS update, system update, password change, etc.).\n\nIt is crucial to NOT put your service back online (using your customer panel) before ensuring that it's properly secured, otherwise it'll be hacked again and the abuse will come back, in which case we could be forced to take additional measures to keep the {{ brand }} network safe.\n\nCordially,\n\nThe {{ brand }} Abuse team.",
+    "body": "Hello,\n\nDue to the absence of answer from your side, concerning the hosting of one or several phishing webpages that were previously reported ...",
     "name": "[customer-auto] PHISHING_SERVICE_BLOCKED",
     "codename": "phishing_service_blocked",
     "subject": "[Abuse #{{ publicId }}]",
@@ -352,6 +359,18 @@
   },
   "model": "abuse.mailtemplate",
   "pk": 51
+},
+{
+  "fields": {
+    "lang": "EN",
+    "body": "First Alert",
+    "name": "[customer-auto] FIRST_ALERT",
+    "codename": "first_alert",
+    "subject": "[Abuse #{{ publicId }}]",
+    "recipientType": "Defendant"
+  },
+  "model": "abuse.mailtemplate",
+  "pk": 52
 },
 {
   "fields": {
