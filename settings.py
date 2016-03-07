@@ -94,9 +94,11 @@ TAGS = {
 CODENAMES = {
     'ack_received': 'ack_report_received',
     'case_closed': 'case_closed',
-    'no_more_content': 'no_more_content',
+    'first_alert': 'first_alert',
     'fixed_customer': 'fixed_by_customer',
     'fixed': 'fixed_by_isp',
+    'forward_acns': 'forward_acns',
+    'no_more_content': 'no_more_content',
     'phishing_blocked': 'phishing_blocked',
     'phishing_service_blocked': 'phishing_service_blocked',
     'ticket_closed': 'ticket_closed',

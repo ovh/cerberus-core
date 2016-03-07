@@ -28,7 +28,7 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from mock import patch
 
-from abuse.models import (ServiceAction, ContactedProvider, Defendant, Report,
+from abuse.models import (ServiceAction, ContactedProvider, Defendant, Report, Provider,
                           ReportThreshold, DefendantHistory, Resolution, Stat, Ticket, User)
 from adapters.services.phishing.abstract import PingResponse
 from factory.factory import ImplementationFactory
@@ -321,6 +321,21 @@ class TestWorkers(GlobalTestCase):
         self.assertEqual(2, DefendantHistory.objects.filter(defendant=defendant).count())
         self.assertEqual(2, defendant.details.id)
         self.assertEqual('Doe', defendant.details.name)
+
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_acns_specific_workflow(self, mock_rq):
+        """
+            Test copyright/acns specific workflow
+        """
+        Provider.objects.create(email='broadgreenpictures@copyright-compliance.com', trusted=True)
+        from worker import report
+        mock_rq.return_value = None
+        sample = self._samples['acns']
+        content = sample.read()
+        report.create_from_email(email_content=content)
+        cerberus_report = Report.objects.all()[:1][0]
+        self.assertEqual('Archived', cerberus_report.status)
+        self.assertEqual('Closed', cerberus_report.ticket.status)
 
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
     def test_report_threshold(self, mock_rq):

@@ -31,8 +31,8 @@ from django.db.models import ObjectDoesNotExist, Q
 
 import database
 import phishing
-from abuse.models import (AttachedDocument, Report, ReportItem,
-                          ReportThreshold, Ticket, Defendant, Service)
+from abuse.models import (AttachedDocument, Report, ReportItem, Resolution,
+                          Proof, ReportThreshold, Ticket, Defendant, Service)
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.mailer.abstract import MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
@@ -63,7 +63,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
     """
     # This function use a lock/commit_on_succes on db when creating reports
     #
-    # Huge block of code are under transaction, why ? Because it's important to
+    # Huge blocks of code are under transaction because it's important to
     # rollback if ANYTHING goes wrong in the report creation workflow.
     #
     # But concurrent transactions (with multiple workers), on defendant/service creation
@@ -205,6 +205,8 @@ def __create_with_services(abuse_report, filename, services):
 
         _, attach_only, no_phishtocheck = __get_attributes_based_on_tags(report, abuse_report.recipients)
         __insert_items(report.id, data['items'])
+
+        # The provider or the way we received the report
         trusted = True if report.provider.trusted or abuse_report.trusted else False
 
         # Looking for existing open ticket for same (service, defendant, category)
@@ -217,11 +219,18 @@ def __create_with_services(abuse_report, filename, services):
 
         # Phishing specific workflow
         if report.category.name.lower() == 'phishing' and is_there_some_urls:
+            Logger.debug(unicode('New phishing report %d' % (report.id)))
             is_workflow_applied = __do_phishing_workflow(report, no_phishtocheck)
             if is_workflow_applied:
                 continue
 
-        # If attach report only and no ticket found
+        # ACNS specific workflow
+        if trusted and report.category.name.lower() == 'copyright' and 'www.acns.net/ACNS' in report.body:
+            Logger.debug(unicode('New ACNS/copyright report %d, applying specific workflow' % (report.id)))
+            __do_copyright_acns_workflow(report)
+            continue
+
+        # If attach report only and no ticket found, continue
         if not ticket and attach_only:
             report.status = 'Archived'
             report.save()
@@ -235,6 +244,7 @@ def __create_with_services(abuse_report, filename, services):
         # If attached to new or exising
         if ticket:
 
+            # Block phishing url signaled by trusted provider
             if report.provider.apiKey and report.category.name.lower() == 'phishing' and is_there_some_urls:
                 phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
 
@@ -407,6 +417,59 @@ def __do_phishing_workflow(report, no_phishtocheck):
         return True
 
     return False
+
+
+def __do_copyright_acns_workflow(report):
+    """
+        Apply specific workflow for copyright-acns report
+    """
+    # Create ticket
+    ticket = database.create_ticket(report.defendant, report.category, report.service, attach_new=False)
+    database.log_action_on_ticket(
+        ticket,
+        'create this ticket with report %d from %s (%s ...)' % (report.id, report.provider.email, report.subject[:30])
+    )
+
+    # Add proof
+    Proof.objects.create(
+        content=regexp.ACNS_PROOF.search(report.body).group(),
+        ticket=ticket,
+    )
+
+    # Send emails to provider/defendant (template, email, lang)
+    templates = [
+        (settings.CODENAMES['ack_received'], report.provider.email, 'EN'),
+        (settings.CODENAMES['first_alert'], report.defendant.details.email, report.defendant.details.lang),
+    ]
+    for codename, email, lang in templates:
+        prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+            ticket,
+            codename,
+            lang=lang,
+            acknowledged_report=report.id,
+        )
+        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
+            ticket,
+            email,
+            prefetched_email.subject,
+            prefetched_email.body
+        )
+        database.log_action_on_ticket(ticket, 'send an email to %s' % (email))
+
+    # Close ticket
+    resolution = Resolution.objects.get(codename=settings.CODENAMES['forward_acns'])
+    ticket.resolution = resolution
+    ticket.previousStatus = ticket.status
+    ticket.status = 'Closed'
+    ticket.update = False
+    ticket.save()
+    database.log_action_on_ticket(
+        ticket,
+        'change status from %s to %s, reason : %s' % (ticket.previousStatus, ticket.status, resolution.codename)
+    )
+    report.ticket = ticket
+    report.status = 'Archived'
+    report.save()
 
 
 def __get_ticket_if_answer(abuse_report, filename):

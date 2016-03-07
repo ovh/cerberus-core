@@ -82,6 +82,13 @@ class GlobalTestCase(TestCase):
         )
 
         MailTemplate.objects.create(
+            codename='first_alert',
+            name='First Alert',
+            subject='First Alert',
+            body='First Alert',
+        )
+
+        MailTemplate.objects.create(
             codename='case_closed',
             name='Case closed',
             subject='Case closed',
@@ -100,6 +107,7 @@ class GlobalTestCase(TestCase):
 
         Resolution.objects.create(codename='no_more_content')
         Resolution.objects.create(codename='fixed')
+        Resolution.objects.create(codename='forward_acns')
 
         user = User.objects.create(username=settings.GENERAL_CONFIG['bot_user'])
         user.is_superuser = True
