@@ -29,7 +29,7 @@ from django.conf import settings
 from mock import patch
 
 from abuse.models import (ServiceAction, ContactedProvider, Defendant, Report,
-                          DefendantHistory, Resolution, Stat, Ticket, User)
+                          ReportThreshold, DefendantHistory, Resolution, Stat, Ticket, User)
 from adapters.services.phishing.abstract import PingResponse
 from factory.factory import ImplementationFactory
 from tests import GlobalTestCase
@@ -321,3 +321,20 @@ class TestWorkers(GlobalTestCase):
         self.assertEqual(2, DefendantHistory.objects.filter(defendant=defendant).count())
         self.assertEqual(2, defendant.details.id)
         self.assertEqual('Doe', defendant.details.name)
+
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_report_threshold(self, mock_rq):
+        """
+        """
+        from worker import report
+        mock_rq.return_value = None
+        sample = self._samples['sample2']
+        content = sample.read()
+        report.create_from_email(email_content=content)
+        report.create_ticket_with_threshold()
+        cerberus_report = Report.objects.all()[:1][0]
+        self.assertEqual('New', cerberus_report.status)
+        ReportThreshold.objects.all().update(threshold=1)
+        report.create_ticket_with_threshold()
+        cerberus_report = Report.objects.all()[:1][0]
+        self.assertEqual('Attached', cerberus_report.status)

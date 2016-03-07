@@ -263,5 +263,56 @@ class ApiTestCase(GlobalTestCase):
         )
         self.assertEqual(response.status_code, 200)
 
+    def test_admin_threshold(self):
+
+        tester = APP.test_client(self)
+        response = tester.post(
+            '/api/auth',
+            data=json.dumps({'name': settings.GENERAL_CONFIG['bot_user'], 'password': 'test'}),
+            headers={'content-type': 'application/json'},
+        )
+        token = json.loads(response.get_data())['token']
+
+        response = tester.get(
+            '/api/admin/threshold',
+            headers={'X-API-TOKEN': token},
+        )
+        response = json.loads(response.get_data())
+        self.assertEqual(len(response), 1)
+
+        response = tester.get(
+            '/api/admin/threshold/1',
+            headers={'X-API-TOKEN': token},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        response = tester.get(
+            '/api/admin/threshold/1337',
+            headers={'X-API-TOKEN': token},
+        )
+        self.assertEqual(response.status_code, 404)
+
+        response = tester.put(
+            '/api/admin/threshold/1',
+            data=json.dumps({'category': 'Spam', 'interval': 15, 'threshold': 15}),
+            headers={
+                'content-type': 'application/json',
+                'X-API-TOKEN': token
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        response = json.loads(response.get_data())
+        self.assertEqual(15, response['interval'])
+
+        response = tester.post(
+            '/api/admin/threshold',
+            data=json.dumps({'category': 'Spam', 'interval': 15, 'threshold': 15}),
+            headers={
+                'content-type': 'application/json',
+                'X-API-TOKEN': token
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+
     def test_clean(self):
         shutil.rmtree(settings.GENERAL_CONFIG['email_storage_dir'], ignore_errors=True)

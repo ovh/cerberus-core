@@ -52,6 +52,7 @@ from views.reports import report_views
 from views.reputations import reputation_views
 from views.tags import tag_views
 from views.tickets import ticket_views
+from views.thresholds import threshold_views
 
 Logger = logger.get_logger(__name__)
 
@@ -68,6 +69,7 @@ APP.register_blueprint(report_views)
 APP.register_blueprint(reputation_views)
 APP.register_blueprint(tag_views)
 APP.register_blueprint(ticket_views)
+APP.register_blueprint(threshold_views)
 
 
 @APP.before_request

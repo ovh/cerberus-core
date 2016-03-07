@@ -21,7 +21,8 @@
 import os
 import shutil
 
-from abuse.models import AbusePermission, ServiceAction, Category, MailTemplate, User, Profile, Resolution, Tag
+from abuse.models import (AbusePermission, ServiceAction, Category, MailTemplate,
+                          ReportThreshold, User, Profile, Resolution, Tag)
 from django.conf import settings
 from django.test import TestCase
 
@@ -44,13 +45,19 @@ class GlobalTestCase(TestCase):
         Category.objects.create(**{'description': u'Network Attack', 'name': u'Network Attack', 'label': u'Network Attack'})
         Category.objects.create(**{'description': u'Other', 'name': u'Other', 'label': u'Other'})
         Category.objects.create(**{'description': u'Phishing', 'name': u'Phishing', 'label': u'Phishing'})
-        Category.objects.create(**{'description': u'Spam', 'name': u'Spam', 'label': u'Spam'})
+        spam_category = Category.objects.create(**{'description': u'Spam', 'name': u'Spam', 'label': u'Spam'})
         Category.objects.create(**{'description': u'Copyright', 'name': u'Copyright', 'label': u'Copyright'})
 
         action = ServiceAction.objects.create(
             name='default_action',
             module='VPS',
             level='1',
+        )
+
+        ReportThreshold.objects.create(
+            category=spam_category,
+            threshold=100,
+            interval=3600,
         )
 
         MailTemplate.objects.create(

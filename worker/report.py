@@ -544,23 +544,36 @@ def create_ticket_with_threshold():
     """
     log_msg = 'threshold : Checking report threshold for category %s, threshold %d, interval %d seconds'
 
-    for threshold in ReportThreshold.objects.all():
-        Logger.info(unicode(log_msg % (threshold.category.name, threshold.threshold, threshold.interval)))
-        reports = Report.objects.filter(
-            ~Q(defendant=None),
-            ~Q(service=None),
-            category=threshold.category,
-            status='New'
-        ).values_list(
-            'defendant__customerId',
-            'service__name'
-        )
+    for thres in ReportThreshold.objects.all():
+        Logger.info(unicode(log_msg % (thres.category.name, thres.threshold, thres.interval)))
+        reports = __get_threshold_reports(thres.category)
         reports = Counter(reports)
         for data, count in reports.iteritems():
-            nb_tickets = Ticket.objects.filter(~Q(status='Closed'), defendant__customerId=data[0], service__name=data[1]).count()
-            if count > threshold.threshold and not nb_tickets:
-                Logger.info(unicode('threshold: Tuple %s match, creating ticket' % str(data)))
+            nb_tickets = Ticket.objects.filter(
+                ~Q(status='Closed'),
+                defendant__customerId=data[0],
+                service__name=data[1]
+            ).count()
+            if count >= thres.threshold and not nb_tickets:
                 service = Service.objects.filter(name=data[1]).last()
                 defendant = Defendant.objects.filter(customerId=data[0]).last()
-                ticket = database.create_ticket(defendant, threshold.category, service)
-                Logger.info(unicode('threshold: ticket %s has been created' % (ticket.id)))
+                ticket = database.create_ticket(defendant, thres.category, service)
+                database.log_action_on_ticket(
+                    ticket,
+                    'create this ticket with threshold (%s reports in %s seconds)' % (thres.threshold, thres.interval)
+                )
+                Logger.info(unicode('threshold: tuple %s match, ticket %s has been created' % (str(data), ticket.id)))
+
+
+def __get_threshold_reports(category):
+
+    reports = Report.objects.filter(
+        ~Q(defendant=None),
+        ~Q(service=None),
+        category=category,
+        status='New'
+    ).values_list(
+        'defendant__customerId',
+        'service__name'
+    )
+    return reports
