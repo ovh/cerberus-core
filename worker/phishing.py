@@ -354,7 +354,7 @@ def timeout(ticket_id=None):
     # Maybe customer fixed, closing ticket
     if is_all_down_for_ticket(ticket):
         Logger.info(unicode('All items are down for ticket %d, closing ticket' % (ticket_id)))
-        __close_phishing_ticket(ticket, reason=settings.CODENAMES['fixed_by_customer'], service_blocked=False)
+        __close_phishing_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False)
         return
 
     Logger.info(unicode('Executing action %s for ticket %d' % (action.name, ticket_id)))
