@@ -35,7 +35,7 @@ TEMPLATE = {
             'pattern': r'(?:(?:Adresse\s*IP|IP address\(es\))\s*:\s*)' + regexp.IPV4,
         },
         'urls': {
-            'pattern': r'(?:Site concern.*|at the following URL)\s*:\s*' + regexp.URL,
+            'pattern': r'(?:contenus\s*manifestement\s*frauduleux\s*sur\s*|Site\s*concern.*\s*:\s*|at the following URL\s*:\s*)' + regexp.URL,
         },
         'category': {
             'pattern': r'((.|\n|\r|\t)*)',
