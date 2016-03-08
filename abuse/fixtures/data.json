@@ -374,6 +374,18 @@
 },
 {
   "fields": {
+    "lang": "EN",
+    "body": "Spamhaus delist request",
+    "name": "[3rdparty] SPAMHAUS_DELIST",
+    "codename": "spamhaus_delist",
+    "subject": "Subject: ===SBL_Required_here===",
+    "recipientType": "Other"
+  },
+  "model": "abuse.mailtemplate",
+  "pk": 53
+},
+{
+  "fields": {
     "codename": "resolution",
     "value": 12
   },
@@ -427,6 +439,14 @@
   },
   "model": "abuse.ticketactionparams",
   "pk": 31
+},
+{
+   "fields": {
+      "codename": "pauseDuration",
+      "value": 43200
+   },
+   "model": "abuse.ticketactionparams",
+   "pk": 33
 },
 {
   "fields": {
@@ -600,6 +620,16 @@
   "pk": 89
 },
 {
+   "fields": {
+      "action": 7,
+      "params": [
+         33
+      ]
+   },
+   "model": "abuse.ticketworkflowpresetconfig",
+   "pk": 91
+},
+{
   "fields": {
     "orderId": 2,
     "templates": [],
@@ -675,6 +705,20 @@
   },
   "model": "abuse.ticketworkflowpreset",
   "pk": 18
+},
+{
+   "fields": {
+      "orderId": 6,
+      "templates": [
+         53
+      ],
+      "name": "SBL Removal",
+      "codename": "sbl_removal",
+      "config": 91,
+      "groupId": 0
+   },
+   "model": "abuse.ticketworkflowpreset",
+   "pk": 19
 },
 {
   "fields": {
