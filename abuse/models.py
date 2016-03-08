@@ -443,7 +443,7 @@ class Proof(models.Model):
        Proof are elements validating the infrigment
     """
     ticket = models.ForeignKey(Ticket, null=False, related_name='proof')
-    content = TruncatedCharField(null=False, max_length=65535)
+    content = models.TextField(null=False)
 
 
 class UrlStatus(models.Model):
