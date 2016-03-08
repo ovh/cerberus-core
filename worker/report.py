@@ -166,8 +166,7 @@ def __create_without_services(abuse_report, filename, create_if_trusted=True):
         report.status = 'Archived'
     else:
         if abuse_report.trusted and create_if_trusted:
-            priority = report.provider.priority if report.provider.priority else 'Normal'
-            ticket = database.create_ticket(report.defendant, report.category, report.service, priority=priority)
+            ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
             action = 'create this ticket with report %d from %s (%s ...)'
             database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
             report.ticket = ticket
@@ -238,7 +237,7 @@ def __create_with_services(abuse_report, filename, services):
 
         # Create ticket if trusted
         if not ticket and trusted:
-            ticket = database.create_ticket(report.defendant, report.category, report.service, report.provider)
+            ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
             action = 'create this ticket with report %d from %s (%s ...)'
 
         # If attached to new or exising

@@ -165,8 +165,7 @@ def __create_ticket(report, denied_by):
     """
         Create ticket
     """
-    priority = report.provider.priority if report.provider.priority else 'Normal'
-    ticket = database.create_ticket(report.defendant, report.category, report.service, priority=priority, attach_new=False)
+    ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority, attach_new=False)
     action = 'create this ticket with report %d from %s (%s ...)'
     database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
 
@@ -213,6 +212,7 @@ def __send_email(ticket, email, codename, lang='EN'):
         codename,
         lang=lang,
     )
+    print prefetched_email.body
     ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
         ticket,
         email,
