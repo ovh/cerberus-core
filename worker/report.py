@@ -617,13 +617,7 @@ def create_ticket_with_threshold():
                 service__name=data[1]
             ).count()
             if count >= thres.threshold and not nb_tickets:
-                service = Service.objects.filter(name=data[1]).last()
-                defendant = Defendant.objects.filter(customerId=data[0]).last()
-                ticket = database.create_ticket(defendant, thres.category, service)
-                database.log_action_on_ticket(
-                    ticket,
-                    'create this ticket with threshold (%s reports received in %s days)' % (thres.threshold, thres.interval)
-                )
+                ticket = __create_threshold_ticket(data, thres)
                 Logger.info(unicode('threshold: tuple %s match, ticket %s has been created' % (str(data), ticket.id)))
 
 
@@ -640,3 +634,15 @@ def __get_threshold_reports(category, delta):
         'service__name'
     )
     return reports
+
+
+def __create_threshold_ticket(data, thres):
+
+    service = Service.objects.filter(name=data[1]).last()
+    defendant = Defendant.objects.filter(customerId=data[0]).last()
+    ticket = database.create_ticket(defendant, thres.category, service)
+    database.log_action_on_ticket(
+        ticket,
+        'create this ticket with threshold (more than %s reports received in %s days)' % (thres.threshold, thres.interval)
+    )
+    return ticket

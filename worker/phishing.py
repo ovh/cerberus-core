@@ -356,17 +356,24 @@ def timeout(ticket_id=None):
         __close_phishing_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False)
         return
 
+    # Getting ip for action
+    ip_addr = __get_ip_for_action(ticket)
+    if not ip_addr:
+        Logger.error(unicode('Error while getting IP for action, exiting'))
+        ticket.status = ticket.previousStatus
+        ticket.status = 'ActionError'
+        database.log_action_on_ticket(ticket, 'change status from %s to %s' % (ticket.previousStatus, ticket.status), BOT_USER)
+        comment = Comment.objects.create(user=BOT_USER, comment='None or multiple ip addresses for this ticket')
+        TicketComment.objects.create(ticket=ticket, comment=comment)
+        database.log_action_on_ticket(ticket, 'add comment', BOT_USER)
+        ticket.save()
+        return
+
+    # Apply action
     Logger.info(unicode('Executing action %s for ticket %d' % (action.name, ticket_id)))
     ticket.action = action
     database.log_action_on_ticket(ticket, 'set action: %s, execution now' % (action.name), BOT_USER)
     ticket.save()
-
-    ip_addr = __get_ip_for_action(ticket)
-    if not ip_addr:
-        Logger.error(unicode('Error while gettting IP to block, exiting'))
-        return
-
-    # Apply action
     async_job = utils.scheduler.schedule(
         scheduled_time=datetime.utcnow() + timedelta(seconds=3),
         func='action.apply_action',
@@ -388,6 +395,8 @@ def timeout(ticket_id=None):
     ticket.save()
     Logger.info(unicode('All done, sending close notification to provider(s)'))
     ticket = Ticket.objects.get(id=ticket.id)
+
+    # Closing ticket
     __close_phishing_ticket(ticket, reason=settings.CODENAMES['fixed'], service_blocked=True)
 
 
