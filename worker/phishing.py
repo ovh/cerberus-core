@@ -212,7 +212,6 @@ def __send_email(ticket, email, codename, lang='EN'):
         codename,
         lang=lang,
     )
-    print prefetched_email.body
     ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
         ticket,
         email,

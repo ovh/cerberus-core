@@ -602,13 +602,13 @@ def archive_if_timeout(report_id=None):
 def create_ticket_with_threshold():
     """
         Automatically creates ticket if there are more than `abuse.models.ReportThreshold.threshold`
-        new reports created during `abuse.models.ReportThreshold.interval` for same (category/defendant/service)
+        new reports created during `abuse.models.ReportThreshold.interval` (days) for same (category/defendant/service)
     """
-    log_msg = 'threshold : Checking report threshold for category %s, threshold %d, interval %d seconds'
+    log_msg = 'threshold : Checking report threshold for category %s, threshold %d, interval %d days'
 
     for thres in ReportThreshold.objects.all():
         Logger.info(unicode(log_msg % (thres.category.name, thres.threshold, thres.interval)))
-        reports = __get_threshold_reports(thres.category)
+        reports = __get_threshold_reports(thres.category, thres.interval)
         reports = Counter(reports)
         for data, count in reports.iteritems():
             nb_tickets = Ticket.objects.filter(
@@ -622,18 +622,19 @@ def create_ticket_with_threshold():
                 ticket = database.create_ticket(defendant, thres.category, service)
                 database.log_action_on_ticket(
                     ticket,
-                    'create this ticket with threshold (%s reports in %s seconds)' % (thres.threshold, thres.interval)
+                    'create this ticket with threshold (%s reports received in %s days)' % (thres.threshold, thres.interval)
                 )
                 Logger.info(unicode('threshold: tuple %s match, ticket %s has been created' % (str(data), ticket.id)))
 
 
-def __get_threshold_reports(category):
+def __get_threshold_reports(category, delta):
 
     reports = Report.objects.filter(
         ~Q(defendant=None),
         ~Q(service=None),
         category=category,
-        status='New'
+        status='New',
+        receivedDate__gte=datetime.now() - timedelta(days=delta),
     ).values_list(
         'defendant__customerId',
         'service__name'

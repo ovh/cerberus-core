@@ -523,7 +523,7 @@ class ContactedProvider(models.Model):
 class ReportThreshold(models.Model):
     """
         Automatically creates ticket if there are more than
-        `threshold` new reports created during `interval` for same (category/defendant/service)
+        `threshold` new reports created during `interval` (days) for same (category/defendant/service)
     """
     category = models.ForeignKey(Category, null=False)
     threshold = models.IntegerField(null=False)
