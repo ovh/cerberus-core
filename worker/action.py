@@ -47,6 +47,7 @@ def apply_if_no_reply(ticket_id=None, action_id=None, ip_addr=None, resolution_i
         :param int user_id: The id of the Cerberus `User`
         :param bool close: If the ticket has to be closed after action
     """
+    # Checking conformance
     if not all((ticket_id, action_id, user_id)):
         Logger.error(unicode(
             'Invalid parameters [ticket_id=%s, action_id=%s, user_id=%s]' % (ticket_id, action_id, user_id)
@@ -61,10 +62,12 @@ def apply_if_no_reply(ticket_id=None, action_id=None, ip_addr=None, resolution_i
         Logger.error(unicode('Ticket resolution %d not found, Skipping...' % (resolution_id)))
         return
 
+    # Apply action
     applied = apply_action(ticket_id, action_id, ip_addr, user_id)
     if not applied:
         return
 
+    # Updating ticket info
     ticket = Ticket.objects.get(id=ticket_id)
     user = User.objects.get(id=user_id)
     ticket.previousStatus = ticket.status
@@ -93,15 +96,18 @@ def apply_then_close(ticket_id=None, action_id=None, ip_addr=None, resolution_id
         :param int resolution_id: The id of the Cerberus `Resolution`
         :param int user_id: The id of the Cerberus `User`
     """
+    # Checking conformance
     if not all((ticket_id, action_id, resolution_id, user_id)):
         msg = 'Invalid parameters submitted [ticket_id=%d, action_id=%s, resolution_id=%s, user_id=%s]'
         Logger.error(unicode(msg % (ticket_id, action_id, resolution_id, user_id)))
         return
 
+    # Apply action
     applied = apply_action(ticket_id, action_id, ip_addr, user_id)
     if not applied:
         return
 
+    # Closing ticket and updating ticket info
     ticket = Ticket.objects.get(id=ticket_id)
     user = User.objects.get(id=user_id)
     __close_ticket(ticket, resolution_id)
@@ -126,11 +132,13 @@ def apply_action(ticket_id=None, action_id=None, ip_addr=None, user_id=None):
     """
     current_job = get_current_job()
 
+    # Checking conformance
     if not all((ticket_id, action_id, user_id)):
         msg = 'Invalid parameters submitted [ticket_id=%d, action_id=%s, user_id=%s]'
         Logger.error(unicode(msg % (ticket_id, action_id, user_id)))
         return False
 
+    # Fetching Django model object
     Logger.info(unicode('Starting process ticket %d with params [%d]' % (ticket_id, action_id)))
     try:
         ticket = Ticket.objects.get(id=ticket_id)
@@ -139,7 +147,7 @@ def apply_action(ticket_id=None, action_id=None, ip_addr=None, user_id=None):
         Logger.error(unicode('Ticket %d or user %d cannot be found in DB. Skipping...' % (ticket_id, user_id)))
         return False
 
-    # The real job
+    # Call action service
     try:
         result = ImplementationFactory.instance.get_singleton_of(
             'ActionServiceBase'
@@ -169,7 +177,7 @@ def __close_ticket(ticket, resolution_id):
         :param int resolution_id: The id of the Cerberus `Resolution`
 
     """
-    # Send mail to providers and defendant, close ticket
+    # Send mail to providers and defendant
     providers_emails = ContactedProvider.objects.filter(ticket_id=ticket.id).values_list('provider__email', flat=True).distinct()
     providers_emails = list(set(providers_emails))
 
@@ -186,7 +194,9 @@ def __close_ticket(ticket, resolution_id):
             prefetched_email.body
         )
 
-    ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
+    # Close ticket
+    if ticket.mailerId:
+        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
     ticket.previousStatus = ticket.status
     ticket.status = 'Closed'
     ticket.resolution_id = resolution_id
