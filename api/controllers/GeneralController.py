@@ -62,7 +62,7 @@ def auth(body):
         username = body['name']
         password = body['password']
     except (TypeError, KeyError):
-        return False, 'Invalid JSON body'
+        return False, 'Invalid fields in body'
 
     user = authenticate(username=username, password=password)
     if user is not None and user.is_active:
@@ -656,13 +656,20 @@ def mass_contact(body, user):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid value(s) in fields ips'}
 
     try:
-        category = Category.objects.get(name=body['category'])
+        category = Category.objects.get(name=body['category'].title())
     except (AttributeError, ObjectDoesNotExist, TypeError):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid category'}
 
-    campaign_name = body['campaignName']
-    email_subject = body['email']['subject']
-    email_body = body['email']['body']
+    utils.queue.enqueue(
+        'ticket.mass_contact',
+        ips=ips,
+        category=category.name,
+        campaign_name=body['campaignName'],
+        email_subject=body['email']['subject'],
+        email_body=body['email']['body'],
+        user=user.username
+    )
+    return 200, {'status': 'OK', 'code': 200, 'message': 'Campaign successfully created'}
 
 
 def get_notifications(user):

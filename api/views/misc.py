@@ -28,7 +28,7 @@ from flask import Blueprint, request
 from api.controllers import (GeneralController, ProvidersController,
                              TicketsController)
 from decorators import (admin_required, catch_500, json_required, jsonify,
-                        token_required)
+                        token_required, validate_body)
 
 misc_views = Blueprint('misc_views', __name__)
 
@@ -304,4 +304,44 @@ def get_ip_report_count(ip_addr=None):
     """ Get hits for an ip
     """
     code, resp = GeneralController.get_ip_report_count(ip=ip_addr)
+    return code, resp
+
+
+@misc_views.route('/api/mass-contact', methods=['POST'])
+@jsonify
+@token_required
+@catch_500
+@validate_body({'ips': list, 'campaignName': unicode, 'category': unicode, 'email': {'subject': unicode, 'body': unicode}})
+def post_mass_contact():
+    """
+    Massively contact defendants based on ip addresses list
+
+    **Example request**:
+
+    .. sourcecode:: http
+
+       POST /api/mass-contact HTTP/1.1
+       Content-Type: application/json
+
+       {
+           "ips": ["1.2.3.4", "5.6.7.8.9],
+           "campaignName": "ntp_amp_mars_2016",
+           "category": "Network Attack"
+           "email": {
+               "subject": "blah",
+               "body": "blah blah",
+            }
+       }
+
+    :reqjson list ips: The list of involved ip addresses
+    :reqjson str category: The category of the campaign
+    :reqjson str campaignName: The name of the campaign
+    :reqjson dict email: The email to send (containing 'subject' and 'body')
+
+    :status 200: when campagin is successfully created
+    :status 400: when parameters are missing or invalid
+    """
+    body = request.get_json()
+    user = GeneralController.get_user(request)
+    code, resp = GeneralController.mass_contact(body, user)
     return code, resp

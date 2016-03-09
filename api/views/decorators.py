@@ -29,6 +29,8 @@ from json import dumps
 
 from django.db import DatabaseError, InterfaceError, OperationalError
 from flask import Response, request
+from flask.wrappers import BadRequest
+from voluptuous import Invalid, MultipleInvalid, Schema
 from werkzeug.contrib.cache import SimpleCache
 
 from api.controllers import GeneralController
@@ -38,6 +40,8 @@ Logger = logger.get_logger(__name__)
 
 CACHE_TIMEOUT = 300
 cache = SimpleCache()
+
+Schemas = {}
 
 
 class Cached(object):
@@ -130,6 +134,8 @@ def catch_500(func):
     def check_exception(*args, **kwargs):
         try:
             return func(*args, **kwargs)
+        except BadRequest:
+            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid JSON body'}
         except (DatabaseError, InterfaceError, OperationalError) as ex:
             _reset_database_connection()
             return _throw_exception(ex, 'Database connection lost, please retry')
@@ -160,3 +166,20 @@ def jsonify(func):
         response = Response(dumps(retval[1]), status=retval[0], content_type='application/json')
         return response
     return decorated_function
+
+
+def validate_body(schema_desc):
+    """ Validate json body
+    """
+    def real_decorator(func):
+        def wrapper(*args, **kwargs):
+            try:
+                body = request.get_json()
+                if not Schemas.get(func.__name__):
+                    Schemas[func.__name__] = Schema(schema_desc, required=True)
+                Schemas[func.__name__](body)
+            except (Invalid, MultipleInvalid):
+                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing or invalid field(s) in body'}
+            return func(*args, **kwargs)
+        return wrapper
+    return real_decorator
