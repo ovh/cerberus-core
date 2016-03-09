@@ -441,7 +441,7 @@ def search(**kwargs):
                     for key2 in filters[key].keys():
                         values['filters'][key][key2] = [a for a in filters[key][key2] if a.keys()[0] in values['fields']]
     except AttributeError:
-        return 400, {'status': 'Bad Request', 'code': 400}
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
 
     # Map search to multiple field on model
     mapping = {
@@ -642,6 +642,27 @@ def _genereates_oncreate_kpi(ticket):
         ImplementationFactory.instance.get_singleton_of('KPIServiceBase').new_ticket(ticket)
     except KPIServiceException as ex:
         Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
+
+
+def mass_contact(body, user):
+    """
+       Create a worker task for mass contact
+    """
+    try:
+        ips = body['ips']
+        for ip_address in ips:
+            validate_ipv46_address(ip_address)
+    except (TypeError, ValidationError):
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid value(s) in fields ips'}
+
+    try:
+        category = Category.objects.get(name=body['category'])
+    except (AttributeError, ObjectDoesNotExist, TypeError):
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid category'}
+
+    campaign_name = body['campaignName']
+    email_subject = body['email']['subject']
+    email_body = body['email']['body']
 
 
 def get_notifications(user):
