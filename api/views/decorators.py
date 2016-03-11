@@ -177,6 +177,7 @@ def validate_body(schema_desc):
                 body = request.get_json()
                 if not Schemas.get(func.__name__):
                     Schemas[func.__name__] = Schema(schema_desc, required=True)
+                    Logger.debug(unicode('registering schema for %s' % (func.__name__)))
                 Schemas[func.__name__](body)
             except (Invalid, MultipleInvalid):
                 return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing or invalid field(s) in body'}

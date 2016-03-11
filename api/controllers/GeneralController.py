@@ -649,7 +649,7 @@ def mass_contact(body, user):
        Create a worker task for mass contact
     """
     try:
-        ips = body['ips']
+        ips = list(set(body['ips']))
         for ip_address in ips:
             validate_ipv46_address(ip_address)
     except (TypeError, ValidationError):
@@ -660,15 +660,20 @@ def mass_contact(body, user):
     except (AttributeError, ObjectDoesNotExist, TypeError):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid category'}
 
-    utils.queue.enqueue(
-        'ticket.mass_contact',
-        ips=ips,
-        category=category.name,
-        campaign_name=body['campaignName'],
-        email_subject=body['email']['subject'],
-        email_body=body['email']['body'],
-        user=user.username
-    )
+    campaign_name = body['campaignName']
+    campaign_name = re.sub(r'(\s+){2,}', ' ', campaign_name).replace(' ', '_').lower()
+    campaign_name = u'mass_contact_' + campaign_name + u'_' + datetime.now().strftime('%D')
+
+    for ip_address in ips:
+        utils.queue.enqueue(
+            'ticket.mass_contact',
+            ip_address=ip_address,
+            category=category.name,
+            campaign_name=campaign_name,
+            email_subject=body['email']['subject'],
+            email_body=body['email']['body'],
+            user_id=user.id
+        )
     return 200, {'status': 'OK', 'code': 200, 'message': 'Campaign successfully created'}
 
 

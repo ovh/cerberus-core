@@ -266,6 +266,18 @@ def add_phishing_blocked_tag(report):
         pass
 
 
+def add_mass_contact_tag(ticket, campaign_name):
+    """
+        Add mass contact tag to report
+    """
+    try:
+        tag, _ = Tag.objects.get_or_create(tagType='Ticket', name=campaign_name)
+        ticket.tags.add(tag)
+        ticket.save()
+    except ObjectDoesNotExist:
+        pass
+
+
 def log_new_report(report):
     """
         Log report creation
@@ -291,7 +303,7 @@ def log_new_ticket(ticket):
         Log ticket creation
     """
     Logger.debug(
-        str('new ticket %d' % (ticket.id)),
+        unicode('new ticket %d' % (ticket.id)),
         extra={
             'ticket': ticket.id,
             'action': 'new ticket',
