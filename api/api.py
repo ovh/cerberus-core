@@ -78,6 +78,10 @@ def before_request():
         Set start time
     """
     g.start = time.time()
+    if request.endpoint in APP.view_functions:
+        g.endpoint = APP.view_functions[request.endpoint].__name__
+    else:
+        g.endpoint = 'not_handled'
 
 
 @APP.after_request
@@ -106,7 +110,7 @@ def after_request(response):
         ImplementationFactory.instance.get_singleton_of(
             'KPIServiceBase'
         ).new_api_request(
-            path,
+            g.endpoint,
             http_code,
             diff,
         )
