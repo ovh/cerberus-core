@@ -31,6 +31,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_ipv46_address
 from django.db import transaction
 from django.db.models import ObjectDoesNotExist
+from django.template import Context, loader
 
 import database
 
@@ -174,12 +175,7 @@ def __create_contact_tickets(services, campaign_name, ip_address, category, emai
         ))
 
         # Send email to defendant
-        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
-            ticket,
-            report.defendant.details.email,
-            email_subject,
-            email_body
-        )
+        __send_mass_contact_email(ticket, email_subject, email_body)
         actions.append('send an email to %s' % (report.defendant.details.email))
 
         # Close ticket/report
@@ -193,6 +189,32 @@ def __create_contact_tickets(services, campaign_name, ip_address, category, emai
             database.log_action_on_ticket(ticket, action, user=user)
 
 
+def __send_mass_contact_email(ticket, email_subject, email_body):
+
+    template = loader.get_template_from_string(email_subject)
+    context = Context({
+        'publicId': ticket.publicId,
+        'service': ticket.service.name.replace('.', '[.]'),
+        'lang': ticket.defendant.details.lang,
+    })
+    subject = template.render(context)
+
+    template = loader.get_template_from_string(email_body)
+    context = Context({
+        'publicId': ticket.publicId,
+        'service': ticket.service.name.replace('.', '[.]'),
+        'lang': ticket.defendant.details.lang,
+    })
+    body = template.render(context)
+
+    ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
+        ticket,
+        ticket.defendant.details.email,
+        subject,
+        body
+    )
+
+
 def __save_email(filename, email):
     """
         Push email storage service
@@ -201,5 +223,5 @@ def __save_email(filename, email):
         :param str email: The content of the email
     """
     with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
-        cnx.write(filename, email)
+        cnx.write(filename, email.encode('utf-8'))
         Logger.info(unicode('Email %s pushed to Storage Service' % (filename)))

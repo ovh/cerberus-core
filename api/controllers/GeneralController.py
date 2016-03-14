@@ -52,6 +52,7 @@ from utils import logger, utils
 
 Logger = logger.get_logger(__name__)
 CRYPTO = utils.Crypto()
+MASS_CONTACT_REQUIRED = ('{{ service }}', '{{ publicId }}', '{% if lang ==')
 
 
 def auth(body):
@@ -660,9 +661,16 @@ def mass_contact(body, user):
     except (AttributeError, ObjectDoesNotExist, TypeError):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid category'}
 
+    # Generates unified campaignName
     campaign_name = body['campaignName']
     campaign_name = re.sub(r'(\s+){2,}', ' ', campaign_name).replace(' ', '_').lower()
     campaign_name = u'mass_contact_' + campaign_name + u'_' + datetime.now().strftime('%D')
+
+    # Check mustache (required for worker)
+    for key, val in body['email'].iteritems():
+        if not all([mustache in val for mustache in MASS_CONTACT_REQUIRED]):
+            message = '%s templating elements required in %s' % (str(MASS_CONTACT_REQUIRED), key)
+            return 400, {'status': 'Bad Request', 'code': 400, 'message': message}
 
     for ip_address in ips:
         utils.queue.enqueue(

@@ -428,6 +428,7 @@ class MailTemplate(models.Model):
         ('Defendant', 'Defendant'),
         ('Plaintiff', 'Plaintiff'),
         ('Other', 'Other'),
+        ('MassContact', 'MassContact'),
     )
 
     codename = TruncatedCharField(max_length=32)
