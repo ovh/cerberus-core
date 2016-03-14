@@ -508,7 +508,7 @@ def toolbar(**kwargs):
     res = Ticket.objects.filter(where, treatedBy=user).values('status').annotate(count=Count('status'))
     resp['myTicketsCount'] = reduce(operator.add, [t['count'] if t['status'] != 'Closed' else 0 for t in res]) if res else 0
     resp['myTicketsAnsweredCount'] = reduce(operator.add, [t['count'] if t['status'] == 'Answered' else 0 for t in res]) if res else 0
-    resp['myTicketsTodoCount'] = reduce(operator.add, [t['count'] if t['status'] in ['Alarm', 'Open', 'Reopened'] else 0 for t in res]) if res else 0
+    resp['myTicketsTodoCount'] = reduce(operator.add, [t['count'] if t['status'] in ['ActionError', 'Alarm', 'Open', 'Reopened'] else 0 for t in res]) if res else 0
     resp['myTicketsSleepingCount'] = reduce(operator.add, [t['count'] if t['status'] in ['Paused', 'WaitingAnswer'] else 0 for t in res]) if res else 0
     resp['todoCount'] = Ticket.objects.filter(where, status__in=['ActionError', 'Answered', 'Alarm', 'Reopened', 'Open']).order_by('id').distinct().count()
     resp['escalatedCount'] = Ticket.objects.filter(where, escalated=True).order_by('id').distinct().count()
