@@ -292,6 +292,8 @@ def __close_phishing_ticket(ticket, reason=settings.CODENAMES['fixed_customer'],
 
     # Send "ticket closed" email to defendant
     __send_email(ticket, ticket.defendant.details.email, template, lang=ticket.defendant.details.lang)
+    if ticket.mailerId:
+        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
 
     actions = []
     resolution = Resolution.objects.get(codename=reason)
