@@ -456,6 +456,7 @@ def __do_copyright_acns_workflow(report):
         database.log_action_on_ticket(ticket, 'send an email to %s' % (email))
 
     # Close ticket
+    ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
     resolution = Resolution.objects.get(codename=settings.CODENAMES['forward_acns'])
     ticket.resolution = resolution
     ticket.previousStatus = ticket.status
