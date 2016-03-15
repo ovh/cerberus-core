@@ -103,6 +103,7 @@ def create(body):
     """ Create email templates
     """
     try:
+        body['codename'] = body['name'].strip().lower().replace(' ', '_')
         template, _ = MailTemplate.objects.get_or_create(**body)
     except (KeyError, FieldError, IntegrityError):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
