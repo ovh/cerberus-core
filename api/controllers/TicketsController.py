@@ -292,32 +292,53 @@ def show(ticket_id, user):
                     info[key] = int(time.mktime(val.timetuple()))
             ticket_dict['jobs'].append(info)
 
-    ticket_dict['comments'] = [{
+    ticket_dict['comments'] = __get_ticket_comments(ticket)
+    ticket_dict['history'] = __get_ticket_history(ticket)
+    ticket_dict['attachedReportsCount'] = ticket.reportTicket.count()
+    ticket_dict['tags'] = __get_ticket_tags(ticket)
+    # ticket_dict['tags'] = []
+    ticket_dict['justAssigned'] = just_assigned
+
+    return 200, ticket_dict
+
+
+def __get_ticket_comments(ticket):
+    """
+        Get ticket comments..
+    """
+    return [{
         'id': c.comment.id,
         'user': c.comment.user.username,
         'date': time.mktime(c.comment.date.timetuple()),
         'comment': c.comment.comment
     } for c in TicketComment.objects.filter(ticket=ticket.id).order_by('-comment__date')]
 
-    ticket_dict['history'] = [{
-        'username': c.user.username,
-        'date': time.mktime(c.date.timetuple()),
-        'action': c.action
-    } for c in History.objects.filter(ticket=ticket.id).order_by('-date')]
 
-    ticket_dict['attachedReportsCount'] = ticket.reportTicket.count()
+def __get_ticket_history(ticket):
+    """
+        Get ticket history..
+    """
+    history = History.objects.filter(ticket=ticket.id).values_list('user__username', 'date', 'action').order_by('-date')
+    return [{
+        'username': username,
+        'date': time.mktime(date.timetuple()),
+        'action': action
+    } for username, date, action in history]
 
-    report_tags = list(set([report.tags.all() for report in ticket.reportTicket.all()]))
-    report_tags = [item for sublist in report_tags for item in sublist]
+
+def __get_ticket_tags(ticket):
+    """
+        Get ticket tags..
+    """
+    reports = ticket.reportTicket.all().values_list('id', flat=True).distinct()
+    report_tags = Tag.objects.filter(report__id__in=reports).distinct()
     tags = list(set(list(set(ticket.tags.all())) + list(set(report_tags))))
-    ticket_dict['tags'] = [model_to_dict(tag) for tag in tags]
-    ticket_dict['justAssigned'] = just_assigned
-
-    return 200, ticket_dict
+    return [model_to_dict(tag) for tag in tags]
 
 
 def assign_if_not(ticket, user):
-    """ If ticket is not assigned and user not just set ticket owner to nobody
+    """
+        If ticket is not assigned and user not just set ticket owner to nobody
         assign ticket to current user
     """
     try:
