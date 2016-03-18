@@ -73,6 +73,7 @@ GENERAL_CONFIG = {
     },
     'magic_smtp_header': 'Test-Magic-Smtp-Header',
     'report_timeout': 30,
+    'acns_patterns': ('www.acns.net/ACNS',),
 }
 
 DATABASES = {

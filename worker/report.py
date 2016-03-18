@@ -193,14 +193,12 @@ def __create_with_services(abuse_report, filename, services):
 
         report = __create_without_services(abuse_report, filename, create_if_trusted=False)
         created_reports.append(report)
-
-        if report.status == 'Archived':  # because autoarchive tag
-            continue
-
-        action = ticket = None
         report.defendant = database.get_or_create_defendant(data['defendant'])
         report.service = database.get_or_create_service(data['service'])
         report.save()
+
+        if report.status == 'Archived':  # because autoarchive tag
+            continue
 
         _, attach_only, no_phishtocheck = __get_attributes_based_on_tags(report, abuse_report.recipients)
         __insert_items(report.id, data['items'])
@@ -224,18 +222,21 @@ def __create_with_services(abuse_report, filename, services):
                 continue
 
         # ACNS specific workflow
-        if trusted and report.category.name.lower() == 'copyright' and 'www.acns.net/ACNS' in report.body:
+        if (trusted and report.category.name.lower() == 'copyright' and
+                any([pattern in report.body for pattern in settings.GENERAL_CONFIG['acns_patterns']])):
             Logger.debug(unicode('New ACNS/copyright report %d, applying specific workflow' % (report.id)))
             __do_copyright_acns_workflow(report)
             continue
 
         # If attach report only and no ticket found, continue
+        ticket = None
         if not ticket and attach_only:
             report.status = 'Archived'
             report.save()
             continue
 
         # Create ticket if trusted
+        action = None
         if not ticket and trusted:
             ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
             action = 'create this ticket with report %d from %s (%s ...)'

@@ -47,6 +47,7 @@ GENERAL_CONFIG = {
     },
     'magic_smtp_header': os.getenv('MAGIC_SMTP_HEADER', 'X-MAGIC-SMTP-HEADER-TO-IDENTIFY-TRUSTED-PROVIDER'),
     'report_timeout': 30,
+    'acns_patterns': ('www.acns.net/ACNS',),
 }
 
 # API Config (via ENV)
