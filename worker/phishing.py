@@ -445,11 +445,7 @@ def is_all_down_for_ticket(ticket, last=5):
             thread.join()
 
     results = [queue.get() for _ in xrange(ticket.reportTicket.count())]
-
-    if all(results):
-        return True
-    else:
-        return False
+    return bool(all(results))
 
 
 def feedback_to_phishing_service(screenshot_id=None, feedback=None):
