@@ -112,9 +112,10 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         Logger.error(unicode('Exception while creating report(s) for mail %s -> %s' % (filename, str(ex))))
         raise StorageServiceException(ex)
 
-    # Index to SearchService
-    if ImplementationFactory.instance.is_implemented('SearchServiceBase'):
-        __index_report_to_searchservice(abuse_report, filename, [rep.id for rep in created_reports])
+    # Upload attachments
+    if abuse_report.attachments:
+        for report in created_reports:
+            save_attachments(report, abuse_report.attachments)
 
     # Send acknowledgement to provider (only if send_ack = True and report is attached to a ticket)
     for report in created_reports:
@@ -123,6 +124,10 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
                 __send_ack(report, lang=lang)
             except MailerServiceException as ex:
                 raise MailerServiceException(ex)
+
+    # Index to SearchService
+    if ImplementationFactory.instance.is_implemented('SearchServiceBase'):
+        __index_report_to_searchservice(abuse_report, filename, [rep.id for rep in created_reports])
 
     Logger.info(unicode('All done successfully for email %s' % (filename)))
 
@@ -157,10 +162,6 @@ def __create_without_services(abuse_report, filename, create_if_trusted=True):
         'report.archive_if_timeout',
         report_id=report.id
     )
-
-    # Upload attachments
-    if abuse_report.attachments:
-        __save_attachments(report, abuse_report.attachments)
 
     if autoarchive:
         report.status = 'Archived'
@@ -316,7 +317,7 @@ def __insert_items(report_id, items):
                 ReportItem.objects.create(**item_dict)
 
 
-def __save_attachments(report, attachments):
+def save_attachments(report, attachments):
     """ Upload email attachments to StorageService and keep a reference in Cerberus
 
         :param `abuse.models.Report` report: A `abuse.models.Report` instance
@@ -569,7 +570,7 @@ def __update_ticket_if_answer(ticket, abuse_report, filename):
     )
 
     if abuse_report.attachments:
-        __save_attachments(
+        save_attachments(
             ticket.reportTicket.all()[0],
             abuse_report.attachments,
         )
