@@ -96,7 +96,6 @@ def push_to_storage_service(filename, email):
         except StorageServiceException:
             pass
 
-    with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
         cnx.write(filename, email)
         Logger.info(unicode('Email %s pushed to Storage Service' % (filename)))
 
