@@ -129,6 +129,10 @@ EMAIL_FETCHER = {
 # 'fqdn_re': of course trying to identify a FQDN in an text can generate a huge amount of false positive
 #           maybe you have a regexp to identify YOUR managed FQDN (i.e: endswith domain.com)
 PARSING = {
+    'networks_to_ignore': [
+        '0.0.0.0/8',
+        '224.0.0/4',
+    ],
     'domain_to_ignore': [
         'www.yourcompany.com',
     ],

@@ -41,7 +41,6 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator, validate_ipv46_address
-from netaddr import AddrConversionError, AddrFormatError
 from redis import ConnectionError as RedisError
 from redis import Redis
 from requests.exceptions import (ChunkedEncodingError, ConnectionError,
@@ -59,6 +58,7 @@ CHARSETS = ('iso-8859-1', 'iso-8859-15', 'ascii', 'utf-16', 'windows-1252', 'cp8
 CERBERUS_USERS = User.objects.all().values_list('username', flat=True)
 
 IPS_NETWORKS = {}
+BLACKLISTED_NETWORKS = []
 
 queue = Queue(connection=Redis())
 scheduler = Scheduler(connection=Redis())
@@ -371,13 +371,13 @@ def get_ip_network(ip_str):
     """
         Try to return the owner of the IP address (based on ips.py)
 
-        :param str ip_str: The IP address:
+        :param str ip_str: The IP address
         :rtype: str
         :returns: The owner if find else None
     """
     try:
         ip_addr = netaddr.IPAddress(ip_str)
-    except (AddrConversionError, AddrFormatError):
+    except (netaddr.AddrConversionError, netaddr.AddrFormatError):
         return None
 
     for brand, networks in IPS_NETWORKS.iteritems():
@@ -385,3 +385,19 @@ def get_ip_network(ip_str):
             if net.netmask.value & ip_addr.value == net.value:
                 return brand
     return None
+
+
+def is_ipaddr_ignored(ip_str):
+    """
+        Check if the `ip_addr` is blacklisted
+
+        :param str ip_str: The IP address
+        :rtype: bool
+        :returns: If the ip_addr has to be ignored
+    """
+    ip_addr = netaddr.IPAddress(ip_str)
+
+    for network in BLACKLISTED_NETWORKS:
+        if network.netmask.value & ip_addr.value == network.value:
+            return True
+    return False

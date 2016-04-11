@@ -106,7 +106,9 @@ class TestParser(GlobalTestCase):
         self.assertEqual(True, parsed_email.trusted)
         self.assertIn(u'é"', parsed_email.body)
         self.assertEqual([], parsed_email.attachments)
-        self.assertEqual(None, parsed_email.ips)
+        self.assertEqual(2, len(parsed_email.ips))
+        self.assertNotIn('0.0.0.1', parsed_email.ips)
+        self.assertIn('192.168.1.1', parsed_email.ips)
         self.assertEqual(None, parsed_email.urls)
         self.assertEqual(None, parsed_email.fqdn)
 

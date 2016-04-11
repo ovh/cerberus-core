@@ -460,6 +460,15 @@ def clean_parsed_email_items(parsed_email):
     for attrib in [a for a in ['urls', 'ips', 'fqdn'] if getattr(parsed_email, a)]:
         setattr(parsed_email, attrib, [__clean_item(item) for item in getattr(parsed_email, attrib)])
 
+    # Clean duplicates
+    for att in parsed_email.keys():
+        if isinstance(getattr(parsed_email, att), list) and not all(isinstance(x, dict) for x in getattr(parsed_email, att)):
+            setattr(parsed_email, att, list(set(getattr(parsed_email, att))))
+
+    # Remove unwanted ip_addr
+    if getattr(parsed_email, 'ips') and len(parsed_email.ips):
+        parsed_email.ips = [ip_addr for ip_addr in parsed_email.ips if not utils.is_ipaddr_ignored(ip_addr)]
+
     # If parsed ip/fqdn are present in url, only keeping url
     if getattr(parsed_email, 'urls') and len(parsed_email.urls):
         urls = ' '.join(parsed_email.urls)
@@ -467,11 +476,6 @@ def clean_parsed_email_items(parsed_email):
             parsed_email.ips = [ip_addr for ip_addr in parsed_email.ips if not re.search(regexp.PROTO_RE + re.escape(ip_addr), urls, re.I)]
         if getattr(parsed_email, 'fqdn'):
             parsed_email.fqdn = [fqdn for fqdn in parsed_email.fqdn if not re.search(regexp.PROTO_RE + re.escape(fqdn), urls, re.I)]
-
-    # Clean duplicates
-    for att in parsed_email.keys():
-        if isinstance(getattr(parsed_email, att), list) and not all(isinstance(x, dict) for x in getattr(parsed_email, att)):
-            setattr(parsed_email, att, list(set(getattr(parsed_email, att))))
 
 
 def __clean_item(item):

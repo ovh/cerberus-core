@@ -85,6 +85,10 @@ DATABASES = {
 }
 
 PARSING = {
+    'networks_to_ignore': [
+        '0.0.0.0/8',
+        '224.0.0/4',
+    ],
     'domain_to_ignore': [
         'www.yourcompany.com',
     ],
