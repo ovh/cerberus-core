@@ -208,6 +208,7 @@ def __create_with_services(abuse_report, filename, services):
         trusted = True if report.provider.trusted or abuse_report.trusted else False
 
         # Looking for existing open ticket for same (service, defendant, category)
+        ticket = None
         if all((report.defendant, report.category, report.service)):
             msg = 'Looking for opened ticket for (%s, %s, %s)'
             Logger.debug(unicode(msg % (report.defendant.customerId, report.category.name, report.service.name)))
@@ -230,7 +231,6 @@ def __create_with_services(abuse_report, filename, services):
             continue
 
         # If attach report only and no ticket found, continue
-        ticket = None
         if not ticket and attach_only:
             report.status = 'Archived'
             report.save()
@@ -242,9 +242,7 @@ def __create_with_services(abuse_report, filename, services):
             ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
             action = 'create this ticket with report %d from %s (%s ...)'
 
-        # If attached to new or exising
         if ticket:
-
             # Block phishing url signaled by trusted provider
             if report.provider.apiKey and report.category.name.lower() == 'phishing' and is_there_some_urls:
                 phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
