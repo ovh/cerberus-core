@@ -1239,11 +1239,13 @@ def cancel_aysnchronous_job(ticket_id, job_id, user):
     except (ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket or job not found'}
 
-    action = 'cancel action: %s' % (ticket.action.name)
+    if ticket.action:
+        action = 'cancel action: %s' % (ticket.action.name)
+        GeneralController.log_action(ticket, user, action)
+
     utils.scheduler.cancel(job.asynchronousJobId)
     ServiceActionJob.objects.filter(asynchronousJobId=job.asynchronousJobId).update(status='cancelled')
     ticket.save()
-    GeneralController.log_action(ticket, user, action)
     return 200, {'status': 'OK', 'code': 200, 'message': 'Task successfully canceled'}
 
 

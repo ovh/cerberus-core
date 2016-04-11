@@ -145,7 +145,7 @@ def get_or_create_defendant(defendant_infos):
             defendant.save()
             DefendantHistory.objects.create(defendant=defendant, revision=revision)
     except ValidationError as ex:
-        raise ValidationError(ex + " " + str(revision_infos))
+        raise ValidationError(str(ex) + " " + str(revision_infos))
     return defendant
 
 
