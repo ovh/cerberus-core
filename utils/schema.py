@@ -22,9 +22,10 @@
     Voluptuous Schema for Adapters
 """
 
-from voluptuous import Invalid, MultipleInvalid, Schema
+from voluptuous import Invalid, MultipleInvalid, Optional, Schema
 
 from adapters.dao.customer.abstract import DefendantClass, ServiceClass
+from adapters.services.phishing.abstract import PingResponse
 
 
 Schemas = {
@@ -49,6 +50,39 @@ Schemas = {
             }
         ], required=True)
     },
+    'PhishingServiceBase': {
+        'ping_url': Schema(PingResponse, required=True),
+        'is_screenshot_viewed': Schema({
+            'viewed': bool,
+            'views': [
+                {
+                    'ip': unicode,
+                    'userAgent': unicode,
+                    'timestamp': int,
+                }
+            ]
+        }, required=True),
+        'get_screenshots': Schema([
+            {
+                'timestamp': int,
+                'location': unicode,
+                'screenshotId': unicode,
+                'response': {
+                    'directAccess': {
+                        'statusCode': int,
+                        'headers': unicode,
+                        'state': unicode,
+                    },
+                    'proxyAccess': {
+                        Optional('proxyAddr'): unicode,
+                        Optional('statusCode'): int,
+                        Optional('headers'): unicode,
+                        Optional('state'): unicode,
+                    }
+                }
+            }
+        ], required=True),
+    }
 }
 
 

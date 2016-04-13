@@ -91,7 +91,7 @@ class DefaultPhishingService(PhishingServiceBase):
             :rtype: bool
             :raises PhishingServiceException: if any error occur
         """
-        return False
+        return {'viewed': False, 'views': []}
 
     def block_url(self, url, report):
         """

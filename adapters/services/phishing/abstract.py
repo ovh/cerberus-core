@@ -106,9 +106,29 @@ class PhishingServiceBase(object):
             If your screenshotting API exposed this screenshot (as proof), it can
             be interesting to store if the screenshot have been viewed or not
 
+            Returns something like :
+
+            {
+                'viewed': True,
+                'views': [
+                    {
+                        'ip': '1.2.3.4',
+                        'userAgent': 'curl/7.38.0',
+                        'timestamp': 123456789,
+                    },
+                ],
+            }
+
+            or
+
+            {
+                'viewed': False,
+                'views': [],
+            }
+
             :param str screenshot_id : The uuid of the screenshot
-            :return: If yes or not the screenshot has been viwed
-            :rtype: bool
+            :return: Details about screenshot
+            :rtype: dict
             :raises PhishingServiceException: if any error occur
         """
         cls = self.__class__.__name__
