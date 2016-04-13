@@ -307,6 +307,18 @@ def get_ip_report_count(ip_addr=None):
     return code, resp
 
 
+@misc_views.route('/api/mass-contact', methods=['GET'])
+@jsonify
+@token_required
+@catch_500
+def get_mass_contact():
+    """
+        List all created mass-contact campaigns
+    """
+    code, resp = GeneralController.get_mass_contact(filters=request.args.get('filters'))
+    return code, resp
+
+
 @misc_views.route('/api/mass-contact', methods=['POST'])
 @jsonify
 @token_required
@@ -343,5 +355,5 @@ def post_mass_contact():
     """
     body = request.get_json()
     user = GeneralController.get_user(request)
-    code, resp = GeneralController.mass_contact(body, user)
+    code, resp = GeneralController.post_mass_contact(body, user)
     return code, resp

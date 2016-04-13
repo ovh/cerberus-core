@@ -29,6 +29,7 @@ import re
 from base64 import b64encode
 from copy import deepcopy
 from datetime import datetime, timedelta
+from time import mktime
 from urllib import unquote
 
 import jwt
@@ -645,7 +646,37 @@ def _genereates_oncreate_kpi(ticket):
         Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
 
 
-def mass_contact(body, user):
+def get_mass_contact(filters=None):
+    """
+        List all created mass-contact campaigns
+    """
+    # Parse filters from request
+    query_filters = {}
+    if filters:
+        try:
+            query_filters = json.loads(unquote(unquote(filters)))
+        except (ValueError, SyntaxError, TypeError) as ex:
+            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+    try:
+        limit = int(query_filters['paginate']['resultsPerPage'])
+        offset = int(query_filters['paginate']['currentPage'])
+    except KeyError:
+        limit = 10
+        offset = 1
+
+    campaigns = []
+    for campaign in MassContact.objects.all()[(offset - 1) * limit:limit * offset]:
+        campaigns.append({
+            'campaignName': campaign.campaignName,
+            'category': campaign.category.name,
+            'user': campaign.user.username,
+            'ipsCount': campaign.ipsCount,
+            'date': int(mktime(campaign.date.timetuple())),
+        })
+    return 200, campaigns
+
+
+def post_mass_contact(body, user):
     """
        Create a worker task for mass contact
     """
