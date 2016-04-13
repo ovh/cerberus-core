@@ -22,7 +22,7 @@
     Voluptuous Schema for Adapters
 """
 
-from voluptuous import Invalid, MultipleInvalid, Optional, Schema
+from voluptuous import Any, Invalid, MultipleInvalid, Optional, Schema
 
 from adapters.dao.customer.abstract import DefendantClass, ServiceClass
 from adapters.services.phishing.abstract import PingResponse
@@ -74,10 +74,10 @@ Schemas = {
                         'state': unicode,
                     },
                     'proxyAccess': {
-                        Optional('proxyAddr'): unicode,
-                        Optional('statusCode'): int,
-                        Optional('headers'): unicode,
-                        Optional('state'): unicode,
+                        Optional('proxyAddr'): Any(None, unicode),
+                        Optional('statusCode'): Any(None, int),
+                        Optional('headers'): Any(None, unicode),
+                        Optional('state'): Any(None, unicode),
                     }
                 }
             }

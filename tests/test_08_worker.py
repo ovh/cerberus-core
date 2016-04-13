@@ -123,7 +123,7 @@ class TestWorkers(GlobalTestCase):
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
     def test_phishing_report_not_trusted(self, mock_rq):
         """
-            Sample6 is a trusted phishing report
+            Sample7 is not a trusted phishing report
         """
         from worker import report
         mock_rq.return_value = None
@@ -353,3 +353,22 @@ class TestWorkers(GlobalTestCase):
         report.create_ticket_with_threshold()
         cerberus_report = Report.objects.all()[:1][0]
         self.assertEqual('Attached', cerberus_report.status)
+
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_ticket_from_phishtocheck(self, mock_rq):
+
+        from worker import report, ticket
+        mock_rq.return_value = None
+        sample = self._samples['sample7']
+        content = sample.read()
+        report.create_from_email(email_content=content, send_ack=False)
+
+        self.assertEqual(1, Report.objects.count())
+        cerberus_report = Report.objects.all()[:1][0]
+        user = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
+        ticket.create_ticket_from_phishtocheck(report=cerberus_report.id, user=user.id)
+        cerberus_report = Report.objects.all()[:1][0]
+        self.assertEqual('Attached', cerberus_report.status)
+        self.assertEqual(1, cerberus_report.ticket.id)
+        emails = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').get_emails(cerberus_report.ticket)
+        self.assertEqual(1, len(emails))

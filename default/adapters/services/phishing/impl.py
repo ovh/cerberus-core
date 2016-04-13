@@ -50,19 +50,19 @@ class DefaultPhishingService(PhishingServiceBase):
         """
         response = [{
             'timestamp': 1452706246,
-            'location': 'https://www.ovh.com/fr/news/logos/with-baseline/logo-ovh-avec-150DPI.png',
-            'screenshotId': '123456',
+            'location': u'https://www.ovh.com/fr/news/logos/with-baseline/logo-ovh-avec-150DPI.png',
+            'screenshotId': u'123456',
             'response': {
                 'directAccess': {
                     'statusCode': 200,
-                    'headers': '200 OK\ncontent-length: 44\naccept-ranges: bytes\n ...',
-                    'state': 'UP',
+                    'headers': u'200 OK\ncontent-length: 44\naccept-ranges: bytes\n ...',
+                    'state': u'UP',
                 },
                 'proxyAccess': {
-                    'proxyAddr': '1.2.3.4',
+                    'proxyAddr': u'1.2.3.4',
                     'statusCode': 200,
-                    'headers': '200 OK\ncontent-length: 44\naccept-ranges: bytes\n ...',
-                    'state': 'UP',
+                    'headers': u'200 OK\ncontent-length: 44\naccept-ranges: bytes\n ...',
+                    'state': u'UP',
                 }
             }
         }]

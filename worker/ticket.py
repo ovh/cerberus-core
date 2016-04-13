@@ -225,3 +225,58 @@ def __save_email(filename, email):
     with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
         cnx.write(filename, email.encode('utf-8'))
         Logger.info(unicode('Email %s pushed to Storage Service' % (filename)))
+
+
+def create_ticket_from_phishtocheck(report=None, user=None):
+    """
+        Create/attach report to ticket + block_url + mail to defendant + email to provider
+
+        :param int report: The id of the `abuse.models.Report`
+        :param int user: The id of the `abuse.models.User`
+    """
+    if not isinstance(report, Report):
+        try:
+            report = Report.objects.get(id=report)
+        except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
+            Logger.error(unicode('Report %d cannot be found in DB. Skipping...' % (report)))
+            return
+
+    if not isinstance(user, User):
+        try:
+            user = User.objects.get(id=user)
+        except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
+            Logger.error(unicode('User %d cannot be found in DB. Skipping...' % (user)))
+            return
+
+    # Create/attach to ticket
+    ticket = database.search_ticket(report.defendant, report.category, report.service)
+    action = 'attach report %d from %s (%s ...) to this ticket'
+
+    if not ticket:
+        ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
+        action = 'create this ticket with report %d from %s (%s ...)'
+
+    report.ticket = ticket
+    report.status = 'Attached'
+    report.save()
+    database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
+    database.log_action_on_ticket(ticket, 'validate PhishToCheck report %d' % (report.id), user=user)
+
+    # Sending email to provider
+    if settings.TAGS['no_autoack'] not in report.provider.tags.all().values_list('name', flat=True):
+
+        prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+            ticket,
+            settings.CODENAMES['ack_received'],
+            acknowledged_report=report.id,
+        )
+        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
+            ticket,
+            report.provider.email,
+            prefetched_email.subject,
+            prefetched_email.body
+        )
+        database.log_action_on_ticket(ticket, 'send an email to %s' % (report.provider.email))
+
+    utils.queue.enqueue('phishing.block_url_and_mail', ticket_id=ticket.id, report_id=report.id, timeout=3600)
+    return ticket

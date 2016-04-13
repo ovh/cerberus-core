@@ -47,7 +47,6 @@ import ReportItemsController
 import TicketsController
 from abuse.models import (AbusePermission, AttachedDocument, Plaintiff, Report,
                           ReportItem, Service, Tag, Ticket, Defendant)
-from adapters.services.mailer.abstract import MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
 from adapters.services.storage.abstract import StorageServiceException
 from factory.factory import ImplementationFactory
@@ -678,7 +677,7 @@ def __get_url_screenshot(item_id, report_id, queue, only_taken=False):
     queue.put(resp)
 
 
-def parse_screenshot_feeback(report_id, body, user):
+def parse_screenshot_feedback(report_id, body, user):
     """ Get operator result after manual check
     """
     try:
@@ -711,44 +710,11 @@ def parse_screenshot_feeback(report_id, body, user):
             ReportItem.objects.filter(rawItem=item, report=report).delete()
 
     # If no more items, notification to provider and closing ticket
+    report.status = 'New'
+    report.save()
     if not any(result.values()):
-        report.status = 'New'
-        report.save()
         utils.queue.enqueue('phishing.close_because_all_down', report=report.id, denied_by=user.id, timeout=3600)
         return 200, {'status': 'OK', 'code': 200, 'message': 'Report successfully archived and mail sent to provider'}
-    else:
-        try:
-            ticket = __create_ticket_and_ack(report, user)
-        except MailerServiceException as ex:
-            return 500, {'status': 'Internal Server Error', 'code': 500, 'message': str(ex)}
-        return 200, {'status': 'OK', 'code': 200, 'message': 'Report attached to ticket %d' % (ticket.id)}
-
-
-def __create_ticket_and_ack(report, user):
-    """
-        Create/attach to ticket + block_url + mail to defendant + email to provider
-    """
-    _, report_dict = show(report.id)
-    report_dict['status'] = 'New'
-    Report.objects.filter(id=report.id).update(status='New')
-    _, ticket_dict = TicketsController.create(report_dict, user=user)
-    ticket = Ticket.objects.get(id=ticket_dict['id'])
-    GeneralController.log_action(ticket, user, 'validate PhishToCheck report %d' % (report.id))
-
-    if settings.TAGS['no_autoack'] not in report.provider.tags.all().values_list('name', flat=True):
-
-        prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
-            ticket,
-            settings.CODENAMES['ack_received'],
-            acknowledged_report=report.id,
-        )
-        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
-            ticket,
-            report.provider.email,
-            prefetched_email.subject,
-            prefetched_email.body
-        )
-        GeneralController.log_action(ticket, user, 'send an email to %s' % (report.provider.email))
-
-    utils.queue.enqueue('phishing.block_url_and_mail', ticket_id=ticket.id, report_id=report.id, timeout=3600)
-    return ticket
+    else:  # Else create/attach report to ticket + block_url + mail to defendant + email to provider
+        utils.queue.enqueue('ticket.create_ticket_from_phishtocheck', report=report.id, user=user.id, timeout=600)
+        return 200, {'status': 'OK', 'code': 200, 'message': 'Report will be attached to ticket in few seconds'}
