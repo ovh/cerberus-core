@@ -354,11 +354,13 @@ class TestWorkers(GlobalTestCase):
         cerberus_report = Report.objects.all()[:1][0]
         self.assertEqual('Attached', cerberus_report.status)
 
+    @patch('rq_scheduler.scheduler.Scheduler.schedule')
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
-    def test_ticket_from_phishtocheck(self, mock_rq):
+    def test_ticket_from_phishtocheck(self, mock_rq, mock_rq_schedule):
 
         from worker import report, ticket
         mock_rq.return_value = None
+        mock_rq_schedule.return_value = FakeJob()
         sample = self._samples['sample7']
         content = sample.read()
         report.create_from_email(email_content=content, send_ack=False)
