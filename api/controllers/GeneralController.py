@@ -45,7 +45,7 @@ from django.forms.models import model_to_dict
 import ReportsController
 import TicketsController
 from abuse.models import (AbusePermission, Category, History, Profile, Report,
-                          ReportItem, Resolution, Tag, Ticket)
+                          MassContact, ReportItem, Resolution, Tag, Ticket)
 from adapters.services.kpi.abstract import KPIServiceException
 from factory.factory import ImplementationFactory
 from utils import logger, utils
@@ -672,6 +672,15 @@ def mass_contact(body, user):
             message = '%s templating elements required in %s' % (str(MASS_CONTACT_REQUIRED), key)
             return 400, {'status': 'Bad Request', 'code': 400, 'message': message}
 
+    # Save related infos
+    MassContact.objects.create(
+        campaignName=campaign_name,
+        category=category,
+        user=user,
+        ipsCount=len(ips),
+    )
+
+    # For each IP, create a worker job
     for ip_address in ips:
         utils.queue.enqueue(
             'ticket.mass_contact',

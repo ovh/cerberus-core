@@ -529,3 +529,14 @@ class ReportThreshold(models.Model):
     category = models.ForeignKey(Category, null=False)
     threshold = models.IntegerField(null=False)
     interval = models.IntegerField(null=False)
+
+
+class MassContact(models.Model):
+    """
+        Store details of different "mass contact" campaign.
+    """
+    campaignName = TruncatedCharField(max_length=256, null=False)
+    category = models.ForeignKey(Category, null=False)
+    user = models.ForeignKey(User, null=False)
+    ipsCount = models.IntegerField(null=False)
+    date = models.DateTimeField(auto_now=True, null=False)
