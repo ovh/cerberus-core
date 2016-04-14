@@ -487,6 +487,8 @@ def __clean_item(item):
     """
     item = item.strip()
     item = item.replace(' ', '')
+    item = item.replace('\r\n', '')
+    item = re.sub(r'(?<!\d)0+(?=\d)', '', item)  # '038.140.010.024' -> '38.140.10.24'
 
     for key, reg in regexp.DEOBFUSCATE_URL.iteritems():
         item = reg.sub(key, item)
