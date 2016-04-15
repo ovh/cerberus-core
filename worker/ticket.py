@@ -100,10 +100,6 @@ def mass_contact(ip_address=None, category=None, campaign_name=None, email_subje
         :param str email_body: The body of the email to send to defendant
         :param int user_id: The id of the Cerberus `abuse.models.User` who created the campaign
     """
-
-    if ip_address == '1.2.3.4':
-        raise Exception('toto')
-
     # Check params
     _, _, _, values = inspect.getargvalues(inspect.currentframe())
     if not all(values.values()):
@@ -261,11 +257,11 @@ def check_mass_contact_result(result_campaign_id=None, jobs=None):
             sleep(0.5)
         result.append(job.result)
 
-    result = Counter(result)
+    count = Counter(result)
     campaign_result.state = 'Done'
-    campaign_result.matchingCount = result[True]
-    campaign_result.notMatchingCount = result[False]
-    campaign_result.failedCount = result[None]
+    campaign_result.matchingCount = count[True]
+    campaign_result.notMatchingCount = count[False]
+    campaign_result.failedCount = count[None]
     campaign_result.save()
     Logger.info(unicode('MassContact campaign %d finished' % (campaign_result.campaign.id)))
 
