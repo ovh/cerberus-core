@@ -181,6 +181,7 @@ def __create_contact_tickets(services, campaign_name, ip_address, category, emai
         )
         database.add_mass_contact_tag(ticket, campaign_name)
         actions.append('create this ticket with mass contact campaign %s' % (campaign_name))
+        actions.append('change treatedBy from nobody to %s' % (user.username))
         report.ticket = ticket
         report.save()
         Logger.debug(unicode(
