@@ -24,7 +24,10 @@
 
 import hashlib
 import inspect
+
+from collections import Counter
 from datetime import datetime, timedelta
+from time import sleep
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -35,7 +38,8 @@ from django.template import Context, loader
 
 import database
 
-from abuse.models import Category, Report, ReportItem, Resolution, Ticket, User
+from abuse.models import (Category, MassContactResult, Report,
+                          ReportItem, Resolution, Ticket, User)
 from adapters.dao.customer.abstract import CustomerDaoException
 from factory.factory import ImplementationFactory
 from utils import pglocks, schema, utils
@@ -88,7 +92,18 @@ def mass_contact(ip_address=None, category=None, campaign_name=None, email_subje
 
         The use case is: a trusted provider sent you a list of vulnerable DNS servers (DrDOS amp) for example.
         To prevent abuse on your network, you notify customer of this vulnerability.
+
+        :param str ip_address: The IP address
+        :param str category: The category of the abuse
+        :param str campaign_name: The name if the "mass-conctact" campaign
+        :param str email_subject: The subject of the email to send to defendant
+        :param str email_body: The body of the email to send to defendant
+        :param int user_id: The id of the Cerberus `abuse.models.User` who created the campaign
     """
+
+    if ip_address == '1.2.3.4':
+        raise Exception('toto')
+
     # Check params
     _, _, _, values = inspect.getargvalues(inspect.currentframe())
     if not all(values.values()):
@@ -122,8 +137,10 @@ def mass_contact(ip_address=None, category=None, campaign_name=None, email_subje
         Logger.debug(unicode('creating report/ticket for ip address %s' % (ip_address)))
         with pglocks.advisory_lock('cerberus_lock'):
             __create_contact_tickets(services, campaign_name, ip_address, category, email_subject, email_body, user)
+        return True
     else:
         Logger.debug(unicode('no service found for ip address %s' % (ip_address)))
+        return False
 
 
 @transaction.atomic
@@ -213,6 +230,44 @@ def __send_mass_contact_email(ticket, email_subject, email_body):
         subject,
         body
     )
+
+
+def check_mass_contact_result(result_campaign_id=None, jobs=None):
+    """
+        Check "mass-contact" campaign jobs's result
+
+        :param int result_campaign_id: The id of the `abuse.models.MassContactResult`
+        :param list jobs: The list of associated Python-Rq jobs id
+    """
+    # Check params
+    _, _, _, values = inspect.getargvalues(inspect.currentframe())
+    if not all(values.values()) or not isinstance(jobs, list):
+        Logger.error(unicode('invalid parameters submitted %s' % str(values)))
+        return
+
+    if not isinstance(result_campaign_id, MassContactResult):
+        try:
+            campaign_result = MassContactResult.objects.get(id=result_campaign_id)
+        except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
+            Logger.error(unicode('MassContactResult %d cannot be found in DB. Skipping...' % (result_campaign_id)))
+            return
+
+    result = []
+    for job_id in jobs:
+        job = utils.queue.fetch_job(job_id)
+        if not job:
+            continue
+        while job.status.lower() == 'queued':
+            sleep(0.5)
+        result.append(job.result)
+
+    result = Counter(result)
+    campaign_result.state = 'Done'
+    campaign_result.matchingCount = result[True]
+    campaign_result.notMatchingCount = result[False]
+    campaign_result.failedCount = result[None]
+    campaign_result.save()
+    Logger.info(unicode('MassContact campaign %d finished' % (campaign_result.campaign.id)))
 
 
 def __save_email(filename, email):

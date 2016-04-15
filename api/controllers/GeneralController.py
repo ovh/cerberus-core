@@ -46,7 +46,7 @@ from django.forms.models import model_to_dict
 import ReportsController
 import TicketsController
 from abuse.models import (AbusePermission, Category, History, Profile, Report,
-                          MassContact, ReportItem, Resolution, Tag, Ticket)
+                          MassContact, MassContactResult, ReportItem, Resolution, Tag, Ticket)
 from adapters.services.kpi.abstract import KPIServiceException
 from factory.factory import ImplementationFactory
 from utils import logger, utils
@@ -664,15 +664,25 @@ def get_mass_contact(filters=None):
         limit = 10
         offset = 1
 
+    sort = []
+    try:
+        sort += ['-' + k if v < 0 else k for k, v in query_filters['sortBy'].iteritems()]
+    except KeyError:
+        sort += ['id']
+
     campaigns = []
-    for campaign in MassContact.objects.all()[(offset - 1) * limit:limit * offset]:
-        campaigns.append({
-            'campaignName': campaign.campaignName,
-            'category': campaign.category.name,
-            'user': campaign.user.username,
-            'ipsCount': campaign.ipsCount,
-            'date': int(mktime(campaign.date.timetuple())),
-        })
+    try:
+        for campaign in MassContact.objects.all().order_by(*sort)[(offset - 1) * limit:limit * offset]:
+            campaigns.append({
+                'campaignName': campaign.campaignName,
+                'category': campaign.category.name,
+                'user': campaign.user.username,
+                'ipsCount': campaign.ipsCount,
+                'date': int(mktime(campaign.date.timetuple())),
+                'result': model_to_dict(campaign.masscontactresult_set.all()[0]),
+            })
+    except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
     return 200, campaigns
 
 
@@ -695,6 +705,7 @@ def post_mass_contact(body, user):
     # Generates unified campaignName
     campaign_name = body['campaignName']
     campaign_name = re.sub(r'(\s+){2,}', ' ', campaign_name).replace(' ', '_').lower()
+    campaign_name = re.sub('[^A-Za-z0-9_]+', '', campaign_name)
     campaign_name = u'mass_contact_' + campaign_name + u'_' + datetime.now().strftime('%D')
 
     # Check mustache (required for worker)
@@ -703,26 +714,47 @@ def post_mass_contact(body, user):
             message = '%s templating elements required in %s' % (str(MASS_CONTACT_REQUIRED), key)
             return 400, {'status': 'Bad Request', 'code': 400, 'message': message}
 
+    __create_jobs(campaign_name, ips, category, body, user)
+    return 200, {'status': 'OK', 'code': 200, 'message': 'Campaign successfully created'}
+
+
+def __create_jobs(campaign_name, ips, category, body, user):
+    """
+        Creates RQ jobs for each IP
+    """
     # Save related infos
-    MassContact.objects.create(
+    campaign = MassContact.objects.create(
         campaignName=campaign_name,
         category=category,
         user=user,
         ipsCount=len(ips),
     )
 
+    result = MassContactResult.objects.create(
+        campaign=campaign,
+    )
+
     # For each IP, create a worker job
+    jobs = []
     for ip_address in ips:
-        utils.queue.enqueue(
+        job = utils.queue.enqueue(
             'ticket.mass_contact',
             ip_address=ip_address,
             category=category.name,
             campaign_name=campaign_name,
             email_subject=body['email']['subject'],
             email_body=body['email']['body'],
-            user_id=user.id
+            user_id=user.id,
+            timeout=360,
         )
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Campaign successfully created'}
+        jobs.append(job.id)
+
+    utils.queue.enqueue(
+        'ticket.check_mass_contact_result',
+        result_campaign_id=result.id,
+        jobs=jobs,
+        timeout=3600,
+    )
 
 
 def get_notifications(user):

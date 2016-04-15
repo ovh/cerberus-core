@@ -350,7 +350,7 @@ def post_mass_contact():
     :reqjson str campaignName: The name of the campaign
     :reqjson dict email: The email to send (containing 'subject' and 'body')
 
-    :status 200: when campagin is successfully created
+    :status 200: when campaign is successfully created
     :status 400: when parameters are missing or invalid
     """
     body = request.get_json()

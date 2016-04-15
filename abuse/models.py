@@ -540,3 +540,19 @@ class MassContact(models.Model):
     user = models.ForeignKey(User, null=False)
     ipsCount = models.IntegerField(null=False)
     date = models.DateTimeField(auto_now=True, null=False)
+
+
+class MassContactResult(models.Model):
+    """
+        Store result of a "mass contact" campaign.
+    """
+    STATE = (
+        ('Done', 'Done'),
+        ('Pending', 'Pending'),
+    )
+
+    campaign = models.ForeignKey(MassContact, null=False)
+    state = TruncatedCharField(max_length=32, null=False, choices=STATE, default='Pending')
+    matchingCount = models.IntegerField(null=False, default=0)  # Defendant found, report created
+    notMatchingCount = models.IntegerField(null=False, default=0)  # No defendant found
+    failedCount = models.IntegerField(null=False, default=0)  # Rq job failed
