@@ -52,6 +52,8 @@ class DefaultPhishingService(PhishingServiceBase):
             'timestamp': 1452706246,
             'location': u'https://www.ovh.com/fr/news/logos/with-baseline/logo-ovh-avec-150DPI.png',
             'screenshotId': u'123456',
+            'phishingGrade': 0.0,
+            'score': 0,
             'response': {
                 'directAccess': {
                     'statusCode': 200,

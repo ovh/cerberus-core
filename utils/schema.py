@@ -67,6 +67,8 @@ Schemas = {
                 'timestamp': int,
                 'location': unicode,
                 'screenshotId': unicode,
+                'phishingGrade': float,
+                'score': int,
                 'response': {
                     'directAccess': {
                         'statusCode': int,

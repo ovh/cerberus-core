@@ -75,6 +75,8 @@ class PhishingServiceBase(object):
                 'timestamp': 1452706246,
                 'location': 'https://your.screenshot.storage/example.png',
                 'screenshotId': '123456',
+                'phishingGrade': '0.9',  # Between 0 and 1 (0, not phishing, 1 phishing)
+                'score': 0,  # Between 0 and 100 (0, UP, 100, DOWN)
                 'response': {
                     'directAccess': {
                         'statusCode': 200,
