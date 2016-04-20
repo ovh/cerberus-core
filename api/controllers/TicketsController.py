@@ -1008,6 +1008,10 @@ def interact(ticket_id, body, user):
     if not all(key in body for key in ('emails', 'action')):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing param(s): need emails and action'}
 
+    for email_to_send in body['emails']:
+        if not all(email_to_send.get(key) for key in ('to', 'subject', 'body')):
+            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing param(s): need subject and body in email'}
+
     action = body['action']
     code = 200
 
@@ -1029,8 +1033,8 @@ def interact(ticket_id, body, user):
                     params['body']
                 )
                 GeneralController.log_action(ticket, user, 'send an email to %s' % (recipient))
-            except MailerServiceException as ex:
-                return 500, {'status': 'Internal Server Error', 'code': 500, 'message': str(ex)}
+            except MailerServiceException:
+                return 500, {'status': 'Internal Server Error', 'code': 500, 'message': 'Error while sending emails (actions ok)'}
 
     return 200, {'status': 'OK', 'code': 200, 'message': 'Ticket successfully updated'}
 
