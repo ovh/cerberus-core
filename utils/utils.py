@@ -125,8 +125,9 @@ class RequestException(Exception):
     """
         RequestException
     """
-    def __init__(self, message):
+    def __init__(self, message, code):
         super(RequestException, self).__init__(message)
+        self.code = code
 
 
 def request_wrapper(url, auth=None, params=None, as_json=False, method='POST', headers=None, timeout=30):
@@ -160,16 +161,16 @@ def request_wrapper(url, auth=None, params=None, as_json=False, method='POST', h
         except HTTPError as ex:
             if 500 <= int(ex.response.status_code) <= 599:
                 if retry == max_tries - 1:
-                    raise RequestException(__get_request_exception_message(request, url, params, ex))
+                    raise RequestException(__get_request_exception_message(request, url, params, ex), ex.response.status_code)
                 else:
                     sleep(1)
             else:
-                raise RequestException(__get_request_exception_message(request, url, params, ex))
+                raise RequestException(__get_request_exception_message(request, url, params, ex), ex.response.status_code)
         except Timeout as ex:
-            raise RequestException(__get_request_exception_message(request, url, params, ex))
+            raise RequestException(__get_request_exception_message(request, url, params, ex), None)
         except (ChunkedEncodingError, ConnectionError, JSONDecodeError) as ex:
             if retry == max_tries - 1:
-                raise RequestException(__get_request_exception_message(request, url, params, ex))
+                raise RequestException(__get_request_exception_message(request, url, params, ex), None)
             else:
                 sleep(1)
 
