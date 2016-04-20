@@ -1230,7 +1230,7 @@ def get_actions_list(ticket_id, user):
     return 200, actions
 
 
-def cancel_aysnchronous_job(ticket_id, job_id, user):
+def cancel_asynchronous_job(ticket_id, job_id, user):
     """ Cancel task on ticket
     """
     try:
