@@ -1275,7 +1275,7 @@ def schedule_asynchronous_job(ticket_id, action_id, ip_addr, user, seconds=1, me
             job.status = 'cancelled by new action'
             job.save()
 
-    async_job = utils.scheduler.enqueue_in(timedelta(seconds=seconds), method, **params)
+    async_job = utils.scheduler.enqueue_in(timedelta(seconds=seconds), method, timeout=3600, **params)
     job = ServiceActionJob.objects.create(ip=ip_addr, action=action, asynchronousJobId=async_job.id, creationDate=datetime.now())
 
     ticket.action = action
