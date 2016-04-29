@@ -114,8 +114,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
 
     # Upload attachments
     if abuse_report.attachments:
-        for report in created_reports:
-            save_attachments(report, abuse_report.attachments)
+        __save_attachments(created_reports, filename, abuse_report.attachments)
 
     # Send acknowledgement to provider (only if send_ack = True and report is attached to a ticket)
     for report in created_reports:
@@ -315,26 +314,28 @@ def __insert_items(report_id, items):
                 ReportItem.objects.create(**item_dict)
 
 
-def save_attachments(report, attachments):
+def __save_attachments(reports, filename, attachments):
     """ Upload email attachments to StorageService and keep a reference in Cerberus
 
-        :param `abuse.models.Report` report: A `abuse.models.Report` instance
+        :param list reports: A list of `abuse.models.Report` instance
         :param list attachments: A list of dict {'filename': 'test.pdf', 'data': '...', 'type': 'application/pdf'}
     """
-    for attachment in attachments:
-        storage_filename = report.filename + '-attach-'
+    for attachment in attachments[:50]:  # Slice 50 to avoid denial of service
+
+        storage_filename = filename + '-attach-'
         storage_filename = storage_filename.encode('utf-8')
         storage_filename = storage_filename + attachment['filename']
 
-        AttachedDocument.objects.create(
-            report=report,
-            name=attachment['filename'],
-            filename=storage_filename,
-            filetype=attachment['type'],
-        )
-
         with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
             cnx.write(storage_filename, attachment['data'])
+
+        for report in reports:
+            AttachedDocument.objects.create(
+                report=report,
+                name=attachment['filename'],
+                filename=storage_filename,
+                filetype=attachment['type'],
+            )
 
 
 def __save_email(filename, email):
@@ -568,8 +569,9 @@ def __update_ticket_if_answer(ticket, abuse_report, filename):
     )
 
     if abuse_report.attachments:
-        save_attachments(
-            ticket.reportTicket.all()[0],
+        __save_attachments(
+            [ticket.reportTicket.all()[0]],
+            filename,
             abuse_report.attachments,
         )
 

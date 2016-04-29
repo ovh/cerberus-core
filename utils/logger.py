@@ -18,8 +18,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-""" Utils for Cerberus
 """
+    Logger for Cerberus
+"""
+
 import logging
 import Queue
 import sys
