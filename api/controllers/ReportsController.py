@@ -80,7 +80,7 @@ def index(**kwargs):
     # Generate Django filter based on parsed filters
     try:
         where = __generate_request_filters(filters, kwargs['user'])
-    except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
+    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
 
     # Try to identify sortby in request
@@ -103,7 +103,7 @@ def index(**kwargs):
         reports = Report.objects.filter(where).values(*fields).distinct().order_by(*sort)
         reports = reports[(offset - 1) * limit:limit * offset]
         len(reports)  # Force django to evaluate query now
-    except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
+    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
 
     __format_report_response(reports)
@@ -265,6 +265,8 @@ def show(report_id):
 def update(report_id, body, user):
     """ Update a report
     """
+    from worker import database
+
     try:
         report = Report.objects.get(id=int(report_id))
     except (ObjectDoesNotExist, ValueError):
@@ -299,6 +301,9 @@ def update(report_id, body, user):
         valid_fields = ['status', 'defendant', 'category', 'ticket']
         body = {k: v for k, v in body.iteritems() if k in valid_fields}
         Report.objects.filter(id=report.id).update(**body)
+        report = Report.objects.get(id=int(report_id))
+        if report.ticket:
+            database.set_ticket_higher_priority(report.ticket)
     except (KeyError, FieldDoesNotExist, FieldError, IntegrityError, TypeError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
 

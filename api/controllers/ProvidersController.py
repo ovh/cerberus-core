@@ -53,7 +53,10 @@ def index(**kwargs):
         limit = 10
         offset = 1
 
-    where = generate_request_filter(filters)
+    try:
+        where = __generate_request_filter(filters)
+    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, ValueError) as ex:
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
 
     try:
         sort = ['-' + k if v < 0 else k for k, v in filters['sortBy'].iteritems()]
@@ -81,21 +84,18 @@ def index(**kwargs):
     return 200, {'providers': [dict(prov) for prov in providers], 'providersCount': count}
 
 
-def generate_request_filter(filters):
+def __generate_request_filter(filters):
     """ Generates filters from filter query string
     """
     where = [Q()]
     if 'where' in filters and len(filters['where']):
-        try:
-            keys = set(k for k in filters['where'])
-            if 'like' in keys:
-                for i in filters['where']['like']:
-                    for key, val in i.iteritems():
-                        field = key + '__icontains'
-                        where.append(reduce(operator.or_, [Q(**{field: val[0]})]))
-            where = reduce(operator.and_, where)
-        except (AttributeError, KeyError, FieldError, SyntaxError, ValueError) as ex:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+        keys = set(k for k in filters['where'])
+        if 'like' in keys:
+            for i in filters['where']['like']:
+                for key, val in i.iteritems():
+                    field = key + '__icontains'
+                    where.append(reduce(operator.or_, [Q(**{field: val[0]})]))
+        where = reduce(operator.and_, where)
     else:
         where = reduce(operator.and_, where)
     return where

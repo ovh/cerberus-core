@@ -24,10 +24,9 @@
 
 import json
 import operator
-import random
 import re
-import string
 import time
+
 from copy import deepcopy
 from datetime import datetime, timedelta
 from urllib import unquote
@@ -78,7 +77,7 @@ def index(**kwargs):
     # Generate Django filter based on parsed filters
     try:
         where = __generate_request_filters(filters, kwargs['user'], kwargs.get('treated_by'))
-    except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
+    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
 
     # Try to identify sortby in request
@@ -108,7 +107,7 @@ def index(**kwargs):
             attachedReportsCount=Count('reportTicket')).order_by(*sort)
         tickets = tickets[(offset - 1) * limit:limit * offset]
         len(tickets)  # Force django to evaluate query now
-    except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
+    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
 
     __format_ticket_response(tickets)
@@ -364,6 +363,8 @@ def create(report, user):
     """ Create a ticket from a report or attach it
         if ticket with same defendant/category already exists
     """
+    from worker import database
+
     if not all(k in report.keys() for k in ('id', 'status')) or report['status'] not in ['New', 'Attached']:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Can not create a ticket with this status'}
 
@@ -400,45 +401,23 @@ def create(report, user):
     actions = []
     # Try to attach to existing
     if all((defendant, service, report.category)):
-        tickets = Ticket.objects.filter(
-            ~(Q(status='Closed')),
-            defendant=defendant,
-            category=report.category,
-            service=service,
-            update=True
-        )
-        if len(tickets):
-            ticket = tickets[0]
+        ticket = database.search_ticket(defendant, report.category, service)
+        if ticket:
             actions.append('attach report %d from %s (%s ...) to this ticket' % (report.id, report.provider.email, report.subject[:30]))
 
     # Else creates ticket
     if not ticket:
-        while True:
-            try:
-                public_id = ''.join(random.sample(string.ascii_uppercase.translate(None, 'AEIOUY'), 10))
-                ticket = Ticket.objects.create(
-                    publicId=public_id,
-                    creationDate=datetime.now(),
-                    category=report.category,
-                    defendant=defendant,
-                    service=service,
-                    update=True
-                )
-                break
-            except IntegrityError:
-                pass
+        ticket = database.create_ticket(defendant, report.category, service, priority=report.provider.priority)
         actions.append('create this ticket with report %d from %s (%s ...)' % (report.id, report.provider.email, report.subject[:30]))
 
-    report.ticket = ticket
+    database.set_ticket_higher_priority(ticket)
     report.status = 'Attached'
+    report.ticket = ticket
     report.save()
 
     # If new report, try to attach existing reports with status "New" to this new created ticket
-    if all((defendant, service, report.category)):
-        for rep in Report.objects.filter(~Q(id__in=[report.id]), status='New', category=report.category, defendant=defendant, service=service):
-            rep.status = 'Attached'
-            rep.ticket = ticket
-            rep.save()
+    if ticket:
+        for rep in ticket.reportTicket.filter(~Q(id__in=[report.id])):
             actions.append('attach report %d from %s (%s ...) to this ticket' % (rep.id, rep.provider.email, rep.subject[:30]))
 
     for action in actions:
@@ -1254,7 +1233,8 @@ def cancel_asynchronous_job(ticket_id, job_id, user):
 
 
 def schedule_asynchronous_job(ticket_id, action_id, ip_addr, user, seconds=1, method='apply_action', params=None):
-    """ Schedule task on ticket
+    """
+        Schedule task on ticket
     """
     try:
         ticket = Ticket.objects.get(id=ticket_id)
@@ -1275,8 +1255,13 @@ def schedule_asynchronous_job(ticket_id, action_id, ip_addr, user, seconds=1, me
             job.status = 'cancelled by new action'
             job.save()
 
-    async_job = utils.scheduler.enqueue_in(timedelta(seconds=seconds), method, timeout=3600, **params)
-    job = ServiceActionJob.objects.create(ip=ip_addr, action=action, asynchronousJobId=async_job.id, creationDate=datetime.now())
+    async_job = utils.scheduler.enqueue_in(timedelta(seconds=seconds), method, **params)
+    job = ServiceActionJob.objects.create(
+        ip=ip_addr,
+        action=action,
+        asynchronousJobId=async_job.id,
+        creationDate=datetime.now()
+    )
 
     ticket.action = action
     delay = 'now' if seconds == 1 else 'in %s hour(s)' % (str(seconds / 3600))
@@ -1326,7 +1311,8 @@ def __check_action_rights(ticket, action_id, user):
 
 
 def get_todo_tickets(**kwargs):
-    """ Test
+    """
+        Get TODO tickets
     """
     # Parse filters from request
     filters = {}
@@ -1342,7 +1328,8 @@ def get_todo_tickets(**kwargs):
 
 
 def __get_filtered_todo_tickets(filters, user):
-    """ Get tickets TODO with specifi ordering
+    """
+        Get tickets TODO with specific ordering
     """
     try:
         limit = int(filters['paginate']['resultsPerPage'])
@@ -1390,7 +1377,7 @@ def __get_filtered_todo_tickets(filters, user):
         if status == ['Open']:
             order_by.append('-reportTicket__tags__level')
 
-        for priority in ['High', 'Normal', 'Low']:
+        for priority in ['Critical', 'High', 'Normal', 'Low']:
 
             tickets = Ticket.objects.filter(
                 where,
@@ -1415,7 +1402,8 @@ def __get_filtered_todo_tickets(filters, user):
 
 
 def __get_user_filters(user):
-    """ Filter allowed category for this user
+    """
+        Filter allowed category for this user
     """
     where = [Q()]
     user_specific_where = []
@@ -1427,7 +1415,13 @@ def __get_user_filters(user):
         elif perm.profile.name == 'Advanced':
             user_specific_where.append(Q(category=perm.category, confidential=False))
         elif perm.profile.name == 'Beginner':
-            user_specific_where.append(Q(category=perm.category, confidential=False, escalated=False, moderation=False))
+            user_specific_where.append(Q(
+                priority__in=['Low', 'Normal'],
+                category=perm.category,
+                confidential=False,
+                escalated=False,
+                moderation=False
+            ))
 
     if len(user_specific_where):
         user_specific_where = reduce(operator.or_, user_specific_where)

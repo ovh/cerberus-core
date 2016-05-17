@@ -22,7 +22,7 @@ import os
 import shutil
 
 from abuse.models import (AbusePermission, ServiceAction, Category, MailTemplate,
-                          ReportThreshold, User, Profile, Resolution, Tag)
+                          Provider, ReportThreshold, User, Profile, Resolution, Tag)
 from django.conf import settings
 from django.test import TestCase
 
@@ -122,6 +122,10 @@ class GlobalTestCase(TestCase):
 
         for category in Category.objects.all():
             AbusePermission.objects.create(user=user, category=category, profile=profile)
+
+        Provider.objects.create(email='low@provider.com', priority='Low')
+        Provider.objects.create(email='normal@provider.com', priority='Normal')
+        Provider.objects.create(email='critical@provider.com', priority='Critical')
 
     def tearDown(self):
 

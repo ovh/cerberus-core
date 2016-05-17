@@ -21,9 +21,11 @@
     Database wrapper for worker
 """
 
+import operator
 import random
 import re
 import string
+
 from datetime import datetime
 
 from django.conf import settings
@@ -42,6 +44,13 @@ from worker import Logger
 BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
 DEFENDANT_REVISION_FIELDS = [f.name for f in DefendantRevision._meta.fields]
 SERVICE_FIELDS = [f.name for f in Service._meta.fields]
+
+PRIORITY_LEVEL = {
+    'Low': 3,
+    'Normal': 2,
+    'High': 1,
+    'Critical': 0,
+}  # Lower, higher
 
 
 class MultipleDefendantWithSameCustomerId(Exception):
@@ -169,13 +178,14 @@ def search_ticket(defendant, category, service):
         Get ticket if exists
     """
     ticket = None
-
     tickets = Ticket.objects.filter(
         ~(Q(status='Closed')),
         defendant=defendant,
         category=category,
         service=service,
         update=True
+    ).order_by(
+        '-creationDate',
     )
     if len(tickets):
         ticket = tickets[0]
@@ -215,6 +225,20 @@ def create_ticket(defendant, category, service, priority='Normal', attach_new=Tr
         except (IntegrityError, ValueError):
             continue
     return ticket
+
+
+def set_ticket_higher_priority(ticket):
+    """
+        Set `abuse.models.Ticket` higher priority available through it's
+        `abuse.models.Report`'s `abuse.models.Provider`
+    """
+    priorities = list(set(ticket.reportTicket.all().values_list('provider__priority', flat=True)))
+    for priority, _ in sorted(PRIORITY_LEVEL.items(), key=operator.itemgetter(1)):
+        if priority in priorities:
+            Logger.debug(unicode('set priority %s to ticket %d' % (priority, ticket.id)))
+            ticket.priority = priority
+            ticket.save()
+            return
 
 
 def get_category(name):

@@ -70,12 +70,13 @@ class TestWorkers(GlobalTestCase):
             Sample1 does not contains any offending items, so just one report and no defendant/service
         """
         from worker import report
+
         mock_rq.return_value = None
         sample = self._samples['sample1']
         content = sample.read()
         report.create_from_email(email_content=content)
         self.assertEqual(1, Report.objects.count())
-        report = Report.objects.all()[:1][0]
+        report = Report.objects.last()
         self.assertFalse(report.defendant)
         self.assertFalse(report.service)
         self.assertFalse(report.attachedDocumentRelatedReport.count())
@@ -88,13 +89,14 @@ class TestWorkers(GlobalTestCase):
             Sample2 contains offending items
         """
         from worker import report
+
         mock_rq.return_value = None
         sample = self._samples['sample2']
         content = sample.read()
         report.create_from_email(email_content=content)
         self.assertTrue(Defendant.objects.count())
         self.assertEqual(1, Report.objects.count())
-        report = Report.objects.all()[:1][0]
+        report = Report.objects.last()
         self.assertTrue(report.defendant)
         self.assertEqual('Doe', report.defendant.details.name)
         self.assertTrue(report.service)
@@ -109,13 +111,14 @@ class TestWorkers(GlobalTestCase):
             Sample6 is a trusted phishing report
         """
         from worker import report
+
         mock_rq.return_value = None
         sample = self._samples['sample6']
         content = sample.read()
         report.create_from_email(email_content=content, send_ack=False)
 
         self.assertEqual(1, Report.objects.count())
-        report = Report.objects.all()[:1][0]
+        report = Report.objects.last()
         self.assertEqual('Phishing', report.category.name)
         self.assertFalse(report.ticket)
         self.assertEqual('PhishToCheck', report.status)
@@ -126,13 +129,14 @@ class TestWorkers(GlobalTestCase):
             Sample7 is not a trusted phishing report
         """
         from worker import report
+
         mock_rq.return_value = None
         sample = self._samples['sample7']
         content = sample.read()
         report.create_from_email(email_content=content, send_ack=False)
 
         self.assertEqual(1, Report.objects.count())
-        report = Report.objects.all()[:1][0]
+        report = Report.objects.last()
         self.assertEqual('Phishing', report.category.name)
         self.assertFalse(report.ticket)
         self.assertEqual('PhishToCheck', report.status)
@@ -152,6 +156,7 @@ class TestWorkers(GlobalTestCase):
             Sample6 is a trusted phishing report, now down items
         """
         from worker import report
+
         mock_rq.return_value = None
         mock_ping.return_value = PingResponse(100, '404', 'Not Found', 'Not Found')
         sample = self._samples['sample6']
@@ -159,7 +164,7 @@ class TestWorkers(GlobalTestCase):
         report.create_from_email(email_content=content, send_ack=False)
 
         self.assertEqual(1, Report.objects.count())
-        report = Report.objects.all()[:1][0]
+        report = Report.objects.last()
         self.assertEqual('Phishing', report.category.name)
         self.assertTrue(report.ticket)
         self.assertEqual('Archived', report.status)
@@ -172,12 +177,13 @@ class TestWorkers(GlobalTestCase):
             Sample3 is trusted
         """
         from worker import report
+
         mock_rq.return_value = None
         sample = self._samples['sample3']
         content = sample.read()
         report.create_from_email(email_content=content, send_ack=True)
         self.assertEqual(1, Report.objects.count())
-        report = Report.objects.all()[:1][0]
+        report = Report.objects.last()
         self.assertEqual('newsletter@ipm.dhnet.be', report.provider.email)
         self.assertEqual('Copyright', report.category.name)
         self.assertEqual(1, report.ticket.id)
@@ -216,7 +222,7 @@ class TestWorkers(GlobalTestCase):
         content = sample.read()
         report.create_from_email(email_content=content, send_ack=False)
 
-        cerberus_report = Report.objects.all()[:1][0]
+        cerberus_report = Report.objects.last()
         cerberus_report.status = 'Attached'
         cerberus_report.ticket.status = 'WaitingAnswer'
         cerberus_report.ticket.snoozeDuration = 1
@@ -250,7 +256,7 @@ class TestWorkers(GlobalTestCase):
         content = sample.read()
         report.create_from_email(email_content=content, send_ack=False)
 
-        cerberus_report = Report.objects.all()[:1][0]
+        cerberus_report = Report.objects.last()
         cerberus_report.status = 'Attached'
         cerberus_report.ticket.status = 'WaitingAnswer'
         cerberus_report.ticket.save()
@@ -306,18 +312,19 @@ class TestWorkers(GlobalTestCase):
             Test defendant revision/history modification
         """
         from worker import report
+
         mock_rq.return_value = None
         sample = self._samples['sample2']
         content = sample.read()
         report.create_from_email(email_content=content)
-        defendant = Report.objects.all()[:1][0].defendant
+        defendant = Report.objects.last().defendant
         self.assertEqual(1, DefendantHistory.objects.filter(defendant=defendant).count())
         self.assertEqual(1, defendant.details.id)
         defendant.details.name = 'Test'
         defendant.details.save()
         defendant.save()
         report.create_from_email(email_content=content)
-        defendant = Report.objects.all()[:1][0].defendant
+        defendant = Report.objects.last().defendant
         self.assertEqual(2, DefendantHistory.objects.filter(defendant=defendant).count())
         self.assertEqual(2, defendant.details.id)
         self.assertEqual('Doe', defendant.details.name)
@@ -327,13 +334,14 @@ class TestWorkers(GlobalTestCase):
         """
             Test copyright/acns specific workflow
         """
-        Provider.objects.create(email='broadgreenpictures@copyright-compliance.com', trusted=True)
         from worker import report
+
+        Provider.objects.create(email='broadgreenpictures@copyright-compliance.com', trusted=True)
         mock_rq.return_value = None
         sample = self._samples['acns']
         content = sample.read()
         report.create_from_email(email_content=content)
-        cerberus_report = Report.objects.all()[:1][0]
+        cerberus_report = Report.objects.last()
         self.assertEqual('Archived', cerberus_report.status)
         self.assertEqual('Closed', cerberus_report.ticket.status)
 
@@ -342,16 +350,17 @@ class TestWorkers(GlobalTestCase):
         """
         """
         from worker import report
+
         mock_rq.return_value = None
         sample = self._samples['sample2']
         content = sample.read()
         report.create_from_email(email_content=content)
         report.create_ticket_with_threshold()
-        cerberus_report = Report.objects.all()[:1][0]
+        cerberus_report = Report.objects.last()
         self.assertEqual('New', cerberus_report.status)
         ReportThreshold.objects.all().update(threshold=1)
         report.create_ticket_with_threshold()
-        cerberus_report = Report.objects.all()[:1][0]
+        cerberus_report = Report.objects.last()
         self.assertEqual('Attached', cerberus_report.status)
 
     @patch('rq.queue.Queue.enqueue')
@@ -359,6 +368,7 @@ class TestWorkers(GlobalTestCase):
     def test_ticket_from_phishtocheck(self, mock_rq, mock_rq_enqueue):
 
         from worker import report, ticket
+
         mock_rq.return_value = None
         mock_rq_enqueue.return_value = FakeJob()
         sample = self._samples['sample7']
@@ -366,11 +376,38 @@ class TestWorkers(GlobalTestCase):
         report.create_from_email(email_content=content, send_ack=False)
 
         self.assertEqual(1, Report.objects.count())
-        cerberus_report = Report.objects.all()[:1][0]
+        cerberus_report = Report.objects.last()
         user = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
         ticket.create_ticket_from_phishtocheck(report=cerberus_report.id, user=user.id)
-        cerberus_report = Report.objects.all()[:1][0]
+        cerberus_report = Report.objects.last()
         self.assertEqual('Attached', cerberus_report.status)
         self.assertEqual(1, cerberus_report.ticket.id)
         emails = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').get_emails(cerberus_report.ticket)
         self.assertEqual(1, len(emails))
+
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_ticket_change_priority(self, mock_rq):
+        """
+            Test if ticket is actually changing priority
+        """
+        from worker import report
+
+        mock_rq.return_value = None
+
+        sample = self._samples['sample11']  # Low
+        content = sample.read()
+        report.create_from_email(email_content=content, send_ack=True)
+        cerberus_report = Report.objects.last()
+        self.assertEqual('Low', cerberus_report.ticket.priority)
+
+        sample = self._samples['sample13']  # Critical
+        content = sample.read()
+        report.create_from_email(email_content=content, send_ack=True)
+        cerberus_report = Report.objects.last()
+        self.assertEqual('Critical', cerberus_report.ticket.priority)
+
+        sample = self._samples['sample12']  # Normal
+        content = sample.read()
+        report.create_from_email(email_content=content, send_ack=True)
+        cerberus_report = Report.objects.last()
+        self.assertEqual('Critical', cerberus_report.ticket.priority)

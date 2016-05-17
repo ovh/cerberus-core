@@ -249,6 +249,7 @@ def __create_with_services(abuse_report, filename, services):
             report.ticket = Ticket.objects.get(id=ticket.id)
             report.status = 'Attached'
             report.save()
+            database.set_ticket_higher_priority(ticket)
             action = action if action else 'attach report %d from %s (%s ...) to this ticket'
             database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
 

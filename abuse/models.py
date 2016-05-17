@@ -223,7 +223,8 @@ class Ticket(models.Model):
     TICKET_PRIORITY = (
         ('Low', 'Low'),
         ('Normal', 'Normal'),
-        ('High', 'High')
+        ('High', 'High'),
+        ('Critical', 'Critical'),
     )
 
     publicId = TruncatedCharField(max_length=10, blank=True, null=True, unique=True)
@@ -261,7 +262,8 @@ class Provider(models.Model):
     PROVIDER_PRIORITY = (
         ('Low', 'Low'),
         ('Normal', 'Normal'),
-        ('High', 'High')
+        ('High', 'High'),
+        ('Critical', 'Critical'),
     )
     email = TruncatedCharField(primary_key=True, max_length=255)
     name = TruncatedCharField(null=True, max_length=255)

@@ -84,7 +84,7 @@ def get_items_infos(**kwargs):
                     for key, val in i.iteritems():
                         field = key + '__icontains'
                         where.append(reduce(operator.or_, [Q(**{field: val[0]})]))
-        except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
+        except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
             return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex)}
 
     where = reduce(operator.and_, where)
@@ -95,7 +95,7 @@ def get_items_infos(**kwargs):
         raw_items = ReportItem.objects.filter(where, report__in=kwargs['reps']).values_list('rawItem', flat=True).distinct()
         raw_items = raw_items[(offset - 1) * limit:limit * offset]
         items = [ReportItem.objects.filter(where, report__in=kwargs['reps'], rawItem=raw).last() for raw in raw_items]
-    except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
+    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex)}
 
     items = [{f.name: f.value_from_object(i) for f in ReportItem._meta.fields} for i in items]
