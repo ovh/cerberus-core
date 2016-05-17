@@ -67,7 +67,7 @@ Schemas = {
                 'timestamp': int,
                 'location': unicode,
                 'screenshotId': unicode,
-                'phishingGrade': float,
+                'phishingGrade': Any(None, float),
                 'score': int,
                 'response': {
                     'directAccess': {
@@ -121,5 +121,5 @@ def valid_adapter_response(base_name, func_name, data):
         Schemas[base_name][func_name](data)
     except (KeyError, TypeError, ValueError):
         raise SchemaNotFound('Schema not found for %s.%s' % (base_name, func_name))
-    except (Invalid, MultipleInvalid):
-        raise InvalidFormatError('Given data is not compliant to %s.%s schema' % (base_name, func_name))
+    except (Invalid, MultipleInvalid) as ex:
+        raise InvalidFormatError('Given data is not compliant to %s.%s schema: %s' % (base_name, func_name, str(ex)))

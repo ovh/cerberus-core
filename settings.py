@@ -130,8 +130,7 @@ EMAIL_FETCHER = {
 #           maybe you have a regexp to identify YOUR managed FQDN (i.e: endswith domain.com)
 PARSING = {
     'providers_to_ignore': [
-        'juergen.giegold@web.de',
-        'juergen.giegold@arcor.de',
+        'bad@provider.com',
     ],
     'networks_to_ignore': [
         '0.0.0.0/8',
