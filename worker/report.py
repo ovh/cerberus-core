@@ -22,15 +22,17 @@
     Report functions for worker
 """
 import hashlib
+from collections import Counter
 from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import ObjectDoesNotExist
+from django.db.models import ObjectDoesNotExist, Q
 
 import database
 import phishing
-from abuse.models import AttachedDocument, Report, ReportItem, Ticket
+from abuse.models import (AttachedDocument, Report, ReportItem, Resolution,
+                          Proof, ReportThreshold, Ticket, Defendant, Service)
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.mailer.abstract import MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
@@ -61,7 +63,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
     """
     # This function use a lock/commit_on_succes on db when creating reports
     #
-    # Huge block of code are under transaction, why ? Because it's important to
+    # Huge blocks of code are under transaction because it's important to
     # rollback if ANYTHING goes wrong in the report creation workflow.
     #
     # But concurrent transactions (with multiple workers), on defendant/service creation
@@ -87,6 +89,11 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         except MailerServiceException as ex:
             raise MailerServiceException(ex)
 
+    # Check if provider is not blacklisted
+    if abuse_report.provider in settings.PARSING['providers_to_ignore']:
+        Logger.error(unicode('Provider %s is blacklisted, skipping ...' % (abuse_report.provider)))
+        return
+
     # Check if items are linked to customer and get corresponding services
     try:
         services = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_services_from_items(
@@ -110,9 +117,9 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         Logger.error(unicode('Exception while creating report(s) for mail %s -> %s' % (filename, str(ex))))
         raise StorageServiceException(ex)
 
-    # Index to SearchService
-    if ImplementationFactory.instance.is_implemented('SearchServiceBase'):
-        __index_report_to_searchservice(abuse_report, filename, [rep.id for rep in created_reports])
+    # Upload attachments
+    if abuse_report.attachments:
+        __save_attachments(created_reports, filename, abuse_report.attachments)
 
     # Send acknowledgement to provider (only if send_ack = True and report is attached to a ticket)
     for report in created_reports:
@@ -121,6 +128,10 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
                 __send_ack(report, lang=lang)
             except MailerServiceException as ex:
                 raise MailerServiceException(ex)
+
+    # Index to SearchService
+    if ImplementationFactory.instance.is_implemented('SearchServiceBase'):
+        __index_report_to_searchservice(abuse_report, filename, [rep.id for rep in created_reports])
 
     Logger.info(unicode('All done successfully for email %s' % (filename)))
 
@@ -156,15 +167,11 @@ def __create_without_services(abuse_report, filename, create_if_trusted=True):
         report_id=report.id
     )
 
-    # Upload attachments
-    if abuse_report.attachments:
-        __save_attachments(report, abuse_report.attachments)
-
     if autoarchive:
         report.status = 'Archived'
     else:
         if abuse_report.trusted and create_if_trusted:
-            ticket = database.create_ticket(report.defendant, report.category, report.service, report.provider)
+            ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
             action = 'create this ticket with report %d from %s (%s ...)'
             database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
             report.ticket = ticket
@@ -191,20 +198,21 @@ def __create_with_services(abuse_report, filename, services):
 
         report = __create_without_services(abuse_report, filename, create_if_trusted=False)
         created_reports.append(report)
-
-        if report.status == 'Archived':  # because autoarchive tag
-            continue
-
-        action = ticket = None
         report.defendant = database.get_or_create_defendant(data['defendant'])
         report.service = database.get_or_create_service(data['service'])
         report.save()
 
+        if report.status == 'Archived':  # because autoarchive tag
+            continue
+
         _, attach_only, no_phishtocheck = __get_attributes_based_on_tags(report, abuse_report.recipients)
         __insert_items(report.id, data['items'])
+
+        # The provider or the way we received the report
         trusted = True if report.provider.trusted or abuse_report.trusted else False
 
         # Looking for existing open ticket for same (service, defendant, category)
+        ticket = None
         if all((report.defendant, report.category, report.service)):
             msg = 'Looking for opened ticket for (%s, %s, %s)'
             Logger.debug(unicode(msg % (report.defendant.customerId, report.category.name, report.service.name)))
@@ -214,30 +222,39 @@ def __create_with_services(abuse_report, filename, services):
 
         # Phishing specific workflow
         if report.category.name.lower() == 'phishing' and is_there_some_urls:
+            Logger.debug(unicode('New phishing report %d' % (report.id)))
             is_workflow_applied = __do_phishing_workflow(report, no_phishtocheck)
             if is_workflow_applied:
                 continue
 
-        # If attach report only and no ticket found
+        # ACNS specific workflow
+        if (trusted and report.category.name.lower() == 'copyright' and
+                any([pattern in report.body for pattern in settings.GENERAL_CONFIG['acns_patterns']])):
+            Logger.debug(unicode('New ACNS/copyright report %d, applying specific workflow' % (report.id)))
+            __do_copyright_acns_workflow(report)
+            continue
+
+        # If attach report only and no ticket found, continue
         if not ticket and attach_only:
             report.status = 'Archived'
             report.save()
             continue
 
         # Create ticket if trusted
+        action = None
         if not ticket and trusted:
-            ticket = database.create_ticket(report.defendant, report.category, report.service, report.provider)
+            ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
             action = 'create this ticket with report %d from %s (%s ...)'
 
-        # If attached to new or exising
         if ticket:
-
+            # Block phishing url signaled by trusted provider
             if report.provider.apiKey and report.category.name.lower() == 'phishing' and is_there_some_urls:
                 phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
 
             report.ticket = Ticket.objects.get(id=ticket.id)
             report.status = 'Attached'
             report.save()
+            database.set_ticket_higher_priority(ticket)
             action = action if action else 'attach report %d from %s (%s ...) to this ticket'
             database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
 
@@ -303,26 +320,28 @@ def __insert_items(report_id, items):
                 ReportItem.objects.create(**item_dict)
 
 
-def __save_attachments(report, attachments):
+def __save_attachments(reports, filename, attachments):
     """ Upload email attachments to StorageService and keep a reference in Cerberus
 
-        :param `abuse.models.Report` report: A `abuse.models.Report` instance
+        :param list reports: A list of `abuse.models.Report` instance
         :param list attachments: A list of dict {'filename': 'test.pdf', 'data': '...', 'type': 'application/pdf'}
     """
-    for attachment in attachments:
-        storage_filename = report.filename + '-attach-'
+    for attachment in attachments[:50]:  # Slice 50 to avoid denial of service
+
+        storage_filename = filename + '-attach-'
         storage_filename = storage_filename.encode('utf-8')
         storage_filename = storage_filename + attachment['filename']
 
-        AttachedDocument.objects.create(
-            report=report,
-            name=attachment['filename'],
-            filename=storage_filename,
-            filetype=attachment['type'],
-        )
-
         with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
             cnx.write(storage_filename, attachment['data'])
+
+        for report in reports:
+            AttachedDocument.objects.create(
+                report=report,
+                name=attachment['filename'],
+                filename=storage_filename,
+                filetype=attachment['type'],
+            )
 
 
 def __save_email(filename, email):
@@ -404,6 +423,60 @@ def __do_phishing_workflow(report, no_phishtocheck):
         return True
 
     return False
+
+
+def __do_copyright_acns_workflow(report):
+    """
+        Apply specific workflow for copyright-acns report
+    """
+    # Create ticket
+    ticket = database.create_ticket(report.defendant, report.category, report.service, attach_new=False)
+    database.log_action_on_ticket(
+        ticket,
+        'create this ticket with report %d from %s (%s ...)' % (report.id, report.provider.email, report.subject[:30])
+    )
+
+    # Add proof
+    Proof.objects.create(
+        content=regexp.ACNS_PROOF.search(report.body).group(),
+        ticket=ticket,
+    )
+
+    # Send emails to provider/defendant (template, email, lang)
+    templates = [
+        (settings.CODENAMES['ack_received'], report.provider.email, 'EN'),
+        (settings.CODENAMES['first_alert'], report.defendant.details.email, report.defendant.details.lang),
+    ]
+    for codename, email, lang in templates:
+        prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+            ticket,
+            codename,
+            lang=lang,
+            acknowledged_report=report.id,
+        )
+        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
+            ticket,
+            email,
+            prefetched_email.subject,
+            prefetched_email.body
+        )
+        database.log_action_on_ticket(ticket, 'send an email to %s' % (email))
+
+    # Close ticket
+    ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
+    resolution = Resolution.objects.get(codename=settings.CODENAMES['forward_acns'])
+    ticket.resolution = resolution
+    ticket.previousStatus = ticket.status
+    ticket.status = 'Closed'
+    ticket.update = False
+    ticket.save()
+    database.log_action_on_ticket(
+        ticket,
+        'change status from %s to %s, reason : %s' % (ticket.previousStatus, ticket.status, resolution.codename)
+    )
+    report.ticket = ticket
+    report.status = 'Archived'
+    report.save()
 
 
 def __get_ticket_if_answer(abuse_report, filename):
@@ -503,7 +576,8 @@ def __update_ticket_if_answer(ticket, abuse_report, filename):
 
     if abuse_report.attachments:
         __save_attachments(
-            ticket.reportTicket.all()[0],
+            [ticket.reportTicket.all()[0]],
+            filename,
             abuse_report.attachments,
         )
 
@@ -532,3 +606,52 @@ def archive_if_timeout(report_id=None):
     report.status = 'Archived'
     report.save()
     Logger.info(unicode('Report %d successfully archived' % (report_id)))
+
+
+def create_ticket_with_threshold():
+    """
+        Automatically creates ticket if there are more than `abuse.models.ReportThreshold.threshold`
+        new reports created during `abuse.models.ReportThreshold.interval` (days) for same (category/defendant/service)
+    """
+    log_msg = 'threshold : Checking report threshold for category %s, threshold %d, interval %d days'
+
+    for thres in ReportThreshold.objects.all():
+        Logger.info(unicode(log_msg % (thres.category.name, thres.threshold, thres.interval)))
+        reports = __get_threshold_reports(thres.category, thres.interval)
+        reports = Counter(reports)
+        for data, count in reports.iteritems():
+            nb_tickets = Ticket.objects.filter(
+                ~Q(status='Closed'),
+                defendant__customerId=data[0],
+                service__id=data[1],
+            ).count()
+            if count >= thres.threshold and not nb_tickets:
+                ticket = __create_threshold_ticket(data, thres)
+                Logger.info(unicode('threshold: tuple %s match, ticket %s has been created' % (str(data), ticket.id)))
+
+
+def __get_threshold_reports(category, delta):
+
+    reports = Report.objects.filter(
+        ~Q(defendant=None),
+        ~Q(service=None),
+        category=category,
+        status='New',
+        receivedDate__gte=datetime.now() - timedelta(days=delta),
+    ).values_list(
+        'defendant__customerId',
+        'service__id'
+    )
+    return reports
+
+
+def __create_threshold_ticket(data, thres):
+
+    service = Service.objects.filter(id=data[1]).last()
+    defendant = Defendant.objects.filter(customerId=data[0]).last()
+    ticket = database.create_ticket(defendant, thres.category, service)
+    database.log_action_on_ticket(
+        ticket,
+        'create this ticket with threshold (more than %s reports received in %s days)' % (thres.threshold, thres.interval)
+    )
+    return ticket

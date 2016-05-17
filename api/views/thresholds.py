@@ -19,80 +19,77 @@
 
 
 """
-    News views for Cerberus protected API.
+    ReportThreshold views for Cerberus protected API.
 """
 
 from flask import Blueprint, request
 
-from api.controllers import GeneralController, NewsController
+from api.controllers import ThresholdController
 from decorators import (admin_required, catch_500, json_required, jsonify,
                         token_required)
 
-news_views = Blueprint('news_views', __name__)
+threshold_views = Blueprint('threshold_views', __name__)
 
 
-@news_views.route('/api/news', methods=['GET'])
-@jsonify
-@token_required
-@catch_500
-def get_all_news():
-    """ Get abuse news
-
-        Filtering is possible through "filters" query string, JSON double encoded format
-    """
-    if 'filters' in request.args:
-        code, resp = NewsController.index(filters=request.args['filters'])
-    else:
-        code, resp = NewsController.index()
-    return code, resp
-
-
-@news_views.route('/api/news/<news>', methods=['GET'])
-@jsonify
-@token_required
-@catch_500
-def get_news(news=None):
-    """ Get given news
-    """
-    code, resp = NewsController.show(news)
-    return code, resp
-
-
-@news_views.route('/api/news', methods=['POST'])
-@jsonify
-@token_required
-@json_required
-@catch_500
-def create_news():
-    """ Post a news
-    """
-    user = GeneralController.get_user(request)
-    body = request.get_json()
-    code, resp = NewsController.create(body, user)
-    return code, resp
-
-
-@news_views.route('/api/news/<news>', methods=['PUT'])
-@jsonify
-@token_required
-@json_required
-@catch_500
-def update_news(news=None):
-    """ Update given news
-    """
-    user = GeneralController.get_user(request)
-    body = request.get_json()
-    code, resp = NewsController.update(news, body, user)
-    return code, resp
-
-
-@news_views.route('/api/news/<news>', methods=['DELETE'])
+@threshold_views.route('/api/admin/threshold', methods=['GET'])
 @jsonify
 @token_required
 @admin_required
 @catch_500
-def delete_news(news=None):
-    """ Delete given news
+def get_all_threshold():
+    """ Get all report's threshold
     """
-    code, resp = NewsController.destroy(news)
+    code, resp = ThresholdController.get_all()
+    return code, resp
+
+
+@threshold_views.route('/api/admin/threshold/<threshold>', methods=['GET'])
+@jsonify
+@token_required
+@admin_required
+@catch_500
+def get_threshold(threshold=None):
+    """ Get given threshold
+    """
+    code, resp = ThresholdController.show(threshold)
+    return code, resp
+
+
+@threshold_views.route('/api/admin/threshold', methods=['POST'])
+@jsonify
+@token_required
+@json_required
+@admin_required
+@catch_500
+def create_threshold():
+    """ Post a new threshold
+    """
+    body = request.get_json()
+    code, resp = ThresholdController.create(body)
+    return code, resp
+
+
+@threshold_views.route('/api/admin/threshold/<threshold>', methods=['PUT'])
+@jsonify
+@token_required
+@json_required
+@admin_required
+@catch_500
+def update_threshold(threshold=None):
+    """ Update given threshold
+    """
+    body = request.get_json()
+    code, resp = ThresholdController.update(threshold, body)
+    return code, resp
+
+
+@threshold_views.route('/api/admin/threshold/<threshold>', methods=['DELETE'])
+@jsonify
+@token_required
+@admin_required
+@catch_500
+def delete_threshold(threshold=None):
+    """ Delete given threshold
+    """
+    code, resp = ThresholdController.destroy(threshold)
     return code, resp

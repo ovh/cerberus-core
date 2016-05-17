@@ -22,12 +22,27 @@
     Ticket functions for worker
 """
 
-from datetime import timedelta
+import hashlib
+import inspect
 
+from collections import Counter
+from datetime import datetime, timedelta
+from time import sleep
+
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_ipv46_address
+from django.db import transaction
 from django.db.models import ObjectDoesNotExist
+from django.template import Context, loader
 
-from abuse.models import Ticket
-from utils import utils
+import database
+
+from abuse.models import (Category, MassContactResult, Report,
+                          ReportItem, Resolution, Ticket, User)
+from adapters.dao.customer.abstract import CustomerDaoException
+from factory.factory import ImplementationFactory
+from utils import pglocks, schema, utils
 from worker import Logger
 
 
@@ -68,3 +83,252 @@ def delay_jobs(ticket=None, delay=None, back=True):
                         date
                     )
                     break
+
+
+def mass_contact(ip_address=None, category=None, campaign_name=None, email_subject=None, email_body=None, user_id=None):
+    """
+        Try to identify customer based on `ip_address`, creates Cerberus ticket
+        then send email to customer and finally close ticket.
+
+        The use case is: a trusted provider sent you a list of vulnerable DNS servers (DrDOS amp) for example.
+        To prevent abuse on your network, you notify customer of this vulnerability.
+
+        :param str ip_address: The IP address
+        :param str category: The category of the abuse
+        :param str campaign_name: The name if the "mass-conctact" campaign
+        :param str email_subject: The subject of the email to send to defendant
+        :param str email_body: The body of the email to send to defendant
+        :param int user_id: The id of the Cerberus `abuse.models.User` who created the campaign
+    """
+    # Check params
+    _, _, _, values = inspect.getargvalues(inspect.currentframe())
+    if not all(values.values()):
+        Logger.error(unicode('invalid parameters submitted %s' % str(values)))
+        return
+
+    try:
+        validate_ipv46_address(ip_address)
+    except (TypeError, ValidationError):
+        Logger.error(unicode('invalid ip addresses submitted'))
+        return
+
+    # Get Django model objects
+    try:
+        category = Category.objects.get(name=category)
+        user = User.objects.get(id=user_id)
+    except (AttributeError, ObjectDoesNotExist, TypeError):
+        Logger.error(unicode('invalid user or category'))
+        return
+
+    # Identify service for ip_address
+    try:
+        services = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_services_from_items(ips=[ip_address])
+        schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
+    except CustomerDaoException as ex:
+        Logger.error(unicode('Exception while identifying defendants for ip %s -> %s ' % (ip_address, str(ex))))
+        raise CustomerDaoException(ex)
+
+    # Create report/ticket
+    if services:
+        Logger.debug(unicode('creating report/ticket for ip address %s' % (ip_address)))
+        with pglocks.advisory_lock('cerberus_lock'):
+            __create_contact_tickets(services, campaign_name, ip_address, category, email_subject, email_body, user)
+        return True
+    else:
+        Logger.debug(unicode('no service found for ip address %s' % (ip_address)))
+        return False
+
+
+@transaction.atomic
+def __create_contact_tickets(services, campaign_name, ip_address, category, email_subject, email_body, user):
+
+    # Create fake report
+    report_subject = 'Campaign %s for ip %s' % (campaign_name, ip_address)
+    report_body = 'Campaign: %s\nIP Address: %s\n' % (campaign_name, ip_address)
+    filename = hashlib.sha256(report_body.encode('utf-8')).hexdigest()
+    __save_email(filename, report_body)
+
+    for data in services:  # For identified (service, defendant, items) tuple
+
+        actions = []
+
+        # Create report
+        report = Report.objects.create(**{
+            'provider': database.get_or_create_provider('mass_contact'),
+            'receivedDate': datetime.now(),
+            'subject': report_subject,
+            'body': report_body,
+            'category': category,
+            'filename': filename,
+            'status': 'Archived',
+            'defendant': database.get_or_create_defendant(data['defendant']),
+            'service': database.get_or_create_service(data['service']),
+        })
+        database.log_new_report(report)
+
+        # Create item
+        item_dict = {'itemType': 'IP', 'report_id': report.id, 'rawItem': ip_address}
+        item_dict.update(utils.get_reverses_for_item(ip_address, nature='IP'))
+        ReportItem.objects.create(**item_dict)
+
+        # Create ticket
+        ticket = database.create_ticket(
+            report.defendant,
+            report.category,
+            report.service,
+            priority=report.provider.priority,
+            attach_new=False,
+        )
+        database.add_mass_contact_tag(ticket, campaign_name)
+        actions.append('create this ticket with mass contact campaign %s' % (campaign_name))
+        actions.append('change treatedBy from nobody to %s' % (user.username))
+        report.ticket = ticket
+        report.save()
+        Logger.debug(unicode(
+            'ticket %d successfully created for (%s, %s)' % (ticket.id, report.defendant.customerId, report.service.name)
+        ))
+
+        # Send email to defendant
+        __send_mass_contact_email(ticket, email_subject, email_body)
+        actions.append('send an email to %s' % (report.defendant.details.email))
+
+        # Close ticket/report
+        ticket.resolution = Resolution.objects.get(codename=settings.CODENAMES['fixed_customer'])
+        ticket.previousStatus = ticket.status
+        ticket.status = 'Closed'
+        ticket.save()
+        actions.append('change status from %s to %s, reason : %s' % (ticket.previousStatus, ticket.status, ticket.resolution.codename))
+
+        for action in actions:
+            database.log_action_on_ticket(ticket, action, user=user)
+
+
+def __send_mass_contact_email(ticket, email_subject, email_body):
+
+    template = loader.get_template_from_string(email_subject)
+    context = Context({
+        'publicId': ticket.publicId,
+        'service': ticket.service.name.replace('.', '[.]'),
+        'lang': ticket.defendant.details.lang,
+    })
+    subject = template.render(context)
+
+    template = loader.get_template_from_string(email_body)
+    context = Context({
+        'publicId': ticket.publicId,
+        'service': ticket.service.name.replace('.', '[.]'),
+        'lang': ticket.defendant.details.lang,
+    })
+    body = template.render(context)
+
+    ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
+        ticket,
+        ticket.defendant.details.email,
+        subject,
+        body
+    )
+
+
+def check_mass_contact_result(result_campaign_id=None, jobs=None):
+    """
+        Check "mass-contact" campaign jobs's result
+
+        :param int result_campaign_id: The id of the `abuse.models.MassContactResult`
+        :param list jobs: The list of associated Python-Rq jobs id
+    """
+    # Check params
+    _, _, _, values = inspect.getargvalues(inspect.currentframe())
+    if not all(values.values()) or not isinstance(jobs, list):
+        Logger.error(unicode('invalid parameters submitted %s' % str(values)))
+        return
+
+    if not isinstance(result_campaign_id, MassContactResult):
+        try:
+            campaign_result = MassContactResult.objects.get(id=result_campaign_id)
+        except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
+            Logger.error(unicode('MassContactResult %d cannot be found in DB. Skipping...' % (result_campaign_id)))
+            return
+
+    result = []
+    for job_id in jobs:
+        job = utils.queue.fetch_job(job_id)
+        if not job:
+            continue
+        while job.status.lower() == 'queued':
+            sleep(0.5)
+        result.append(job.result)
+
+    count = Counter(result)
+    campaign_result.state = 'Done'
+    campaign_result.matchingCount = count[True]
+    campaign_result.notMatchingCount = count[False]
+    campaign_result.failedCount = count[None]
+    campaign_result.save()
+    Logger.info(unicode('MassContact campaign %d finished' % (campaign_result.campaign.id)))
+
+
+def __save_email(filename, email):
+    """
+        Push email storage service
+
+        :param str filename: The filename of the email
+        :param str email: The content of the email
+    """
+    with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
+        cnx.write(filename, email.encode('utf-8'))
+        Logger.info(unicode('Email %s pushed to Storage Service' % (filename)))
+
+
+def create_ticket_from_phishtocheck(report=None, user=None):
+    """
+        Create/attach report to ticket + block_url + mail to defendant + email to provider
+
+        :param int report: The id of the `abuse.models.Report`
+        :param int user: The id of the `abuse.models.User`
+    """
+    if not isinstance(report, Report):
+        try:
+            report = Report.objects.get(id=report)
+        except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
+            Logger.error(unicode('Report %d cannot be found in DB. Skipping...' % (report)))
+            return
+
+    if not isinstance(user, User):
+        try:
+            user = User.objects.get(id=user)
+        except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
+            Logger.error(unicode('User %d cannot be found in DB. Skipping...' % (user)))
+            return
+
+    # Create/attach to ticket
+    ticket = database.search_ticket(report.defendant, report.category, report.service)
+    action = 'attach report %d from %s (%s ...) to this ticket'
+
+    if not ticket:
+        ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
+        action = 'create this ticket with report %d from %s (%s ...)'
+
+    report.ticket = ticket
+    report.status = 'Attached'
+    report.save()
+    database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
+    database.log_action_on_ticket(ticket, 'validate PhishToCheck report %d' % (report.id), user=user)
+
+    # Sending email to provider
+    if settings.TAGS['no_autoack'] not in report.provider.tags.all().values_list('name', flat=True):
+
+        prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+            ticket,
+            settings.CODENAMES['ack_received'],
+            acknowledged_report=report.id,
+        )
+        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
+            ticket,
+            report.provider.email,
+            prefetched_email.subject,
+            prefetched_email.body
+        )
+        database.log_action_on_ticket(ticket, 'send an email to %s' % (report.provider.email))
+
+    utils.queue.enqueue('phishing.block_url_and_mail', ticket_id=ticket.id, report_id=report.id, timeout=3600)
+    return ticket

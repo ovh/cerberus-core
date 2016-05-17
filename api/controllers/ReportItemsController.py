@@ -84,17 +84,18 @@ def get_items_infos(**kwargs):
                     for key, val in i.iteritems():
                         field = key + '__icontains'
                         where.append(reduce(operator.or_, [Q(**{field: val[0]})]))
-        except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
+        except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
             return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex)}
 
     where = reduce(operator.and_, where)
 
+    # If backend is PostgreSQL, a simple distinct('rawItem') do the job
     try:
-        count = ReportItem.objects.filter(where, report__in=kwargs['reps']).distinct().count()
-        items = ReportItem.objects.filter(where, report__in=kwargs['reps']).distinct()
-        items = items[(offset - 1) * limit:limit * offset]
-        len(items)  # Force django to evaluate query now
-    except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
+        count = ReportItem.objects.filter(where, report__in=kwargs['reps']).values_list('rawItem', flat=True).distinct().count()
+        raw_items = ReportItem.objects.filter(where, report__in=kwargs['reps']).values_list('rawItem', flat=True).distinct()
+        raw_items = raw_items[(offset - 1) * limit:limit * offset]
+        items = [ReportItem.objects.filter(where, report__in=kwargs['reps'], rawItem=raw).last() for raw in raw_items]
+    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex)}
 
     items = [{f.name: f.value_from_object(i) for f in ReportItem._meta.fields} for i in items]
@@ -128,7 +129,7 @@ def __format_item_response(item, now, queue):
 
     history.append(item)
 
-    # History : diff parsing/now
+    # History == diff parsing/now
     current_item_infos = __check_item_status(item)
     for key, val in current_item_infos.iteritems():
 
@@ -157,17 +158,25 @@ def __format_item_response(item, now, queue):
         'report': item['report'],
         'id': item['id'],
         'itemType': item['itemType'],
-        'history': history
+        'history': history,
+        'screenshotDetails': None
     }
 
     # Add screenshot feedback if available
     if ItemScreenshotFeedback.objects.filter(item_id=item['id']).exists():
         try:
             feedback = ItemScreenshotFeedback.objects.filter(item_id=item['id'])[0]
-            res['viewed'] = ImplementationFactory.instance.get_instance_of(
+            details = ImplementationFactory.instance.get_instance_of(
                 'PhishingServiceBase'
             ).is_screenshot_viewed(feedback.token)
-        except PhishingServiceException:
+            schema.valid_adapter_response('PhishingServiceBase', 'is_screenshot_viewed', details)
+            res['screenshotDetails'] = {
+                'screenshotId': feedback.token,
+                'viewed': details['viewed'],
+                'views': details['views'],
+            }
+            res['viewed'] = details['viewed']  # For compatiblity with UX
+        except (PhishingServiceException, schema.InvalidFormatError, schema.SchemaNotFound):
             pass
 
     queue.put(res)
@@ -491,10 +500,11 @@ def get_screenshot(item_id, report_id):
 
     try:
         screenshots = ImplementationFactory.instance.get_singleton_of('PhishingServiceBase').get_screenshots(item.rawItem)
+        schema.valid_adapter_response('PhishingServiceBase', 'get_screenshots', screenshots)
         results = {
             'rawItem': item.rawItem,
             'screenshots': screenshots,
         }
         return 200, results
-    except PhishingServiceException:
+    except (PhishingServiceException, schema.InvalidFormatError, schema.SchemaNotFound):
         return 502, {'status': 'Proxy Error', 'code': 502, 'message': 'Error while loading screenshots'}

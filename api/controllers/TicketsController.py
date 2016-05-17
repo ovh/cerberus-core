@@ -24,10 +24,9 @@
 
 import json
 import operator
-import random
 import re
-import string
 import time
+
 from copy import deepcopy
 from datetime import datetime, timedelta
 from urllib import unquote
@@ -78,7 +77,7 @@ def index(**kwargs):
     # Generate Django filter based on parsed filters
     try:
         where = __generate_request_filters(filters, kwargs['user'], kwargs.get('treated_by'))
-    except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
+    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
 
     # Try to identify sortby in request
@@ -108,7 +107,7 @@ def index(**kwargs):
             attachedReportsCount=Count('reportTicket')).order_by(*sort)
         tickets = tickets[(offset - 1) * limit:limit * offset]
         len(tickets)  # Force django to evaluate query now
-    except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
+    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
 
     __format_ticket_response(tickets)
@@ -292,32 +291,53 @@ def show(ticket_id, user):
                     info[key] = int(time.mktime(val.timetuple()))
             ticket_dict['jobs'].append(info)
 
-    ticket_dict['comments'] = [{
+    ticket_dict['comments'] = __get_ticket_comments(ticket)
+    ticket_dict['history'] = __get_ticket_history(ticket)
+    ticket_dict['attachedReportsCount'] = ticket.reportTicket.count()
+    ticket_dict['tags'] = __get_ticket_tags(ticket)
+    # ticket_dict['tags'] = []
+    ticket_dict['justAssigned'] = just_assigned
+
+    return 200, ticket_dict
+
+
+def __get_ticket_comments(ticket):
+    """
+        Get ticket comments..
+    """
+    return [{
         'id': c.comment.id,
         'user': c.comment.user.username,
         'date': time.mktime(c.comment.date.timetuple()),
         'comment': c.comment.comment
     } for c in TicketComment.objects.filter(ticket=ticket.id).order_by('-comment__date')]
 
-    ticket_dict['history'] = [{
-        'username': c.user.username,
-        'date': time.mktime(c.date.timetuple()),
-        'action': c.action
-    } for c in History.objects.filter(ticket=ticket.id).order_by('-date')]
 
-    ticket_dict['attachedReportsCount'] = ticket.reportTicket.count()
+def __get_ticket_history(ticket):
+    """
+        Get ticket history..
+    """
+    history = History.objects.filter(ticket=ticket.id).values_list('user__username', 'date', 'action').order_by('-date')
+    return [{
+        'username': username,
+        'date': time.mktime(date.timetuple()),
+        'action': action
+    } for username, date, action in history]
 
-    report_tags = list(set([report.tags.all() for report in ticket.reportTicket.all()]))
-    report_tags = [item for sublist in report_tags for item in sublist]
+
+def __get_ticket_tags(ticket):
+    """
+        Get ticket tags..
+    """
+    reports = ticket.reportTicket.all().values_list('id', flat=True).distinct()
+    report_tags = Tag.objects.filter(report__id__in=reports).distinct()
     tags = list(set(list(set(ticket.tags.all())) + list(set(report_tags))))
-    ticket_dict['tags'] = [model_to_dict(tag) for tag in tags]
-    ticket_dict['justAssigned'] = just_assigned
-
-    return 200, ticket_dict
+    return [model_to_dict(tag) for tag in tags]
 
 
 def assign_if_not(ticket, user):
-    """ If ticket is not assigned and user not just set ticket owner to nobody
+    """
+        If ticket is not assigned and user not just set ticket owner to nobody
         assign ticket to current user
     """
     try:
@@ -343,6 +363,8 @@ def create(report, user):
     """ Create a ticket from a report or attach it
         if ticket with same defendant/category already exists
     """
+    from worker import database
+
     if not all(k in report.keys() for k in ('id', 'status')) or report['status'] not in ['New', 'Attached']:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Can not create a ticket with this status'}
 
@@ -379,45 +401,23 @@ def create(report, user):
     actions = []
     # Try to attach to existing
     if all((defendant, service, report.category)):
-        tickets = Ticket.objects.filter(
-            ~(Q(status='Closed')),
-            defendant=defendant,
-            category=report.category,
-            service=service,
-            update=True
-        )
-        if len(tickets):
-            ticket = tickets[0]
+        ticket = database.search_ticket(defendant, report.category, service)
+        if ticket:
             actions.append('attach report %d from %s (%s ...) to this ticket' % (report.id, report.provider.email, report.subject[:30]))
 
     # Else creates ticket
     if not ticket:
-        while True:
-            try:
-                public_id = ''.join(random.sample(string.ascii_uppercase.translate(None, 'AEIOUY'), 10))
-                ticket = Ticket.objects.create(
-                    publicId=public_id,
-                    creationDate=datetime.now(),
-                    category=report.category,
-                    defendant=defendant,
-                    service=service,
-                    update=True
-                )
-                break
-            except IntegrityError:
-                pass
+        ticket = database.create_ticket(defendant, report.category, service, priority=report.provider.priority)
         actions.append('create this ticket with report %d from %s (%s ...)' % (report.id, report.provider.email, report.subject[:30]))
 
-    report.ticket = ticket
+    database.set_ticket_higher_priority(ticket)
     report.status = 'Attached'
+    report.ticket = ticket
     report.save()
 
     # If new report, try to attach existing reports with status "New" to this new created ticket
-    if all((defendant, service, report.category)):
-        for rep in Report.objects.filter(~Q(id__in=[report.id]), status='New', category=report.category, defendant=defendant, service=service):
-            rep.status = 'Attached'
-            rep.ticket = ticket
-            rep.save()
+    if ticket:
+        for rep in ticket.reportTicket.filter(~Q(id__in=[report.id])):
             actions.append('attach report %d from %s (%s ...) to this ticket' % (rep.id, rep.provider.email, rep.subject[:30]))
 
     for action in actions:
@@ -842,12 +842,12 @@ def bulk_add(body, user, method):
     """
         Add or update infos for multiple tickets
     """
-    code, resp = __check_bulk_conformance(body, user, method)
+    code, tickets = __check_bulk_conformance(body, user, method)
     if code != 200:
         transaction.rollback()
-        return code, resp
+        return code, tickets
 
-    for ticket in resp:
+    for ticket in tickets:
         assign_if_not(ticket, user)
 
     # Update status
@@ -860,7 +860,7 @@ def bulk_add(body, user, method):
         valid_fields = ['pauseDuration', 'resolution']
         properties = {k: v for k, v in body['properties'].iteritems() if k in valid_fields}
 
-        for ticket in resp:
+        for ticket in tickets:
             code, resp = update_status(ticket.id, body['properties']['status'], properties, user)
             if code != 200:
                 transaction.rollback()
@@ -868,7 +868,7 @@ def bulk_add(body, user, method):
 
     # Update tags
     if 'tags' in body['properties'] and isinstance(body['properties']['tags'], list):
-        for ticket in resp:
+        for ticket in tickets:
             for tag in body['properties']['tags']:
                 code, resp = add_tag(ticket.id, tag, user)
                 if code != 200:
@@ -880,7 +880,7 @@ def bulk_add(body, user, method):
     valid_fields.extend(['moderation', 'protected', 'escalated', 'update', 'pauseDuration'])
     properties = {k: v for k, v in body['properties'].iteritems() if k in valid_fields}
 
-    for ticket in resp:
+    for ticket in tickets:
         code, resp = update(ticket.id, properties, user)
         if code != 200:
             transaction.rollback()
@@ -895,15 +895,15 @@ def bulk_delete(body, user, method):
     """
         Delete infos from multiple tickets
     """
-    code, resp = __check_bulk_conformance(body, user, method)
+    code, tickets = __check_bulk_conformance(body, user, method)
     if code != 200:
         transaction.rollback()
-        return code, resp
+        return code, tickets
 
     # Update tags
     try:
         if 'tags' in body['properties'] and isinstance(body['properties']['tags'], list):
-            for ticket in resp:
+            for ticket in tickets:
                 for tag in body['properties']['tags']:
                     code, resp = remove_tag(ticket.id, tag['id'], user)
                     if code != 200:
@@ -987,6 +987,10 @@ def interact(ticket_id, body, user):
     if not all(key in body for key in ('emails', 'action')):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing param(s): need emails and action'}
 
+    for email_to_send in body['emails']:
+        if not all(email_to_send.get(key) for key in ('to', 'subject', 'body')):
+            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing param(s): need subject and body in email'}
+
     action = body['action']
     code = 200
 
@@ -1008,8 +1012,8 @@ def interact(ticket_id, body, user):
                     params['body']
                 )
                 GeneralController.log_action(ticket, user, 'send an email to %s' % (recipient))
-            except MailerServiceException as ex:
-                return 500, {'status': 'Internal Server Error', 'code': 500, 'message': str(ex)}
+            except MailerServiceException:
+                return 500, {'status': 'Internal Server Error', 'code': 500, 'message': 'Error while sending emails (actions ok)'}
 
     return 200, {'status': 'OK', 'code': 200, 'message': 'Ticket successfully updated'}
 
@@ -1209,7 +1213,7 @@ def get_actions_list(ticket_id, user):
     return 200, actions
 
 
-def cancel_aysnchronous_job(ticket_id, job_id, user):
+def cancel_asynchronous_job(ticket_id, job_id, user):
     """ Cancel task on ticket
     """
     try:
@@ -1218,16 +1222,19 @@ def cancel_aysnchronous_job(ticket_id, job_id, user):
     except (ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket or job not found'}
 
-    action = 'cancel action: %s' % (ticket.action.name)
+    if ticket.action:
+        action = 'cancel action: %s' % (ticket.action.name)
+        GeneralController.log_action(ticket, user, action)
+
     utils.scheduler.cancel(job.asynchronousJobId)
     ServiceActionJob.objects.filter(asynchronousJobId=job.asynchronousJobId).update(status='cancelled')
     ticket.save()
-    GeneralController.log_action(ticket, user, action)
     return 200, {'status': 'OK', 'code': 200, 'message': 'Task successfully canceled'}
 
 
 def schedule_asynchronous_job(ticket_id, action_id, ip_addr, user, seconds=1, method='apply_action', params=None):
-    """ Schedule task on ticket
+    """
+        Schedule task on ticket
     """
     try:
         ticket = Ticket.objects.get(id=ticket_id)
@@ -1249,7 +1256,12 @@ def schedule_asynchronous_job(ticket_id, action_id, ip_addr, user, seconds=1, me
             job.save()
 
     async_job = utils.scheduler.enqueue_in(timedelta(seconds=seconds), method, **params)
-    job = ServiceActionJob.objects.create(ip=ip_addr, action=action, asynchronousJobId=async_job.id, creationDate=datetime.now())
+    job = ServiceActionJob.objects.create(
+        ip=ip_addr,
+        action=action,
+        asynchronousJobId=async_job.id,
+        creationDate=datetime.now()
+    )
 
     ticket.action = action
     delay = 'now' if seconds == 1 else 'in %s hour(s)' % (str(seconds / 3600))
@@ -1299,7 +1311,8 @@ def __check_action_rights(ticket, action_id, user):
 
 
 def get_todo_tickets(**kwargs):
-    """ Test
+    """
+        Get TODO tickets
     """
     # Parse filters from request
     filters = {}
@@ -1315,7 +1328,8 @@ def get_todo_tickets(**kwargs):
 
 
 def __get_filtered_todo_tickets(filters, user):
-    """ Get tickets TODO with specifi ordering
+    """
+        Get tickets TODO with specific ordering
     """
     try:
         limit = int(filters['paginate']['resultsPerPage'])
@@ -1363,7 +1377,7 @@ def __get_filtered_todo_tickets(filters, user):
         if status == ['Open']:
             order_by.append('-reportTicket__tags__level')
 
-        for priority in ['High', 'Normal', 'Low']:
+        for priority in ['Critical', 'High', 'Normal', 'Low']:
 
             tickets = Ticket.objects.filter(
                 where,
@@ -1388,7 +1402,8 @@ def __get_filtered_todo_tickets(filters, user):
 
 
 def __get_user_filters(user):
-    """ Filter allowed category for this user
+    """
+        Filter allowed category for this user
     """
     where = [Q()]
     user_specific_where = []
@@ -1400,7 +1415,13 @@ def __get_user_filters(user):
         elif perm.profile.name == 'Advanced':
             user_specific_where.append(Q(category=perm.category, confidential=False))
         elif perm.profile.name == 'Beginner':
-            user_specific_where.append(Q(category=perm.category, confidential=False, escalated=False, moderation=False))
+            user_specific_where.append(Q(
+                priority__in=['Low', 'Normal'],
+                category=perm.category,
+                confidential=False,
+                escalated=False,
+                moderation=False
+            ))
 
     if len(user_specific_where):
         user_specific_where = reduce(operator.or_, user_specific_where)

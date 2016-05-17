@@ -52,6 +52,7 @@ from views.reports import report_views
 from views.reputations import reputation_views
 from views.tags import tag_views
 from views.tickets import ticket_views
+from views.thresholds import threshold_views
 
 Logger = logger.get_logger(__name__)
 
@@ -68,6 +69,7 @@ APP.register_blueprint(report_views)
 APP.register_blueprint(reputation_views)
 APP.register_blueprint(tag_views)
 APP.register_blueprint(ticket_views)
+APP.register_blueprint(threshold_views)
 
 
 @APP.before_request
@@ -76,6 +78,10 @@ def before_request():
         Set start time
     """
     g.start = time.time()
+    if request.endpoint in APP.view_functions:
+        g.endpoint = APP.view_functions[request.endpoint].__name__
+    else:
+        g.endpoint = 'not_handled'
 
 
 @APP.after_request
@@ -104,7 +110,7 @@ def after_request(response):
         ImplementationFactory.instance.get_singleton_of(
             'KPIServiceBase'
         ).new_api_request(
-            path,
+            g.endpoint,
             http_code,
             diff,
         )

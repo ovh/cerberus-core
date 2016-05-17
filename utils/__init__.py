@@ -24,9 +24,13 @@
 import netaddr
 
 import ips
+import settings
 import utils
 
 for key, val in ips.IPS_NETWORKS.iteritems():
     utils.IPS_NETWORKS[key] = []
-    for ip_addr in val:
-        utils.IPS_NETWORKS[key].append(netaddr.IPNetwork(ip_addr))
+    for network in val:
+        utils.IPS_NETWORKS[key].append(netaddr.IPNetwork(network))
+
+for network in settings.PARSING['networks_to_ignore']:
+    utils.BLACKLISTED_NETWORKS.append(netaddr.IPNetwork(network))

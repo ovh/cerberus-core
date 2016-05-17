@@ -266,5 +266,5 @@ def post_feedback(report=None):
     """
     user = GeneralController.get_user(request)
     body = request.get_json()
-    code, resp = ReportsController.parse_screenshot_feeback(report, body, user)
+    code, resp = ReportsController.parse_screenshot_feedback(report, body, user)
     return code, resp

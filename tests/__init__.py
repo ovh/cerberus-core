@@ -21,7 +21,8 @@
 import os
 import shutil
 
-from abuse.models import AbusePermission, ServiceAction, Category, MailTemplate, User, Profile, Resolution, Tag
+from abuse.models import (AbusePermission, ServiceAction, Category, MailTemplate,
+                          Provider, ReportThreshold, User, Profile, Resolution, Tag)
 from django.conf import settings
 from django.test import TestCase
 
@@ -44,13 +45,19 @@ class GlobalTestCase(TestCase):
         Category.objects.create(**{'description': u'Network Attack', 'name': u'Network Attack', 'label': u'Network Attack'})
         Category.objects.create(**{'description': u'Other', 'name': u'Other', 'label': u'Other'})
         Category.objects.create(**{'description': u'Phishing', 'name': u'Phishing', 'label': u'Phishing'})
-        Category.objects.create(**{'description': u'Spam', 'name': u'Spam', 'label': u'Spam'})
+        spam_category = Category.objects.create(**{'description': u'Spam', 'name': u'Spam', 'label': u'Spam'})
         Category.objects.create(**{'description': u'Copyright', 'name': u'Copyright', 'label': u'Copyright'})
 
         action = ServiceAction.objects.create(
             name='default_action',
             module='VPS',
             level='1',
+        )
+
+        ReportThreshold.objects.create(
+            category=spam_category,
+            threshold=100,
+            interval=3600,
         )
 
         MailTemplate.objects.create(
@@ -75,6 +82,13 @@ class GlobalTestCase(TestCase):
         )
 
         MailTemplate.objects.create(
+            codename='first_alert',
+            name='First Alert',
+            subject='First Alert',
+            body='First Alert',
+        )
+
+        MailTemplate.objects.create(
             codename='case_closed',
             name='Case closed',
             subject='Case closed',
@@ -93,6 +107,7 @@ class GlobalTestCase(TestCase):
 
         Resolution.objects.create(codename='no_more_content')
         Resolution.objects.create(codename='fixed')
+        Resolution.objects.create(codename='forward_acns')
 
         user = User.objects.create(username=settings.GENERAL_CONFIG['bot_user'])
         user.is_superuser = True
@@ -107,6 +122,10 @@ class GlobalTestCase(TestCase):
 
         for category in Category.objects.all():
             AbusePermission.objects.create(user=user, category=category, profile=profile)
+
+        Provider.objects.create(email='low@provider.com', priority='Low')
+        Provider.objects.create(email='normal@provider.com', priority='Normal')
+        Provider.objects.create(email='critical@provider.com', priority='Critical')
 
     def tearDown(self):
 

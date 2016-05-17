@@ -21,9 +21,11 @@
     Database wrapper for worker
 """
 
+import operator
 import random
 import re
 import string
+
 from datetime import datetime
 
 from django.conf import settings
@@ -42,6 +44,13 @@ from worker import Logger
 BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
 DEFENDANT_REVISION_FIELDS = [f.name for f in DefendantRevision._meta.fields]
 SERVICE_FIELDS = [f.name for f in Service._meta.fields]
+
+PRIORITY_LEVEL = {
+    'Low': 3,
+    'Normal': 2,
+    'High': 1,
+    'Critical': 0,
+}  # Lower, higher
 
 
 class MultipleDefendantWithSameCustomerId(Exception):
@@ -145,7 +154,7 @@ def get_or_create_defendant(defendant_infos):
             defendant.save()
             DefendantHistory.objects.create(defendant=defendant, revision=revision)
     except ValidationError as ex:
-        raise ValidationError(ex + " " + str(revision_infos))
+        raise ValidationError(str(ex) + " " + str(revision_infos))
     return defendant
 
 
@@ -169,20 +178,21 @@ def search_ticket(defendant, category, service):
         Get ticket if exists
     """
     ticket = None
-
     tickets = Ticket.objects.filter(
         ~(Q(status='Closed')),
         defendant=defendant,
         category=category,
         service=service,
         update=True
+    ).order_by(
+        '-creationDate',
     )
     if len(tickets):
         ticket = tickets[0]
     return ticket
 
 
-def create_ticket(defendant, category, service, provider, attach_new=True):
+def create_ticket(defendant, category, service, priority='Normal', attach_new=True):
     """
         Create ticket
     """
@@ -196,9 +206,10 @@ def create_ticket(defendant, category, service, provider, attach_new=True):
                 defendant=defendant,
                 category=category,
                 service=service,
+                priority=priority,
                 update=True,
             )
-            if all((defendant, service, category)) and attach_new:
+            if all((defendant, service, category)) and attach_new:   # Automatically attach similar reports
                 Report.objects.filter(
                     service=service,
                     defendant=defendant,
@@ -209,13 +220,25 @@ def create_ticket(defendant, category, service, provider, attach_new=True):
                     ticket=ticket,
                     status='Attached',
                 )
-            ticket.priority = provider.priority if provider.priority else 'Normal'
-            ticket.save()
             log_new_ticket(ticket)
             break
         except (IntegrityError, ValueError):
             continue
     return ticket
+
+
+def set_ticket_higher_priority(ticket):
+    """
+        Set `abuse.models.Ticket` higher priority available through it's
+        `abuse.models.Report`'s `abuse.models.Provider`
+    """
+    priorities = list(set(ticket.reportTicket.all().values_list('provider__priority', flat=True)))
+    for priority, _ in sorted(PRIORITY_LEVEL.items(), key=operator.itemgetter(1)):
+        if priority in priorities:
+            Logger.debug(unicode('set priority %s to ticket %d' % (priority, ticket.id)))
+            ticket.priority = priority
+            ticket.save()
+            return
 
 
 def get_category(name):
@@ -267,6 +290,18 @@ def add_phishing_blocked_tag(report):
         pass
 
 
+def add_mass_contact_tag(ticket, campaign_name):
+    """
+        Add mass contact tag to report
+    """
+    try:
+        tag, _ = Tag.objects.get_or_create(tagType='Ticket', name=campaign_name)
+        ticket.tags.add(tag)
+        ticket.save()
+    except ObjectDoesNotExist:
+        pass
+
+
 def log_new_report(report):
     """
         Log report creation
@@ -292,7 +327,7 @@ def log_new_ticket(ticket):
         Log ticket creation
     """
     Logger.debug(
-        str('new ticket %d' % (ticket.id)),
+        unicode('new ticket %d' % (ticket.id)),
         extra={
             'ticket': ticket.id,
             'action': 'new ticket',

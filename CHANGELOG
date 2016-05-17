@@ -1,3 +1,60 @@
+2016-05-18
+
+* update(schema): for phishing service
+* feat(parsing): implement blacklisted provider check
+* feat(): Update "priorized tickets" algo
+* fix(worker.report): now save attachments only once even if multiple reports created
+* fix(api): set larger timeout for aysnc service action tasks
+* fix(api.ticket): check if body is correct in interact
+* fix(api): typo
+* improve(utils): raise http error code
+* feat(phishing): add phishingGrade and score to get_screenshot
+* improve(worker.ticket): mass contact ticket is now treated by user
+* fix(worker.ticket): remove debug
+* feat(): check mass contact campaign result
+* fix(parsing): netaddr lib does not like ip like 038.140.010.024
+* feat(api): list created mass contact campaign
+* feat(): store mass-contact campaign details
+* fix(test): ok, now really mocked ..
+* fix(test): mock rq
+* improve(api): move POST /api/reports/<report>/feedback to worker
+* improve(api.phishing): get logs for phishing screenshots
+* fix(api): 500 when cancelling a job on a ticket with no ServiceAction
+* feat(parsing): add blacklist of cidr
+* fix(worker.report): oups, set ticket to None even if ticket found
+* fix(email_fetcher): unecessary storage re-opening
+* improve(api.controllers): show ticket
+* improve(worker.report): remove attachments upload from pg_locked transactions
+* update(email_fetcher): change rq timeout
+* fix(worker.report): defendant and service not attached to report if autoarchive
+* fix(worker): simplify phishing.is_all_down_for_ticket
+* improve(worker.phishing): limit number of thread in is_all_down_for_ticket
+* fix(api): autogenerate codename when creating email template
+* fix(worker): forget to close email thread on forward_acns
+* improve(api.kpi): log views functions instead of path
+* fix(worker): forget to close_thread on phishing ticket close
+* fix(api): add 'ActionError' ticket to myTicketsTodoCount in toolbar
+* feat(api/worker): use django templating in email
+* feat(worker): worker func for mass contact
+* fix(worker): close email thread only if exists
+* feat(api): mass-contact now with data validation
+* refactor(worker): report threshold
+* fix(worker): forget to check report receivedDate
+* feat(api): mass contact controller
+* feat(event): add report threshold event producer
+* update(models): textfield instead of varchar for proof content
+* fix(worker): ticket priority
+* update(templates): lexsicom
+* update(fixtures): default app data
+* update(fixtures): add template and resolution for acns
+* feat(worker): implement copyright/acns workflow
+* feat(): add worker func/api endpoint for threshold
+* fix(api): overrid defendant id with details id
+* feat(phishing.timeout): closing if all down too
+* fix(api): multiple same items on report/ticket
+* fix(api): bulk actions on ticket
+* feat(worker): threshold functions
+
 2016-02-26
 
 * fix(readme): cerberus ux img

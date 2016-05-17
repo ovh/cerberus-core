@@ -223,7 +223,8 @@ class Ticket(models.Model):
     TICKET_PRIORITY = (
         ('Low', 'Low'),
         ('Normal', 'Normal'),
-        ('High', 'High')
+        ('High', 'High'),
+        ('Critical', 'Critical'),
     )
 
     publicId = TruncatedCharField(max_length=10, blank=True, null=True, unique=True)
@@ -261,7 +262,8 @@ class Provider(models.Model):
     PROVIDER_PRIORITY = (
         ('Low', 'Low'),
         ('Normal', 'Normal'),
-        ('High', 'High')
+        ('High', 'High'),
+        ('Critical', 'Critical'),
     )
     email = TruncatedCharField(primary_key=True, max_length=255)
     name = TruncatedCharField(null=True, max_length=255)
@@ -428,6 +430,7 @@ class MailTemplate(models.Model):
         ('Defendant', 'Defendant'),
         ('Plaintiff', 'Plaintiff'),
         ('Other', 'Other'),
+        ('MassContact', 'MassContact'),
     )
 
     codename = TruncatedCharField(max_length=32)
@@ -443,7 +446,7 @@ class Proof(models.Model):
        Proof are elements validating the infrigment
     """
     ticket = models.ForeignKey(Ticket, null=False, related_name='proof')
-    content = TruncatedCharField(null=False, max_length=65535)
+    content = models.TextField(null=False)
 
 
 class UrlStatus(models.Model):
@@ -512,9 +515,46 @@ class ItemScreenshotFeedback(models.Model):
 
 class ContactedProvider(models.Model):
     """
-        This models is usefull to save which provider have been contacted
+        This model is usefull to save which provider have been contacted
         for a `abuse.models.Ticket`
     """
     ticket = models.ForeignKey(Ticket, null=False, related_name='contactedProviders')
     provider = models.ForeignKey(Provider, null=False)
     date = models.DateTimeField(auto_now=True, null=False)
+
+
+class ReportThreshold(models.Model):
+    """
+        Automatically creates ticket if there are more than
+        `threshold` new reports created during `interval` (days) for same (category/defendant/service)
+    """
+    category = models.ForeignKey(Category, null=False)
+    threshold = models.IntegerField(null=False)
+    interval = models.IntegerField(null=False)
+
+
+class MassContact(models.Model):
+    """
+        Store details of different "mass contact" campaign.
+    """
+    campaignName = TruncatedCharField(max_length=256, null=False)
+    category = models.ForeignKey(Category, null=False)
+    user = models.ForeignKey(User, null=False)
+    ipsCount = models.IntegerField(null=False)
+    date = models.DateTimeField(auto_now=True, null=False)
+
+
+class MassContactResult(models.Model):
+    """
+        Store result of a "mass contact" campaign.
+    """
+    STATE = (
+        ('Done', 'Done'),
+        ('Pending', 'Pending'),
+    )
+
+    campaign = models.ForeignKey(MassContact, null=False)
+    state = TruncatedCharField(max_length=32, null=False, choices=STATE, default='Pending')
+    matchingCount = models.IntegerField(null=False, default=0)  # Defendant found, report created
+    notMatchingCount = models.IntegerField(null=False, default=0)  # No defendant found
+    failedCount = models.IntegerField(null=False, default=0)  # Rq job failed

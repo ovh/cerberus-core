@@ -47,6 +47,7 @@ GENERAL_CONFIG = {
     },
     'magic_smtp_header': os.getenv('MAGIC_SMTP_HEADER', 'X-MAGIC-SMTP-HEADER-TO-IDENTIFY-TRUSTED-PROVIDER'),
     'report_timeout': 30,
+    'acns_patterns': ('www.acns.net/ACNS',),
 }
 
 # API Config (via ENV)
@@ -94,9 +95,11 @@ TAGS = {
 CODENAMES = {
     'ack_received': 'ack_report_received',
     'case_closed': 'case_closed',
-    'no_more_content': 'no_more_content',
+    'first_alert': 'first_alert',
     'fixed_customer': 'fixed_by_customer',
     'fixed': 'fixed_by_isp',
+    'forward_acns': 'forward_acns',
+    'no_more_content': 'no_more_content',
     'phishing_blocked': 'phishing_blocked',
     'phishing_service_blocked': 'phishing_service_blocked',
     'ticket_closed': 'ticket_closed',
@@ -126,6 +129,13 @@ EMAIL_FETCHER = {
 # 'fqdn_re': of course trying to identify a FQDN in an text can generate a huge amount of false positive
 #           maybe you have a regexp to identify YOUR managed FQDN (i.e: endswith domain.com)
 PARSING = {
+    'providers_to_ignore': [
+        'bad@provider.com',
+    ],
+    'networks_to_ignore': [
+        '0.0.0.0/8',
+        '224.0.0/4',
+    ],
     'domain_to_ignore': [
         'www.yourcompany.com',
     ],

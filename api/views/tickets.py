@@ -403,7 +403,7 @@ def cancel_job(ticket=None, job=None):
         Cancel action
     """
     user = GeneralController.get_user(request)
-    code, resp = TicketsController.cancel_aysnchronous_job(ticket, job, user)
+    code, resp = TicketsController.cancel_asynchronous_job(ticket, job, user)
     return code, resp
 
 

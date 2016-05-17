@@ -165,7 +165,7 @@ def __create_ticket(report, denied_by):
     """
         Create ticket
     """
-    ticket = database.create_ticket(report.defendant, report.category, report.service, report.provider, attach_new=False)
+    ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority, attach_new=False)
     action = 'create this ticket with report %d from %s (%s ...)'
     database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
 
@@ -261,18 +261,18 @@ def block_url_and_mail(ticket_id=None, report_id=None):
     Logger.info(unicode('Ticket %d now with status WaitingAnswer for %d' % (ticket_id, ticket_snooze)))
 
 
-def __check_report_items_status(report_id, last, queue):
+def __check_report_items_status(report, last, queue):
     """
         Thread checking if all down for a phishing report
     """
-    queue.put(check_if_all_down(report=report_id, last=last))
+    queue.put(check_if_all_down(report=report, last=last))
 
 
 def __close_phishing_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False):
     """
         Close ticket and add autoclosed Tag
     """
-    # Send email to already contacted Provider(s)
+    # Send "case closed" email to already contacted Provider(s)
     providers_emails = ContactedProvider.objects.filter(ticket_id=ticket.id).values_list('provider__email', flat=True).distinct()
 
     for email in providers_emails:
@@ -290,7 +290,10 @@ def __close_phishing_ticket(ticket, reason=settings.CODENAMES['fixed_customer'],
     else:
         template = settings.CODENAMES['ticket_closed']
 
+    # Send "ticket closed" email to defendant
     __send_email(ticket, ticket.defendant.details.email, template, lang=ticket.defendant.details.lang)
+    if ticket.mailerId:
+        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
 
     actions = []
     resolution = Resolution.objects.get(codename=reason)
@@ -349,21 +352,30 @@ def timeout(ticket_id=None):
         Logger.error(unicode('Ticket %d service %s: action not found, exiting ...' % (ticket_id, ticket.service.componentType)))
         return
 
+    # Maybe customer fixed, closing ticket
     if is_all_down_for_ticket(ticket):
-        Logger.info(unicode('All items are down for ticket %d, Skipping ..' % (ticket_id)))
+        Logger.info(unicode('All items are down for ticket %d, closing ticket' % (ticket_id)))
+        __close_phishing_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False)
         return
 
+    # Getting ip for action
+    ip_addr = __get_ip_for_action(ticket)
+    if not ip_addr:
+        Logger.error(unicode('Error while getting IP for action, exiting'))
+        ticket.status = ticket.previousStatus
+        ticket.status = 'ActionError'
+        database.log_action_on_ticket(ticket, 'change status from %s to %s' % (ticket.previousStatus, ticket.status), BOT_USER)
+        comment = Comment.objects.create(user=BOT_USER, comment='None or multiple ip addresses for this ticket')
+        TicketComment.objects.create(ticket=ticket, comment=comment)
+        database.log_action_on_ticket(ticket, 'add comment', BOT_USER)
+        ticket.save()
+        return
+
+    # Apply action
     Logger.info(unicode('Executing action %s for ticket %d' % (action.name, ticket_id)))
     ticket.action = action
     database.log_action_on_ticket(ticket, 'set action: %s, execution now' % (action.name), BOT_USER)
     ticket.save()
-
-    ip_addr = __get_ip_for_action(ticket)
-    if not ip_addr:
-        Logger.error(unicode('Error while gettting IP to block, exiting'))
-        return
-
-    # Apply action
     async_job = utils.scheduler.schedule(
         scheduled_time=datetime.utcnow() + timedelta(seconds=3),
         func='action.apply_action',
@@ -385,6 +397,8 @@ def timeout(ticket_id=None):
     ticket.save()
     Logger.info(unicode('All done, sending close notification to provider(s)'))
     ticket = Ticket.objects.get(id=ticket.id)
+
+    # Closing ticket
     __close_phishing_ticket(ticket, reason=settings.CODENAMES['fixed'], service_blocked=True)
 
 
@@ -418,20 +432,20 @@ def is_all_down_for_ticket(ticket, last=5):
     threads = []
 
     # Check if there are still items up
-    for report in ticket.reportTicket.all():
-        thread = Thread(target=__check_report_items_status, args=(report.id, last, queue))
-        thread.start()
-        threads.append(thread)
+    reports = ticket.reportTicket.all()
+    reports = [reports[x:x + 5] for x in xrange(0, len(reports), 5)]
 
-    for thread in threads:
-        thread.join()
+    for sublist in reports:
+        for report in sublist:
+            thread = Thread(target=__check_report_items_status, args=(report, last, queue))
+            thread.start()
+            threads.append(thread)
+
+        for thread in threads:
+            thread.join()
 
     results = [queue.get() for _ in xrange(ticket.reportTicket.count())]
-
-    if all(results):
-        return True
-    else:
-        return False
+    return bool(all(results))
 
 
 def feedback_to_phishing_service(screenshot_id=None, feedback=None):

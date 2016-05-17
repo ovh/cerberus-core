@@ -51,9 +51,11 @@ TAGS = {
 CODENAMES = {
     'ack_received': 'ack_report_received',
     'case_closed': 'case_closed',
-    'no_more_content': 'no_more_content',
+    'first_alert': 'first_alert',
     'fixed_customer': 'fixed_by_customer',
     'fixed': 'fixed',
+    'forward_acns': 'forward_acns',
+    'no_more_content': 'no_more_content',
     'phishing_blocked': 'phishing_blocked',
     'phishing_service_blocked': 'phishing_service_blocked',
     'ticket_closed': 'ticket_closed',
@@ -71,6 +73,7 @@ GENERAL_CONFIG = {
     },
     'magic_smtp_header': 'Test-Magic-Smtp-Header',
     'report_timeout': 30,
+    'acns_patterns': ('www.acns.net/ACNS',),
 }
 
 DATABASES = {
@@ -82,6 +85,13 @@ DATABASES = {
 }
 
 PARSING = {
+    'providers_to_ignore': [
+        'blacklisted@provider.com',
+    ],
+    'networks_to_ignore': [
+        '0.0.0.0/8',
+        '224.0.0/4',
+    ],
     'domain_to_ignore': [
         'www.yourcompany.com',
     ],

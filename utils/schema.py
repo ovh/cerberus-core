@@ -22,9 +22,10 @@
     Voluptuous Schema for Adapters
 """
 
-from voluptuous import Invalid, MultipleInvalid, Schema
+from voluptuous import Any, Invalid, MultipleInvalid, Optional, Schema
 
 from adapters.dao.customer.abstract import DefendantClass, ServiceClass
+from adapters.services.phishing.abstract import PingResponse
 
 
 Schemas = {
@@ -49,6 +50,41 @@ Schemas = {
             }
         ], required=True)
     },
+    'PhishingServiceBase': {
+        'ping_url': Schema(PingResponse, required=True),
+        'is_screenshot_viewed': Schema({
+            'viewed': bool,
+            'views': [
+                {
+                    'ip': unicode,
+                    'userAgent': unicode,
+                    'timestamp': int,
+                }
+            ]
+        }, required=True),
+        'get_screenshots': Schema([
+            {
+                'timestamp': int,
+                'location': unicode,
+                'screenshotId': unicode,
+                'phishingGrade': Any(None, float),
+                'score': int,
+                'response': {
+                    'directAccess': {
+                        'statusCode': int,
+                        'headers': unicode,
+                        'state': unicode,
+                    },
+                    'proxyAccess': {
+                        Optional('proxyAddr'): Any(None, unicode),
+                        Optional('statusCode'): Any(None, int),
+                        Optional('headers'): Any(None, unicode),
+                        Optional('state'): Any(None, unicode),
+                    }
+                }
+            }
+        ], required=True),
+    }
 }
 
 
@@ -85,5 +121,5 @@ def valid_adapter_response(base_name, func_name, data):
         Schemas[base_name][func_name](data)
     except (KeyError, TypeError, ValueError):
         raise SchemaNotFound('Schema not found for %s.%s' % (base_name, func_name))
-    except (Invalid, MultipleInvalid):
-        raise InvalidFormatError('Given data is not compliant to %s.%s schema' % (base_name, func_name))
+    except (Invalid, MultipleInvalid) as ex:
+        raise InvalidFormatError('Given data is not compliant to %s.%s schema: %s' % (base_name, func_name, str(ex)))

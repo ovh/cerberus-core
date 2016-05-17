@@ -41,7 +41,6 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator, validate_ipv46_address
-from netaddr import AddrConversionError, AddrFormatError
 from redis import ConnectionError as RedisError
 from redis import Redis
 from requests.exceptions import (ChunkedEncodingError, ConnectionError,
@@ -59,6 +58,7 @@ CHARSETS = ('iso-8859-1', 'iso-8859-15', 'ascii', 'utf-16', 'windows-1252', 'cp8
 CERBERUS_USERS = User.objects.all().values_list('username', flat=True)
 
 IPS_NETWORKS = {}
+BLACKLISTED_NETWORKS = []
 
 queue = Queue(connection=Redis())
 scheduler = Scheduler(connection=Redis())
@@ -125,8 +125,9 @@ class RequestException(Exception):
     """
         RequestException
     """
-    def __init__(self, message):
+    def __init__(self, message, code):
         super(RequestException, self).__init__(message)
+        self.code = code
 
 
 def request_wrapper(url, auth=None, params=None, as_json=False, method='POST', headers=None, timeout=30):
@@ -160,16 +161,16 @@ def request_wrapper(url, auth=None, params=None, as_json=False, method='POST', h
         except HTTPError as ex:
             if 500 <= int(ex.response.status_code) <= 599:
                 if retry == max_tries - 1:
-                    raise RequestException(__get_request_exception_message(request, url, params, ex))
+                    raise RequestException(__get_request_exception_message(request, url, params, ex), ex.response.status_code)
                 else:
                     sleep(1)
             else:
-                raise RequestException(__get_request_exception_message(request, url, params, ex))
+                raise RequestException(__get_request_exception_message(request, url, params, ex), ex.response.status_code)
         except Timeout as ex:
-            raise RequestException(__get_request_exception_message(request, url, params, ex))
+            raise RequestException(__get_request_exception_message(request, url, params, ex), None)
         except (ChunkedEncodingError, ConnectionError, JSONDecodeError) as ex:
             if retry == max_tries - 1:
-                raise RequestException(__get_request_exception_message(request, url, params, ex))
+                raise RequestException(__get_request_exception_message(request, url, params, ex), None)
             else:
                 sleep(1)
 
@@ -371,13 +372,13 @@ def get_ip_network(ip_str):
     """
         Try to return the owner of the IP address (based on ips.py)
 
-        :param str ip_str: The IP address:
+        :param str ip_str: The IP address
         :rtype: str
         :returns: The owner if find else None
     """
     try:
         ip_addr = netaddr.IPAddress(ip_str)
-    except (AddrConversionError, AddrFormatError):
+    except (netaddr.AddrConversionError, netaddr.AddrFormatError):
         return None
 
     for brand, networks in IPS_NETWORKS.iteritems():
@@ -385,3 +386,19 @@ def get_ip_network(ip_str):
             if net.netmask.value & ip_addr.value == net.value:
                 return brand
     return None
+
+
+def is_ipaddr_ignored(ip_str):
+    """
+        Check if the `ip_addr` is blacklisted
+
+        :param str ip_str: The IP address
+        :rtype: bool
+        :returns: If the ip_addr has to be ignored
+    """
+    ip_addr = netaddr.IPAddress(ip_str)
+
+    for network in BLACKLISTED_NETWORKS:
+        if network.netmask.value & ip_addr.value == network.value:
+            return True
+    return False

@@ -29,6 +29,7 @@ import re
 from base64 import b64encode
 from copy import deepcopy
 from datetime import datetime, timedelta
+from time import mktime
 from urllib import unquote
 
 import jwt
@@ -45,13 +46,14 @@ from django.forms.models import model_to_dict
 import ReportsController
 import TicketsController
 from abuse.models import (AbusePermission, Category, History, Profile, Report,
-                          ReportItem, Resolution, Tag, Ticket)
+                          MassContact, MassContactResult, ReportItem, Resolution, Tag, Ticket)
 from adapters.services.kpi.abstract import KPIServiceException
 from factory.factory import ImplementationFactory
 from utils import logger, utils
 
 Logger = logger.get_logger(__name__)
 CRYPTO = utils.Crypto()
+MASS_CONTACT_REQUIRED = ('{{ service }}', '{{ publicId }}', '{% if lang ==')
 
 
 def auth(body):
@@ -62,7 +64,7 @@ def auth(body):
         username = body['name']
         password = body['password']
     except (TypeError, KeyError):
-        return False, 'Invalid JSON body'
+        return False, 'Invalid fields in body'
 
     user = authenticate(username=username, password=password)
     if user is not None and user.is_active:
@@ -441,7 +443,7 @@ def search(**kwargs):
                     for key2 in filters[key].keys():
                         values['filters'][key][key2] = [a for a in filters[key][key2] if a.keys()[0] in values['fields']]
     except AttributeError:
-        return 400, {'status': 'Bad Request', 'code': 400}
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
 
     # Map search to multiple field on model
     mapping = {
@@ -507,7 +509,7 @@ def toolbar(**kwargs):
     res = Ticket.objects.filter(where, treatedBy=user).values('status').annotate(count=Count('status'))
     resp['myTicketsCount'] = reduce(operator.add, [t['count'] if t['status'] != 'Closed' else 0 for t in res]) if res else 0
     resp['myTicketsAnsweredCount'] = reduce(operator.add, [t['count'] if t['status'] == 'Answered' else 0 for t in res]) if res else 0
-    resp['myTicketsTodoCount'] = reduce(operator.add, [t['count'] if t['status'] in ['Alarm', 'Open', 'Reopened'] else 0 for t in res]) if res else 0
+    resp['myTicketsTodoCount'] = reduce(operator.add, [t['count'] if t['status'] in ['ActionError', 'Alarm', 'Open', 'Reopened'] else 0 for t in res]) if res else 0
     resp['myTicketsSleepingCount'] = reduce(operator.add, [t['count'] if t['status'] in ['Paused', 'WaitingAnswer'] else 0 for t in res]) if res else 0
     resp['todoCount'] = Ticket.objects.filter(where, status__in=['ActionError', 'Answered', 'Alarm', 'Reopened', 'Open']).order_by('id').distinct().count()
     resp['escalatedCount'] = Ticket.objects.filter(where, escalated=True).order_by('id').distinct().count()
@@ -642,6 +644,117 @@ def _genereates_oncreate_kpi(ticket):
         ImplementationFactory.instance.get_singleton_of('KPIServiceBase').new_ticket(ticket)
     except KPIServiceException as ex:
         Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
+
+
+def get_mass_contact(filters=None):
+    """
+        List all created mass-contact campaigns
+    """
+    # Parse filters from request
+    query_filters = {}
+    if filters:
+        try:
+            query_filters = json.loads(unquote(unquote(filters)))
+        except (ValueError, SyntaxError, TypeError) as ex:
+            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+    try:
+        limit = int(query_filters['paginate']['resultsPerPage'])
+        offset = int(query_filters['paginate']['currentPage'])
+    except KeyError:
+        limit = 10
+        offset = 1
+
+    sort = []
+    try:
+        sort += ['-' + k if v < 0 else k for k, v in query_filters['sortBy'].iteritems()]
+    except KeyError:
+        sort += ['id']
+
+    campaigns = []
+    try:
+        for campaign in MassContact.objects.all().order_by(*sort)[(offset - 1) * limit:limit * offset]:
+            campaigns.append({
+                'campaignName': campaign.campaignName,
+                'category': campaign.category.name,
+                'user': campaign.user.username,
+                'ipsCount': campaign.ipsCount,
+                'date': int(mktime(campaign.date.timetuple())),
+                'result': model_to_dict(campaign.masscontactresult_set.all()[0]),
+            })
+    except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+    return 200, campaigns
+
+
+def post_mass_contact(body, user):
+    """
+       Create a worker task for mass contact
+    """
+    try:
+        ips = list(set(body['ips']))
+        for ip_address in ips:
+            validate_ipv46_address(ip_address)
+    except (TypeError, ValidationError):
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid value(s) in fields ips'}
+
+    try:
+        category = Category.objects.get(name=body['category'].title())
+    except (AttributeError, ObjectDoesNotExist, TypeError):
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid category'}
+
+    # Generates unified campaignName
+    campaign_name = body['campaignName']
+    campaign_name = re.sub(r'(\s+){2,}', ' ', campaign_name).replace(' ', '_').lower()
+    campaign_name = re.sub('[^A-Za-z0-9_]+', '', campaign_name)
+    campaign_name = u'mass_contact_' + campaign_name + u'_' + datetime.now().strftime('%D')
+
+    # Check mustache (required for worker)
+    for key, val in body['email'].iteritems():
+        if not all([mustache in val for mustache in MASS_CONTACT_REQUIRED]):
+            message = '%s templating elements required in %s' % (str(MASS_CONTACT_REQUIRED), key)
+            return 400, {'status': 'Bad Request', 'code': 400, 'message': message}
+
+    __create_jobs(campaign_name, ips, category, body, user)
+    return 200, {'status': 'OK', 'code': 200, 'message': 'Campaign successfully created'}
+
+
+def __create_jobs(campaign_name, ips, category, body, user):
+    """
+        Creates RQ jobs for each IP
+    """
+    # Save related infos
+    campaign = MassContact.objects.create(
+        campaignName=campaign_name,
+        category=category,
+        user=user,
+        ipsCount=len(ips),
+    )
+
+    result = MassContactResult.objects.create(
+        campaign=campaign,
+    )
+
+    # For each IP, create a worker job
+    jobs = []
+    for ip_address in ips:
+        job = utils.queue.enqueue(
+            'ticket.mass_contact',
+            ip_address=ip_address,
+            category=category.name,
+            campaign_name=campaign_name,
+            email_subject=body['email']['subject'],
+            email_body=body['email']['body'],
+            user_id=user.id,
+            timeout=360,
+        )
+        jobs.append(job.id)
+
+    utils.queue.enqueue(
+        'ticket.check_mass_contact_result',
+        result_campaign_id=result.id,
+        jobs=jobs,
+        timeout=3600,
+    )
 
 
 def get_notifications(user):

@@ -1,4 +1,5 @@
-# -*- coding: utf8 -*-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
 # Copyright (C) 2015-2016, OVH SAS
 #
@@ -18,6 +19,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+"""
+    Report Threshold event producer for Cerberus
+"""
+
 import inspect
 import os
 import sys
@@ -26,20 +31,31 @@ CURRENTDIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 PARENTDIR = os.path.dirname(CURRENTDIR)
 sys.path.insert(0, PARENTDIR)
 
-import regexp
+import django
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+django.setup()
 
-TEMPLATE = {
-    'email': 'cert-soc@lexsi.com',
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:(?:Adresse\s*IP|IP address\(es\))\s*:\s*)' + regexp.IPV4,
-        },
-        'urls': {
-            'pattern': r'(?:contenus\s*manifestement\s*frauduleux\s*sur\s*|Site\s*concern.*\s*:\s*|at the following URL\s*:\s*)' + regexp.URL,
-        },
-        'category': {
-            'pattern': r'((.|\n|\r|\t)*)',
-            'transform': True
-        },
-    },
-}
+import logutils
+from redis import Redis
+from rq import Queue
+
+from utils.logger import get_logger
+
+
+Logger = get_logger('stat')
+Worker = Queue(connection=Redis())
+
+
+def main():
+    """
+        Create worker event for report threshold
+    """
+    Logger.debug(unicode('Starting report threshold checks'))
+    Worker.enqueue('report.create_ticket_with_threshold', timeout=3600)
+
+    for handler in Logger.handlers:
+        if isinstance(handler, logutils.queue.QueueHandler):
+            handler.queue.join()
+
+if __name__ == "__main__":
+    main()

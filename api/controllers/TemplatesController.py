@@ -58,12 +58,12 @@ def index(**kwargs):
             return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
     try:
         where = generate_request_filter(filters)
-    except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
+    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
 
     try:
         templates = MailTemplate.objects.filter(where).order_by('name')
-    except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
+    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
 
     return 200, [model_to_dict(t) for t in templates]
@@ -103,6 +103,7 @@ def create(body):
     """ Create email templates
     """
     try:
+        body['codename'] = body['name'].strip().lower().replace(' ', '_')
         template, _ = MailTemplate.objects.get_or_create(**body)
     except (KeyError, FieldError, IntegrityError):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}

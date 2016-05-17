@@ -70,3 +70,6 @@ ACK_RE = {
         'BODY': r'Ack\s*to\s*Message\s*ID',
     }
 }
+
+
+ACNS_PROOF = re.compile(r'Dear Sir or Madam(\n|.)*?(<|---\s*Start)', re.MULTILINE)

@@ -1,0 +1,149 @@
+Return-Path: <broadgreenpictures@copyright-compliance.com>
+Received: from mx.domain.tld
+	by mx.domain.tld (Dovecot) with LMTP id lLgxJbRMQVUGMQAArOwUew
+	for <abuse@domain.tld>; Mon, 07 Mar 2016 15:55:32 +0100
+From: "broadgreenpictures@copyright-compliance.com" <broadgreenpictures@copyright-compliance.com>
+To: abuse@domain.tld
+Subject: 35-313583585 Notice of Unauthorized Use of Broad Green Pictures LLC
+ Property
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+Notice ID: 35-313583585
+Notice Date: 07 Mar 2016 14:55:27 GMT
+
+Dear Sir or Madam:
+
+Irdeto USA, Inc. (hereinafter referred to as "Irdeto=E2=80=9D) swears under=
+ penalty of perjury that Broad Green Pictures LLC has authorized Irdeto to =
+act as its non-exclusive agent for copyright infringement notification.  Ir=
+deto's search of the protocol listed below has detected infringements of Br=
+oad Green Pictures LLC=E2=80=99s copyright interests on your IP addresses a=
+s detailed in the below report.=20
+
+Irdeto has reasonable good faith belief that Broad Green Pictures LLC, its =
+agents, or the law does not authorize use of the material in the manner com=
+plained of in the below report.  The information provided herein is accurat=
+e to the best of our knowledge.  Therefore, this letter is an official noti=
+fication to effect removal of the detected infringement listed in the below=
+ report.  The Berne Convention for the Protection of Literary and Artistic =
+Works, the Universal Copyright Convention, as well as bilateral treaties wi=
+th other countries allow for protection of client's copyrighted work even b=
+eyond U.S. borders.  The below documentation specifies the exact location o=
+f the infringement.
+
+We hereby request that you immediately remove or block access to the infrin=
+ging material, as specified in the copyright laws, and insure the user refr=
+ains from using or sharing with others Broad Green Pictures LLC materials i=
+n the future.
+
+Further, we believe that the entire Internet community benefits when these =
+matters are resolved cooperatively.  We urge you to take immediate action t=
+o stop this infringing activity.  We appreciate your efforts toward this co=
+mmon goal.=20
+
+Please send us a prompt response indicating the actions you have taken to r=
+esolve this matter, making sure to reference the Notice ID number above in =
+your response.=20
+broadgreenpictures@copyright-compliance.com
+
+Note: If your email program has inserted line breaks into the e-mail link a=
+bove, you can copy and paste the entire link into your email program.
+
+Nothing in this letter shall serve as a waiver of any rights or remedies of=
+ Broad Green Pictures LLC with respect to the alleged infringement, all of =
+which are expressly reserved.  Should you need to contact me, I may be reac=
+hed at the below address.
+
+Regards,
+
+Patrick O'Connor
+Irdeto USA, Inc.=20
+P.O. Box 640442 San Jose, CA 95164
+Phone: 408-492-8546  fax: 408-727-6743
+broadgreenpictures@copyright-compliance.com
+
+*pgp public key is available on the key server at http://pgp.mit.edu
+
+Note: The information transmitted in this Notice is intended only for the p=
+erson or entity to which it is addressed and may contain confidential and/o=
+r privileged material.  Any review, reproduction, retransmission, dissemina=
+tion or other use of, or taking of any action in reliance upon, this inform=
+ation by persons or entities other than the intended recipient is prohibite=
+d.  If you received this in error, please contact the sender and delete the=
+ material from all computers.
+
+This infringement notice contains an XML tag that can be used to automate t=
+he processing of this data.  If you would like more information on how to u=
+se this tag please contact Irdeto.
+
+Evidentiary Information:
+
+Notice ID: 35-313583585
+Initial Infringement Timestamp: 07 Mar 2016 12:46:06 GMT
+Recent Infringement Timestamp: 07 Mar 2016 12:46:06 GMT
+Infringers IP Address: 92.222.64.5.4
+Protocol: BitTorrent
+Infringed Work: Some Picture
+Infringing File Name: Some Picture 2014 720p BRRip x264 AAC-ETRG
+Infringing File Size: 882986479
+Bay ID: addf717a6ddbe9f3173602eaa3feed34dc63cd78|882986479
+Port ID: 31714
+URL: dht
+Infringer's User Name:=20
+
+
+- - ---Start ACNS XML
+<?xml version=3D"1.0" encoding=3D"UTF-8"?>
+<Infringement xmlns=3D"http://www.acns.net/ACNS" xmlns:xsi=3D"http://www.w3=
+.org/2001/XMLSchema-instance" xsi:schemaLocation=3D"http://www.acns.net/ACN=
+S http://www.acns.net/v1.2/ACNS2v1_2.xsd">
+    <Case>
+        <ID>35-313583585</ID>
+        <Status>Open</Status>
+    </Case>
+    <Complainant>
+        <Entity>Irdeto USA, Inc</Entity>
+        <Contact>Patrick O'Connor</Contact>
+        <Address>P.O. Box 640442, San Jose, CA 95164</Address>
+        <Phone>408-492-8500,408-727-6743</Phone>
+        <Email>broadgreenpictures@copyright-compliance.com</Email>
+    </Complainant>
+    <Service_Provider>
+        <Entity>OVH Hosting, Inc.</Entity>
+        <Email>abuse@ovh.ca</Email>
+    </Service_Provider>
+    <Source>
+        <TimeStamp>2016-03-07T12:46:06.000Z</TimeStamp>
+        <IP_Address>92.222.64.5.4</IP_Address>
+        <Port>31714</Port>
+        <Type>BitTorrent</Type>
+        <Number_Files>1</Number_Files>
+        <Deja_Vu>No</Deja_Vu>
+    </Source>
+    <Content>
+        <Item>
+            <TimeStamp>2016-03-07T12:46:06.000Z</TimeStamp>
+            <Title>Some Picture</Title>
+            <FileName>Some Picture 2014 720p BRRip x264 AAC-ETRG</FileName>
+            <FileSize>882986479</FileSize>
+            <URL>dht</URL>
+        </Item>
+    </Content>
+</Infringement>
+- - ---End ACNS XML
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2.0.22 (MingW32)
+
+iQEcBAEBAgAGBQJW3ZZfAAoJEP2+2HHNNTJUXSMH+gM69Wqen3RZXrGjabXWA4Z6
+UhzMDOH61VzV9nde0M4nZwhezD+QgVI7sYYcepPTFJXTauWpC6iNYliGDiDH8Av3
+w+raum2BNS5CCLt6tZ67CqRLDLqA8EYr7tDayGX5SofjGYjbpgIQXa8Flj0/XtFA
+8z7+2zz7VsL8dh5AeBnOpDahTNlAVP6DSGoEev9MjjefSPmp0dnd8qBL1BQDbJpL
+j+7dY5MivENfl3xGpLnFmcY28xUqBpCA3Ow2KedI1XEt2HUsQlINsn12N51L0E5W
+KjqHecbFNYVJFpclPdyrcq55oJjpTyOQaPwjDbQPs1oz0Z4zwH/DLA0tqRm1Wdw=3D
+=3D6Wa8
+-----END PGP SIGNATURE-----

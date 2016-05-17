@@ -96,7 +96,6 @@ def push_to_storage_service(filename, email):
         except StorageServiceException:
             pass
 
-    with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
         cnx.write(filename, email)
         Logger.info(unicode('Email %s pushed to Storage Service' % (filename)))
 
@@ -111,7 +110,7 @@ def push_task_to_worker(filename, email):
         'report.create_from_email',
         email_content=email,
         filename=filename,
-        timeout=3600,
+        timeout=7200,
     )
     Logger.info(unicode('Task for email %s successfully created' % (filename)))
 
