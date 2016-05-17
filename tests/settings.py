@@ -85,6 +85,9 @@ DATABASES = {
 }
 
 PARSING = {
+    'providers_to_ignore': [
+        'blacklisted@provider.com',
+    ],
     'networks_to_ignore': [
         '0.0.0.0/8',
         '224.0.0/4',

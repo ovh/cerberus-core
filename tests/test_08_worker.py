@@ -411,3 +411,17 @@ class TestWorkers(GlobalTestCase):
         report.create_from_email(email_content=content, send_ack=True)
         cerberus_report = Report.objects.last()
         self.assertEqual('Critical', cerberus_report.ticket.priority)
+
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_blacklisted_provider(self, mock_rq):
+        """
+            Test if ticket is actually changing priority
+        """
+        from worker import report
+
+        mock_rq.return_value = None
+
+        sample = self._samples['sample14']  # Blacklisted
+        content = sample.read()
+        report.create_from_email(email_content=content, send_ack=True)
+        self.assertEqual(0, Report.objects.count())

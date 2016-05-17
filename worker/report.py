@@ -89,6 +89,11 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         except MailerServiceException as ex:
             raise MailerServiceException(ex)
 
+    # Check if provider is not blacklisted
+    if abuse_report.provider in settings.PARSING['providers_to_ignore']:
+        Logger.error(unicode('Provider %s is blacklisted, skipping ...' % (abuse_report.provider)))
+        return
+
     # Check if items are linked to customer and get corresponding services
     try:
         services = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_services_from_items(
@@ -618,7 +623,7 @@ def create_ticket_with_threshold():
             nb_tickets = Ticket.objects.filter(
                 ~Q(status='Closed'),
                 defendant__customerId=data[0],
-                service__name=data[1]
+                service__id=data[1],
             ).count()
             if count >= thres.threshold and not nb_tickets:
                 ticket = __create_threshold_ticket(data, thres)
@@ -635,14 +640,14 @@ def __get_threshold_reports(category, delta):
         receivedDate__gte=datetime.now() - timedelta(days=delta),
     ).values_list(
         'defendant__customerId',
-        'service__name'
+        'service__id'
     )
     return reports
 
 
 def __create_threshold_ticket(data, thres):
 
-    service = Service.objects.filter(name=data[1]).last()
+    service = Service.objects.filter(id=data[1]).last()
     defendant = Defendant.objects.filter(customerId=data[0]).last()
     ticket = database.create_ticket(defendant, thres.category, service)
     database.log_action_on_ticket(
