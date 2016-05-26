@@ -254,7 +254,7 @@ def __create_with_services(abuse_report, filename, services):
             report.ticket = Ticket.objects.get(id=ticket.id)
             report.status = 'Attached'
             report.save()
-            database.set_ticket_higher_priority(ticket)
+            database.set_ticket_higher_priority(report.ticket)
             action = action if action else 'attach report %d from %s (%s ...) to this ticket'
             database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
 
@@ -536,6 +536,7 @@ def __update_ticket_if_answer(ticket, abuse_report, filename):
         If the email is an answer to a cerberus ticket:
 
         - update ticket status
+        - cancel all pending ServiceAction jobs
         - append response to ticket's email thread
         - save attachments
 
@@ -563,6 +564,12 @@ def __update_ticket_if_answer(ticket, abuse_report, filename):
         ticket.reportTicket.all().update(status='Attached')
         ticket.save()
         actions.append('change status from %s to %s' % (ticket.previousStatus, ticket.status))
+
+        for job in ticket.jobs.all():
+            if job.asynchronousJobId in utils.scheduler:
+                utils.scheduler.cancel(job.asynchronousJobId)
+                job.status = 'cancelled by answered'
+                job.save()
 
     for action in actions:
         database.log_action_on_ticket(ticket, action)

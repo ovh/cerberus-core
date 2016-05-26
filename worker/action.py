@@ -147,6 +147,14 @@ def apply_action(ticket_id=None, action_id=None, ip_addr=None, user_id=None):
         Logger.error(unicode('Ticket %d or user %d cannot be found in DB. Skipping...' % (ticket_id, user_id)))
         return False
 
+    if ticket.status in ['Closed', 'Answered']:
+        __cancel_by_status(ticket)
+        ticket.previousStatus = ticket.status
+        ticket.status = 'ActionError'
+        ticket.save()
+        database.log_action_on_ticket(ticket, 'change status from %s to %s' % (ticket.previousStatus, ticket.status))
+        return False
+
     # Call action service
     try:
         result = ImplementationFactory.instance.get_singleton_of(
