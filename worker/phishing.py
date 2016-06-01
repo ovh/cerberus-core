@@ -21,9 +21,11 @@
 """
     Phishing functions for worker
 """
+
 from datetime import datetime, timedelta
 from Queue import Queue
 from threading import Thread
+from time import sleep
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -394,7 +396,14 @@ def timeout(ticket_id=None):
     Logger.info(unicode('Task has %s job id' % (async_job.id)))
     job = ServiceActionJob.objects.create(ip=ip_addr, action=action, asynchronousJobId=async_job.id, creationDate=datetime.now())
     ticket.jobs.add(job)
-    ticket.save()
+
+    while not async_job.is_finished:
+        sleep(5)
+
+    if not async_job.result:
+        Logger.debug(unicode('Error while executing service action, exiting'))
+        return
+
     Logger.info(unicode('All done, sending close notification to provider(s)'))
     ticket = Ticket.objects.get(id=ticket.id)
 
