@@ -67,6 +67,7 @@ def check_if_all_down(report=None, last=5):
         __update_item_status(item, country)
 
     items = report.reportItemRelatedReport.all()
+    items = list(set([item for item in items if item.itemType == 'URL']))
     scoring = {item.id: 0 for item in items}
 
     for item in items:
