@@ -23,8 +23,6 @@
 """
 
 from datetime import datetime, timedelta
-from Queue import Queue
-from threading import Thread
 from time import sleep
 
 from django.conf import settings
@@ -68,6 +66,7 @@ def check_if_all_down(report=None, last=5):
     for item in items:
         __update_item_status(item, country)
 
+    items = report.reportItemRelatedReport.all()
     scoring = {item.id: 0 for item in items}
 
     for item in items:
@@ -263,13 +262,6 @@ def block_url_and_mail(ticket_id=None, report_id=None):
     Logger.info(unicode('Ticket %d now with status WaitingAnswer for %d' % (ticket_id, ticket_snooze)))
 
 
-def __check_report_items_status(report, last, queue):
-    """
-        Thread checking if all down for a phishing report
-    """
-    queue.put(check_if_all_down(report=report, last=last))
-
-
 def __close_phishing_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False):
     """
         Close ticket and add autoclosed Tag
@@ -430,23 +422,11 @@ def is_all_down_for_ticket(ticket, last=5):
         :rtype: bool
         :returns: if all items are down
     """
-    queue = Queue()
-    threads = []
-
+    results = []
     # Check if there are still items up
-    reports = ticket.reportTicket.all()
-    reports = [reports[x:x + 5] for x in xrange(0, len(reports), 5)]
+    for report in ticket.reportTicket.all():
+        results.append(check_if_all_down(report=report, last=last))
 
-    for sublist in reports:
-        for report in sublist:
-            thread = Thread(target=__check_report_items_status, args=(report, last, queue))
-            thread.start()
-            threads.append(thread)
-
-        for thread in threads:
-            thread.join()
-
-    results = [queue.get() for _ in xrange(ticket.reportTicket.count())]
     return bool(all(results))
 
 

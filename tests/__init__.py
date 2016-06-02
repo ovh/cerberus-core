@@ -102,12 +102,20 @@ class GlobalTestCase(TestCase):
             body='Phishing blocked',
         )
 
+        MailTemplate.objects.create(
+            codename='ticket_closed',
+            name='ticket closed',
+            subject='ticket closed',
+            body='ticket closed',
+        )
+
         for tag in ['phishing:autoblocked', 'phishing:autoclosed', 'phishing:autoreopened']:
             Tag.objects.create(codename=tag, name=tag, tagType='Ticket')
 
         Resolution.objects.create(codename='no_more_content')
         Resolution.objects.create(codename='fixed')
         Resolution.objects.create(codename='forward_acns')
+        Resolution.objects.create(codename='fixed_by_customer')
 
         user = User.objects.create(username=settings.GENERAL_CONFIG['bot_user'])
         user.is_superuser = True

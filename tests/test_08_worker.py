@@ -205,23 +205,26 @@ class TestWorkers(GlobalTestCase):
         self.assertEqual(1, stat.reports)
         self.assertEqual(1, stat.tickets)
 
+    @patch('rq.queue.Queue.enqueue')
     @patch('rq_scheduler.scheduler.Scheduler.schedule')
     @patch('default.adapters.services.phishing.impl.DefaultPhishingService.ping_url')
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
-    def test_phishing_timeout(self, mock_rq_enqueue, mock_ping, mock_rq_schedule):
+    def test_phishing_timeout(self, mock_rq_enqueue_in, mock_ping, mock_rq_schedule, mock_rq_enqueue):
         """
             Test phishing workflow
         """
         from worker import report
 
-        mock_rq_enqueue.return_value = None
-        mock_ping.return_value = PingResponse(100, '404', 'Not Found', 'Not Found')
+        mock_rq_enqueue_in.return_value = None
+        mock_ping.return_value = PingResponse(100, '404', 'Not Found', 'Not Found for test_phishing_timeout')
         mock_rq_schedule.return_value = FakeJob()
+        mock_rq_enqueue.return_value = FakeJob()
 
         sample = self._samples['sample6']
         content = sample.read()
         report.create_from_email(email_content=content, send_ack=False)
 
+        # Reopening ticket
         cerberus_report = Report.objects.last()
         cerberus_report.status = 'Attached'
         cerberus_report.ticket.status = 'WaitingAnswer'
@@ -230,14 +233,16 @@ class TestWorkers(GlobalTestCase):
         cerberus_report.ticket.save()
         cerberus_report.save()
 
-        from worker import workflow
+        from worker import workflow, phishing
 
-        workflow.follow_the_sun()
-        workflow.update_paused()
         workflow.update_waiting()
 
         ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
+        self.assertEqual('Alarm', ticket.status)
+        phishing.timeout(ticket.id)
+        ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
         self.assertEqual('Closed', ticket.status)
+
 
     @patch('rq.get_current_job')
     @patch('default.adapters.services.phishing.impl.DefaultPhishingService.ping_url')
