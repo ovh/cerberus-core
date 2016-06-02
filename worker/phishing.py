@@ -317,7 +317,7 @@ def __close_phishing_ticket(ticket, reason=settings.CODENAMES['fixed_customer'],
 
 def timeout(ticket_id=None):
     """
-        If ticket timeout (Alarm), apply action on service (if defendant not internal/VIP)
+        If ticket timeout (Alarm), apply action on service (if defendant not internal/VIP) and ticket is not assigned
 
         :param int ticket_id: The id of the Cerberus `abuse.models.Ticket`
     """
@@ -334,15 +334,8 @@ def timeout(ticket_id=None):
         Logger.error(unicode('Ticket %d cannot be found in DB. Skipping...' % (ticket_id)))
         return
 
-    if ticket.defendant.details.isInternal or ticket.defendant.details.isVIP:
-        Logger.error(unicode("Ticket's defendant %s is internal or VIP, skipping" % (ticket.defendant.customerId)))
-        ticket.status = ticket.previousStatus
-        ticket.status = 'ActionError'
-        database.log_action_on_ticket(ticket, 'change status from %s to %s' % (ticket.previousStatus, ticket.status), BOT_USER)
-        comment = Comment.objects.create(user=BOT_USER, comment="Ticket's defendant is internal or VIP")
-        TicketComment.objects.create(ticket=ticket, comment=comment)
-        database.log_action_on_ticket(ticket, 'add comment', BOT_USER)
-        ticket.save()
+    if ticket.treatedBy:
+        Logger.error(unicode('Ticket is %d assigned, skipping' % (ticket_id)))
         return
 
     if ticket.jobs.count():
