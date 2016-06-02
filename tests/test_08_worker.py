@@ -29,7 +29,8 @@ from django.conf import settings
 from mock import patch
 
 from abuse.models import (ServiceAction, ContactedProvider, Defendant, Report, Provider,
-                          ReportThreshold, DefendantHistory, Resolution, Stat, Ticket, User)
+                          ReportThreshold, DefendantHistory, Resolution, Stat, Ticket, User,
+                          UrlStatus)
 from adapters.services.phishing.abstract import PingResponse
 from factory.factory import ImplementationFactory
 from tests import GlobalTestCase
@@ -43,6 +44,8 @@ class FakeJob(object):
     """
     def __init__(self):
         self.id = 42
+        self.is_finished = True
+        self.result = True
 
 
 class TestWorkers(GlobalTestCase):
@@ -242,6 +245,29 @@ class TestWorkers(GlobalTestCase):
         phishing.timeout(ticket.id)
         ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
         self.assertEqual('Closed', ticket.status)
+        self.assertEqual(settings.CODENAMES['fixed_customer'], ticket.resolution.codename)
+
+        # Reopening ticket
+        UrlStatus.objects.all().delete()
+        mock_ping.return_value = PingResponse(0, '200', 'UP', 'UP for test_phishing_timeout')
+        cerberus_report = Report.objects.last()
+        cerberus_report.status = 'Attached'
+        cerberus_report.ticket.status = 'WaitingAnswer'
+        cerberus_report.ticket.snoozeDuration = 1
+        cerberus_report.ticket.snoozeStart = datetime.now() - timedelta(days=1)
+        cerberus_report.ticket.save()
+        cerberus_report.save()
+
+        from worker import workflow, phishing
+
+        workflow.update_waiting()
+
+        ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
+        self.assertEqual('Alarm', ticket.status)
+        phishing.timeout(ticket.id)
+        ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
+        self.assertEqual('Closed', ticket.status)
+        self.assertEqual(settings.CODENAMES['fixed'], ticket.resolution.codename)
 
 
     @patch('rq.get_current_job')
