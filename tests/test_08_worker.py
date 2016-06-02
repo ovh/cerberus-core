@@ -269,7 +269,6 @@ class TestWorkers(GlobalTestCase):
         self.assertEqual('Closed', ticket.status)
         self.assertEqual(settings.CODENAMES['fixed'], ticket.resolution.codename)
 
-
     @patch('rq.get_current_job')
     @patch('default.adapters.services.phishing.impl.DefaultPhishingService.ping_url')
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
