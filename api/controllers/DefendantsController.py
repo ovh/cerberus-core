@@ -22,16 +22,17 @@
     Cerberus defendant manager
 """
 
+from collections import Counter
 from time import mktime, time
 
 from django.core.exceptions import FieldError
 from django.db import IntegrityError
-from django.db.models import Q, Count, ObjectDoesNotExist
+from django.db.models import Q, ObjectDoesNotExist
 from django.forms.models import model_to_dict
 
 import GeneralController
 from abuse.models import (Category, Defendant, DefendantComment, Stat, Tag,
-                          DefendantRevision, DefendantHistory)
+                          Report, Ticket, DefendantRevision, DefendantHistory)
 from adapters.dao.customer.abstract import CustomerDaoException
 from factory.factory import ImplementationFactory
 from utils import schema
@@ -164,19 +165,21 @@ def get_or_create(customer_id=None):
 def get_defendant_top20():
     """ Get top 20 defendant with open tickets/reports
     """
-    res = {'report': [], 'ticket': []}
-    for filtr in res.keys():
-        res[filtr] = Defendant.objects.values(
-            'id', 'customerId', 'details__email'
-        ).annotate(
-            count=Count('%sDefendant' % (filtr))
-        ).filter(
-            ~Q(**{'%sDefendant__status__in' % (filtr): ['Archived', 'Closed']})
-        ).order_by('-count')[:20]
-        for defendant in res[filtr]:
-            defendant['email'] = defendant.pop('details__email')
-        res[filtr] = [dict(r) for r in res[filtr]]
+    ticket = Ticket.objects.filter(~Q(defendant=None), ~Q(status='Closed')).values_list('defendant__id', flat=True)
+    ticket = Counter(ticket).most_common(20)
+    report = Report.objects.filter(~Q(defendant=None), ~Q(status='Archived')).values_list('defendant__id', flat=True)
+    report = Counter(report).most_common(20)
 
+    res = {'report': [], 'ticket': []}
+    for kind in res.keys():
+        for defendant_id, count in locals()[kind]:
+            defendant = Defendant.objects.get(id=defendant_id)
+            res[kind].append({
+                'id': defendant.id,
+                'customerId': defendant.customerId,
+                'email': defendant.details.email,
+                'count': count
+            })
     return 200, res
 
 
