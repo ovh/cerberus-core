@@ -84,6 +84,10 @@ Schemas = {
                 }
             }
         ], required=True),
+        'get_http_headers': Schema({
+            'url': Any(str, unicode),
+            'headers': Any(str, unicode),
+        }, required=True),
     }
 }
 

@@ -26,7 +26,7 @@ from django.conf import settings
 from flask import Blueprint, request
 
 from api.controllers import (GeneralController, ProvidersController,
-                             TicketsController)
+                             ReportItemsController, TicketsController)
 from decorators import (admin_required, catch_500, json_required, jsonify,
                         token_required, validate_body)
 
@@ -75,6 +75,18 @@ def ping():
     """ Keep alive between UX and API
     """
     return 200, {'status': 'OK', 'code': 200}
+
+
+@misc_views.route('/api/tools/curl', methods=['GET'])
+@jsonify
+@token_required
+@catch_500
+def get_url_http_headers():
+    """
+        Keep alive between UX and API
+    """
+    code, resp = ReportItemsController.get_http_headers(request.args.get('url'))
+    return code, resp
 
 
 @misc_views.route('/api/notifications', methods=['GET'])

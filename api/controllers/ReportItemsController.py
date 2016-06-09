@@ -351,13 +351,7 @@ def get_defendant_from_item(item):
         Get defendant/service for given item
     """
     customer_id = None
-    item['rawItem'] = item['rawItem'].strip()
-    item['rawItem'] = item['rawItem'].replace(' ', '')
-    reg = re.compile(re.escape('hxxpx'), re.IGNORECASE)
-    item['rawItem'] = reg.sub('https', item['rawItem'])
-    reg = re.compile(re.escape('hxxp'), re.IGNORECASE)
-    item['rawItem'] = reg.sub('http', item['rawItem'])
-    item['rawItem'] = item['rawItem'].replace('[.]', '.')
+    item['rawItem'] = _get_deobfuscate_item(item['rawItem'])
 
     try:
         ip_addr, hostname = get_item_ip_hostname(item)
@@ -508,3 +502,37 @@ def get_screenshot(item_id, report_id):
         return 200, results
     except (PhishingServiceException, schema.InvalidFormatError, schema.SchemaNotFound):
         return 502, {'status': 'Proxy Error', 'code': 502, 'message': 'Error while loading screenshots'}
+
+
+def get_http_headers(url):
+    """
+        Get HTTP headers for given url
+    """
+    if not url:
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing url'}
+
+    url = _get_deobfuscate_item(url)
+    try:
+        validate = URLValidator()
+        validate(url)
+    except ValidationError:
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Not a valid URL'}
+
+    try:
+        response = ImplementationFactory.instance.get_singleton_of('PhishingServiceBase').get_http_headers(url)
+        schema.valid_adapter_response('PhishingServiceBase', 'get_http_headers', response)
+        return 200, response
+    except (PhishingServiceException, schema.InvalidFormatError, schema.SchemaNotFound) as ex:
+        return 502, {'status': 'Proxy Error', 'code': 502, 'message': str(ex)}
+
+
+def _get_deobfuscate_item(item):
+
+    item = item.strip()
+    item = item.replace(' ', '')
+    reg = re.compile(re.escape('hxxpx'), re.IGNORECASE)
+    item = reg.sub('https', item)
+    reg = re.compile(re.escape('hxxp'), re.IGNORECASE)
+    item = reg.sub('http', item)
+    item = item.replace('[.]', '.')
+    return item

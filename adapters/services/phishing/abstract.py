@@ -159,3 +159,32 @@ class PhishingServiceBase(object):
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'block_url'" % (cls))
+
+    @abc.abstractmethod
+    def get_http_headers(self, url):
+        """
+            Get url HTTP headers (like curl -I)
+
+            Returns:
+
+            {
+                'url': 'https://www.ovh.com/fr/,
+                'headers': 'HTTP/1.1 200 OK
+                            Set-Cookie: a=R1837865839; path=/; expires=Sun, 12-Jun-2016 02:06:33 GMT
+                            Set-Cookie: b=R2649533674; path=/; expires=Thu, 09-Jun-2016 14:55:03 GMT
+                            Content-Type: text/html; charset=UTF-8
+                            Cache-Control: max-age=600
+                            Expires: Thu, 09 Jun 2016 13:59:02 GMT
+                            Connection: close
+                            ...,
+                }
+            }
+
+            :param str url: The URL to block
+            :return: Details about headers
+            :rtype: dict
+
+            :raises PhishingServiceException: if any error occur
+        """
+        cls = self.__class__.__name__
+        raise NotImplementedError("'%s' object does not implement the method 'get_http_headers'" % (cls))

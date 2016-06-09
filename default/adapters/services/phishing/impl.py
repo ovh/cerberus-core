@@ -105,3 +105,19 @@ class DefaultPhishingService(PhishingServiceBase):
             :raises PhishingServiceException: if any error occur
         """
         pass
+
+    def get_http_headers(self, url):
+        """
+            Get url HTTP headers (like curl -I)
+
+            :param str url: The URL to block
+            :return: Details about headers
+            :rtype: dict
+
+            :raises PhishingServiceException: if any error occur
+        """
+        response = {
+            'url': url,
+            'headers': '200 OK\ncontent-length: 24187',
+        }
+        return response

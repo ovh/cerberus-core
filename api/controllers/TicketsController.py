@@ -52,7 +52,6 @@ from utils import utils
 
 IP_CIDR_RE = re.compile(r"(?<!\d\.)(?<!\d)(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}(?!\d|(?:\.\d))")
 STATUS = [status[0].lower() for status in Ticket.TICKET_STATUS]
-USERS = list(set(User.objects.all().values_list('username', flat=True)))
 
 # Mapping JSON fields name to django syntax
 FILTER_MAPPING = (
@@ -1359,7 +1358,8 @@ def __get_filtered_todo_tickets(filters, user):
             res.extend(tickets)
 
             # The others
-            others_users = [username for username in USERS if username != user.username]
+            users = list(set(User.objects.all().values_list('username', flat=True)))
+            others_users = [username for username in users if username != user.username]
             tickets = __get_specific_filtered_to_tickets(where, ids, priority, ticket_status, others_users, fields, order_by, limit, offset)
             ids.update([t['id'] for t in tickets])
             res.extend(tickets)
