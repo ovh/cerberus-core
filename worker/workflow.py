@@ -50,7 +50,7 @@ def follow_the_sun():
     where = reduce(operator.and_, where)
 
     for user in User.objects.filter(~Q(username=CERBERUS_BOT_USER.username)):
-        if now > mktime((user.last_login + timedelta(hours=2)).timetuple()):
+        if now > mktime((user.last_login + timedelta(hours=24)).timetuple()):
             Logger.debug(
                 unicode('user %s logged out, set alarm to True' % (user.username)),
                 extra={
