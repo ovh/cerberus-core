@@ -58,6 +58,20 @@ html2text.ignore_images = True
 html2text.images_to_alt = True
 html2text.ignore_links = True
 
+# Mapping JSON fields name to django syntax
+FILTER_MAPPING = (
+    ('reportTag', 'tags__name'),
+    ('providerEmail', 'provider__email'),
+    ('providerTag', 'provider__tags__name'),
+    ('defendantCustomerId', 'defendant__customerId'),
+    ('defendantCountry', 'defendant__details__country'),
+    ('defendantEmail', 'defendant__details__email'),
+    ('defendantTag', 'defendant__tags__name'),
+    ('itemRawItem', 'reportItemRelatedReport__rawItem'),
+    ('itemIpReverse', 'reportItemRelatedReport__ipReverse'),
+    ('itemFqdnResolved', 'reportItemRelatedReport__fqdnResolved'),
+)
+
 
 def index(**kwargs):
     """ Main endpoint, get all reports from db and eventually contains
@@ -113,20 +127,6 @@ def index(**kwargs):
 def __generate_request_filters(filters, user):
     """ Generates filters base on filter query string
     """
-    # Mapping JSON fields name to django syntax
-    relation_field = {
-        'reportTag': 'tags__name',
-        'providerEmail': 'provider__email',
-        'providerTag': 'provider__tags__name',
-        'defendantCustomerId': 'defendant__customerId',
-        'defendantCountry': 'defendant__details__country',
-        'defendantEmail': 'defendant__details__email',
-        'defendantTag': 'defendant__tags__name',
-        'itemRawItem': 'reportItemRelatedReport__rawItem',
-        'itemIpReverse': 'reportItemRelatedReport__ipReverse',
-        'itemFqdnResolved': 'reportItemRelatedReport__fqdnResolved',
-    }
-
     # Add SearchService results if fulltext search
     try:
         for field in filters['where']['like']:
@@ -146,25 +146,17 @@ def __generate_request_filters(filters, user):
         if 'in' in keys:
             for i in filters['where']['in']:
                 for key, val in i.iteritems():
-                    field = relation_field[key] if key in relation_field else key
+                    field = reduce(lambda a, kv: a.replace(*kv), FILTER_MAPPING, key)
                     where.append(reduce(operator.or_, [Q(**{field: i}) for i in val]))
         if 'like' in keys:
             like = []
             for i in filters['where']['like']:
                 for key, val in i.iteritems():
-                    field = relation_field[key] if key in relation_field else key
+                    field = reduce(lambda a, kv: a.replace(*kv), FILTER_MAPPING, key)
                     field = field + '__icontains'
                     like.append(Q(**{field: val[0]}))
             if len(like):
                 where.append(reduce(operator.or_, like))
-        if 'between' in keys:
-            for i in filters['where']['between']:
-                for key, val in i.iteritems():
-                    field = relation_field[key] if key in relation_field else key
-                    field = field + '__range'
-                    start = datetime.fromtimestamp(val[0])
-                    end = datetime.fromtimestamp(val[1])
-                    where.append(reduce(operator.or_, [Q(**{field: (start, end)})]))
     else:
         # All except closed
         where.append(~Q(status='Archived'))

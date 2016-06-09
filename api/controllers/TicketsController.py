@@ -53,6 +53,22 @@ from utils import utils
 IP_CIDR_RE = re.compile(r"(?<!\d\.)(?<!\d)(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}(?!\d|(?:\.\d))")
 STATUS = [status[0].lower() for status in Ticket.TICKET_STATUS]
 
+# Mapping JSON fields name to django syntax
+FILTER_MAPPING = (
+    ('ticketsTag', 'tags__name'),
+    ('reportsTag', 'reportTicket__tags__name'),
+    ('treatedBy', 'treatedBy__username'),
+    ('defendantCustomerId', 'defendant__customerId'),
+    ('defendantCountry', 'defendant__details__country'),
+    ('defendantEmail', 'defendant__details__email'),
+    ('defendantTag', 'defendant__tags__name'),
+    ('providerEmail', 'reportTicket__provider__email'),
+    ('providerTag', 'reportTicket__provider__tags__name'),
+    ('itemRawItem', 'reportTicket__reportItemRelatedReport__rawItem'),
+    ('itemIpReverse', 'reportTicket__reportItemRelatedReport__ipReverse'),
+    ('itemFqdnResolved', 'reportTicket__reportItemRelatedReport__fqdnResolved'),
+)
+
 
 def index(**kwargs):
     """
@@ -118,22 +134,6 @@ def __generate_request_filters(filters, user=None, treated_by=None):
     """
         Generates filters base on filter query string
     """
-    # Mapping JSON fields name to django syntax
-    relation_field = {
-        'ticketsTag': 'tags__name',
-        'reportsTag': 'reportTicket__tags__name',
-        'treatedBy': 'treatedBy__username',
-        'defendantCustomerId': 'defendant__customerId',
-        'defendantCountry': 'defendant__details__country',
-        'defendantEmail': 'defendant__details__email',
-        'defendantTag': 'defendant__tags__name',
-        'providerEmail': 'reportTicket__provider__email',
-        'providerTag': 'reportTicket__provider__tags__name',
-        'itemRawItem': 'reportTicket__reportItemRelatedReport__rawItem',
-        'itemIpReverse': 'reportTicket__reportItemRelatedReport__ipReverse',
-        'itemFqdnResolved': 'reportTicket__reportItemRelatedReport__fqdnResolved',
-    }
-
     where = [Q()]
     if treated_by:
         where.append(Q(treatedBy=treated_by))
@@ -156,25 +156,17 @@ def __generate_request_filters(filters, user=None, treated_by=None):
         if 'in' in keys:
             for param in filters['where']['in']:
                 for key, val in param.iteritems():
-                    field = relation_field[key] if key in relation_field else key
+                    field = reduce(lambda a, kv: a.replace(*kv), FILTER_MAPPING, key)
                     where.append(reduce(operator.or_, [Q(**{field: i}) for i in val]))
         if 'like' in keys:
             like = []
             for param in filters['where']['like']:
                 for key, val in param.iteritems():
-                    field = relation_field[key] if key in relation_field else key
+                    field = reduce(lambda a, kv: a.replace(*kv), FILTER_MAPPING, key)
                     field = field + '__icontains'
                     like.append(Q(**{field: val[0]}))
             if len(like):
                 where.append(reduce(operator.or_, like))
-        if 'between' in keys:
-            for param in filters['where']['between']:
-                for key, val in param.iteritems():
-                    field = relation_field[key] if key in relation_field else key
-                    field = field + '__range'
-                    start = datetime.fromtimestamp(val[0])
-                    end = datetime.fromtimestamp(val[1])
-                    where.append(reduce(operator.or_, [Q(**{field: (start, end)})]))
     else:
         # All except closed
         where.append(~Q(status='Closed'))
