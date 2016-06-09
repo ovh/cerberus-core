@@ -52,6 +52,7 @@ from utils import utils
 
 IP_CIDR_RE = re.compile(r"(?<!\d\.)(?<!\d)(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}(?!\d|(?:\.\d))")
 STATUS = [status[0].lower() for status in Ticket.TICKET_STATUS]
+USERS = list(set(User.objects.all().values_list('username', flat=True)))
 
 # Mapping JSON fields name to django syntax
 FILTER_MAPPING = (
@@ -1330,60 +1331,36 @@ def __get_filtered_todo_tickets(filters, user):
         limit = 10
         offset = 1
 
-    try:
-        with_assigned = filters['withAssigned']
-        if not isinstance(with_assigned, bool):
-            with_assigned = True
-    except KeyError:
-        with_assigned = True
-
-    try:
-        with_alarm = filters['withFts']
-        if not isinstance(with_alarm, bool):
-            with_alarm = True
-    except KeyError:
-        with_alarm = True
-
     where = __get_user_filters(user)
     res = []
     order_by = ['modificationDate']
     ids = set()
     fields = [fld.name for fld in Ticket._meta.fields]
 
-    if not with_assigned:
-        where.append(Q(treatedBy=None))
-
-    if not with_alarm:
-        where.append(Q(alarm=False))
-
     # Aggregate all filters
     where = reduce(operator.and_, where)
 
+    # Count
     nb_record = Ticket.objects.filter(
         where,
         status__in=['ActionError', 'Answered', 'Alarm', 'Reopened', 'Open']
     ).distinct().count()
 
-    for status in [['ActionError'], ['Answered'], ['Alarm', 'Reopened'], ['Open']]:
+    for ticket_status in [['ActionError'], ['Answered'], ['Alarm', 'Reopened'], ['Open']]:
 
         if status == ['Open']:
             order_by.append('-reportTicket__tags__level')
 
         for priority in ['Critical', 'High', 'Normal', 'Low']:
 
-            tickets = Ticket.objects.filter(
-                where,
-                ~Q(id__in=ids),
-                priority=priority,
-                status__in=status,
-            ).values(
-                *fields
-            ).order_by(
-                *order_by
-            ).annotate(
-                attachedReportsCount=Count('reportTicket')
-            ).distinct()[:limit * offset]
+            # First user
+            tickets = __get_specific_filtered_to_tickets(where, ids, priority, ticket_status, [user.username], fields, order_by, limit, offset)
+            ids.update([t['id'] for t in tickets])
+            res.extend(tickets)
 
+            # The others
+            others_users = [username for username in USERS if username != user.username]
+            tickets = __get_specific_filtered_to_tickets(where, ids, priority, ticket_status, others_users, fields, order_by, limit, offset)
             ids.update([t['id'] for t in tickets])
             res.extend(tickets)
 
@@ -1391,6 +1368,23 @@ def __get_filtered_todo_tickets(filters, user):
                 return res[(offset - 1) * limit:limit * offset], nb_record
 
     return res[(offset - 1) * limit:limit * offset], nb_record
+
+
+def __get_specific_filtered_to_tickets(where, ids, priority, status, users, fields, order_by, limit, offset):
+
+    return Ticket.objects.filter(
+        where,
+        ~Q(id__in=ids),
+        priority=priority,
+        status__in=status,
+        treatedBy__username__in=users,
+    ).values(
+        *fields
+    ).order_by(
+        *order_by
+    ).annotate(
+        attachedReportsCount=Count('reportTicket')
+    ).distinct()[:limit * offset]
 
 
 def __get_user_filters(user):
