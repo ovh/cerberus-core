@@ -178,10 +178,8 @@ def __generate_request_filters(filters, user=None, treated_by=None):
     for perm in abuse_permissions:
         if perm.profile.name == 'Expert':
             user_specific_where.append(Q(category=perm.category))
-        elif perm.profile.name == 'Advanced':
+        elif perm.profile.name in ['Advanced', 'Read-only', 'Beginner']:
             user_specific_where.append(Q(category=perm.category, confidential=False))
-        elif perm.profile.name in ['Read-only', 'Beginner']:
-            user_specific_where.append(Q(category=perm.category, confidential=False, escalated=False, moderation=False))
 
     if len(user_specific_where):
         user_specific_where = reduce(operator.or_, user_specific_where)
