@@ -69,6 +69,9 @@ FILTER_MAPPING = (
     ('itemFqdnResolved', 'reportTicket__reportItemRelatedReport__fqdnResolved'),
 )
 
+TODO_TICKET_STATUS_FILTERS = (['ActionError'], ['Answered'], ['Alarm', 'Reopened'], ['Open'])
+TODO_TICKET_PRIORITY_FILTERS = ('Critical', 'High', 'Normal', 'Low')
+
 
 def index(**kwargs):
     """
@@ -1329,10 +1332,13 @@ def __get_filtered_todo_tickets(filters, user):
         offset = 1
 
     where = __get_user_filters(user)
-    res = []
     order_by = ['modificationDate']
-    ids = set()
     fields = [fld.name for fld in Ticket._meta.fields]
+
+    treated_by_filters = __get_treated_by_filters(user)
+    if filters.get('onlyUnassigned'):
+        where.append(Q(treatedBy=None))
+        treated_by_filters = [{'treatedBy': None}]
 
     # Aggregate all filters
     where = reduce(operator.and_, where)
@@ -1343,39 +1349,53 @@ def __get_filtered_todo_tickets(filters, user):
         status__in=['ActionError', 'Answered', 'Alarm', 'Reopened', 'Open']
     ).distinct().count()
 
-    for ticket_status in [['ActionError'], ['Answered'], ['Alarm', 'Reopened'], ['Open']]:
+    res = []
+    ids = set()
+    # Sort tickets
+    for ticket_status in TODO_TICKET_STATUS_FILTERS:
 
         if status == ['Open']:
             order_by.append('-reportTicket__tags__level')
 
-        for priority in ['Critical', 'High', 'Normal', 'Low']:
+        for priority in TODO_TICKET_PRIORITY_FILTERS:
+            for filters in treated_by_filters:
 
-            # First user
-            tickets = __get_specific_filtered_to_tickets(where, ids, priority, ticket_status, [user.username], fields, order_by, limit, offset)
-            ids.update([t['id'] for t in tickets])
-            res.extend(tickets)
-
-            # The others
-            users = list(set(User.objects.all().values_list('username', flat=True)))
-            others_users = [username for username in users if username != user.username]
-            tickets = __get_specific_filtered_to_tickets(where, ids, priority, ticket_status, others_users, fields, order_by, limit, offset)
-            ids.update([t['id'] for t in tickets])
-            res.extend(tickets)
-
-            if len(res) > limit * offset:
-                return res[(offset - 1) * limit:limit * offset], nb_record
+                tickets = __get_specific_filtered_todo_tickets(where, ids, priority, ticket_status, filters, fields, order_by, limit, offset)
+                ids.update([t['id'] for t in tickets])
+                res.extend(tickets)
+                if len(res) > limit * offset:
+                    return res[(offset - 1) * limit:limit * offset], nb_record
 
     return res[(offset - 1) * limit:limit * offset], nb_record
 
 
-def __get_specific_filtered_to_tickets(where, ids, priority, status, users, fields, order_by, limit, offset):
+def __get_treated_by_filters(user):
+
+    users = list(set(User.objects.all().values_list('username', flat=True)))
+    others_users = [username for username in users if username != user.username]
+
+    treated_by_filters = [
+        {
+            'treatedBy__username': user.username,
+        },
+        {
+            'treatedBy__username__in': others_users,
+        },
+        {
+            'treatedBy': None,
+        },
+    ]
+    return treated_by_filters
+
+
+def __get_specific_filtered_todo_tickets(where, ids, priority, status, treated_by, fields, order_by, limit, offset):
 
     return Ticket.objects.filter(
         where,
         ~Q(id__in=ids),
         priority=priority,
         status__in=status,
-        treatedBy__username__in=users,
+        **treated_by
     ).values(
         *fields
     ).order_by(
