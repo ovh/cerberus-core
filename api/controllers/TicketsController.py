@@ -1242,7 +1242,7 @@ def schedule_asynchronous_job(ticket_id, action_id, ip_addr, user, seconds=1, me
         return 403, {'status': 'Forbidden', 'code': 403, 'message': 'Invalid permission for this action'}
 
     # Cancel previous pending jobs
-    for job in ticket.jobs.all():
+    for job in ticket.jobs.filter(ip=ip_addr):
         if job.asynchronousJobId in utils.scheduler:
             utils.scheduler.cancel(job.asynchronousJobId)
             job.status = 'cancelled by new action'
