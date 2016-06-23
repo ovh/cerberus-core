@@ -288,7 +288,6 @@ def show(ticket_id, user):
     ticket_dict['history'] = __get_ticket_history(ticket)
     ticket_dict['attachedReportsCount'] = ticket.reportTicket.count()
     ticket_dict['tags'] = __get_ticket_tags(ticket)
-    # ticket_dict['tags'] = []
     ticket_dict['justAssigned'] = just_assigned
 
     return 200, ticket_dict
