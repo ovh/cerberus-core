@@ -150,6 +150,9 @@ def get_prefetch_template(ticket_id, template_id, lang=None, ack_report=None):
     except (ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket or email template not found'}
 
+    if not lang and mail_template.recipientType is not 'Defendant':
+        lang = 'EN'
+
     try:
         prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
             ticket,
