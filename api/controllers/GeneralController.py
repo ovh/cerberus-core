@@ -253,7 +253,7 @@ def get_users_infos(**kwargs):
     if 'user' in kwargs:
         return 200, dict(users[0])
     else:
-        return 200, [dict(u) for u in users]
+        return 200, list(users)
 
 
 def update_user(user_id, body):
@@ -351,7 +351,7 @@ def get_profiles():
 def get_users_login():
     """ Get login for all users
     """
-    return 200, [dict(p) for p in User.objects.all().values('username')]
+    return 200, list(User.objects.all().values('username'))
 
 
 def get_ticket_resolutions():

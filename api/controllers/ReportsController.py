@@ -121,7 +121,7 @@ def index(**kwargs):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
 
     __format_report_response(reports)
-    return 200, [dict(rep) for rep in reports], nb_record_filtered
+    return 200, list(reports), nb_record_filtered
 
 
 def __generate_request_filters(filters, user):
@@ -465,7 +465,7 @@ def get_all_attachments(**kwargs):
     except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
 
-    return 200, [dict(document) for document in attached], nb_record_filtered
+    return 200, list(attached), nb_record_filtered
 
 
 def get_attachment(report_id, attachment_id):

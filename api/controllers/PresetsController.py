@@ -64,7 +64,7 @@ def index(**kwargs):
     preset_groups = list(set(TicketWorkflowPreset.objects.all().values_list('groupId', flat=True)))
     try:
         for group in preset_groups:
-            result = [dict(t) for t in TicketWorkflowPreset.objects.filter(groupId=group).values(*fields).order_by('orderId', 'name')]
+            result = list(TicketWorkflowPreset.objects.filter(groupId=group).values(*fields).order_by('orderId', 'name'))
             if with_template:
                 for res in result:
                     res['templates'] = list(set(TicketWorkflowPreset.objects.get(id=res['id']).templates.all().values_list('id', flat=True)))

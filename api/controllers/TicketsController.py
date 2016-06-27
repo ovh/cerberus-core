@@ -130,7 +130,7 @@ def index(**kwargs):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
 
     __format_ticket_response(tickets)
-    return 200, [dict(ticket) for ticket in tickets], nb_record_filtered
+    return 200, list(tickets), nb_record_filtered
 
 
 def __generate_request_filters(filters, user=None, treated_by=None):
@@ -1316,7 +1316,7 @@ def get_todo_tickets(**kwargs):
 
     tickets, nb_record = __get_filtered_todo_tickets(filters, kwargs['user'])
     __format_ticket_response(tickets)
-    return 200, {'tickets': [dict(ticket) for ticket in tickets], 'ticketsCount': nb_record}
+    return 200, {'tickets': list(tickets), 'ticketsCount': nb_record}
 
 
 def __get_filtered_todo_tickets(filters, user):

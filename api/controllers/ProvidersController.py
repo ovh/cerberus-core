@@ -81,7 +81,7 @@ def index(**kwargs):
         tags = Provider.objects.get(email=provider['email']).tags.all()
         provider['tags'] = [model_to_dict(tag) for tag in tags]
 
-    return 200, {'providers': [dict(prov) for prov in providers], 'providersCount': count}
+    return 200, {'providers': list(providers), 'providersCount': count}
 
 
 def __generate_request_filter(filters):

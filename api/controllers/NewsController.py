@@ -65,7 +65,7 @@ def index(**kwargs):
         if news.get('date', None):
             news['date'] = time.mktime(news['date'].timetuple())
 
-    resp = {'news': [dict(n) for n in news_list]}
+    resp = {'news': list(news_list)}
     resp['newsCount'] = nb_record_filtered
 
     return 200, resp
