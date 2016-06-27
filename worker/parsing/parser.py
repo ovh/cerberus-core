@@ -115,24 +115,16 @@ class EmailParser(object):
         setattr(parsed_email, 'ack', is_email_ack(parsed_email.provider, parsed_email.subject, body))
 
         content_to_parse = parsed_email.subject + '\n' + parsed_email.body
-
-        # Try to identify items/category with templates based on provider/recipients/keyword infos
-        emails = [parsed_email.provider]
-        if parsed_email.recipients:
-            emails = parsed_email.recipients + emails
-
-        for keyword in ['acns', 'x-arf']:
-            if keyword in content_to_parse.lower():
-                emails.append(keyword)
-        emails.append('default')
+        templates = get_ordered_template_names_list(parsed_email, content_to_parse)
 
         # Finally order is [recipients, provider, keywords, default]
-        for email in emails:
-            template = self.get_template(email)
-            if template:
-                self.update_parsed_email(parsed_email, content_to_parse, template)
-                if any((parsed_email.urls, parsed_email.ips, parsed_email.fqdn)):
-                    break
+        for name in templates:
+            template = self.get_template(name)
+            if not template:
+                continue
+            self.update_parsed_email(parsed_email, content_to_parse, template)
+            if any((parsed_email.urls, parsed_email.ips, parsed_email.fqdn)) or template.get('fallback') is False:
+                break
 
         # Checking if a default category is set for this provider
         try:
@@ -232,14 +224,12 @@ class EmailParser(object):
                         pass
         return template
 
-    def update_parsed_email(self, parsed_email, content, template=None):
+    def update_parsed_email(self, parsed_email, content, template):
         """
             Get all items (IP, URL) of a parsed_email
         """
-        if not template:
-            template = self._templates['default']
         try:
-            for key, val in template.iteritems():
+            for key, val in template['regexp'].iteritems():
                 if 'pattern' in val:
                     if 'pretransform' in val:
                         res = re.findall(val['pattern'], val['pretransform'](content), re.IGNORECASE)
@@ -269,7 +259,7 @@ class EmailParser(object):
 
         for template in template_files:
             infos = imp.load_source(template, os.path.join(template_base, template + '.py'))
-            templates[infos.TEMPLATE['email']] = infos.TEMPLATE['regexp']
+            templates[infos.TEMPLATE.pop('email')] = infos.TEMPLATE
 
         return templates
 
@@ -538,3 +528,18 @@ def is_email_ack(provider, subject, body):
             resp = True
 
     return resp
+
+
+def get_ordered_template_names_list(parsed_email, content_to_parse):
+    """
+        Try to identify items/category with templates based on provider/recipients/keyword infos
+    """
+    template_names = [parsed_email.provider]
+    if parsed_email.recipients:
+        template_names = parsed_email.recipients + template_names
+
+    for keyword in ['acns', 'x-arf']:
+        if keyword in content_to_parse.lower():
+            template_names.append(keyword)
+    template_names.append('default')
+    return template_names

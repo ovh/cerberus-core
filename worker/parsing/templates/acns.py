@@ -30,6 +30,7 @@ import regexp
 
 TEMPLATE = {
     'email': 'acns',
+    'fallback': True,
     'regexp': {
         'ips': {
             'pattern': r'(?:IP_Address\s*>\s*)' + regexp.IPV4,

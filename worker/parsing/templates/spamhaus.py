@@ -30,6 +30,7 @@ import regexp
 
 TEMPLATE = {
     'email': 'notification@spamhaus.org',
+    'fallback': False,
     'regexp': {
         'ips': {
             'pattern': r'(?:IP\/cidr\s*:\s*)' + regexp.IPV4,

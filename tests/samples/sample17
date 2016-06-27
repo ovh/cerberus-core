@@ -1,0 +1,16 @@
+Return-Path: <notspecified@fallback.com>
+Received: from mx.domain.tld
+	by mx.domain.tld (Dovecot) with LMTP id lLgxJbRMQVUGMQAArOwUew
+	; Wed, 29 Apr 2015 23:27:25 +0200
+Delivered-To: <abuse@ovh.net>
+Date: Wed, 29 Apr 2015 23:26:14 +0200
+From: <notspecified@fallback.com>
+MIME-Version: 1.0
+To: abuse@ovh.net
+Subject: Test no fallback specified
+Content-Type: text/plain; charset=ISO-8859-1; format=flowed
+Content-Transfer-Encoding: 8bit
+
+abuse report about IP: this.is.not.a.IP
+
+(I'm hidden 1.2.3.4)

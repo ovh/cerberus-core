@@ -25,9 +25,47 @@
 import os
 
 from tests import GlobalTestCase
-from worker.parsing import parser
+from worker.parsing import parser, regexp
 
 SAMPLES_DIRECTORY = 'tests/samples'
+
+FALLBACK_FALSE_TEMPLATE = {
+    'email': 'false@fallback.com',
+    'fallback': False,
+    'regexp': {
+        'ips': {
+            'pattern': r'(?:abuse\s*report\s*about\s*IP\s*:\s*)' + regexp.IPV4,
+        },
+        'category': {
+            'value': 'Spam',
+        },
+    },
+}
+
+FALLBACK_TRUE_TEMPLATE = {
+    'email': 'true@fallback.com',
+    'fallback': True,
+    'regexp': {
+        'ips': {
+            'pattern': r'(?:abuse\s*report\s*about\s*IP\s*:\s*)' + regexp.IPV4,
+        },
+        'category': {
+            'value': 'Spam',
+        },
+    },
+}
+
+NO_FALLBACK_SPECIFIED_TEMPLATE = {
+    'email': 'not_specified@fallback.com',
+    'regexp': {
+        'ips': {
+            'pattern': r'(?:abuse\s*report\s*about\s*IP\s*:\s*)' + regexp.IPV4,
+        },
+        'category': {
+            'value': 'Spam',
+        },
+    },
+}
 
 
 class TestParser(GlobalTestCase):
@@ -38,6 +76,8 @@ class TestParser(GlobalTestCase):
 
         super(TestParser, self).setUp()
         self.email_parser = parser.EmailParser()
+        self.email_parser._templates[FALLBACK_TRUE_TEMPLATE['email']] = FALLBACK_TRUE_TEMPLATE
+        self.email_parser._templates[FALLBACK_FALSE_TEMPLATE['email']] = FALLBACK_FALSE_TEMPLATE
         self.samples = {}
 
         for root, dirs, files in os.walk(SAMPLES_DIRECTORY):
@@ -328,7 +368,7 @@ class TestParser(GlobalTestCase):
         parsed_email = self.email_parser.parse(content)
 
         template = self.email_parser.get_template(parsed_email.provider)
-        self.assertEqual(r'(?:Problem\s*:\s*)(.*)', template['category']['pattern'])
+        self.assertEqual(r'(?:Problem\s*:\s*)(.*)', template['regexp']['category']['pattern'])
 
     def test_multiple_recipients(self):
 
@@ -377,3 +417,28 @@ class TestParser(GlobalTestCase):
             parsed_email = parser.ParsedEmail()
             self.email_parser.update_parsed_email(parsed_email, content, template=template)
             self.assertIn('1.2.3.4', parsed_email.ips)
+
+    def test_fallback_false(self):
+
+        sample = self.samples['sample15']
+        content = sample.read()
+        parsed_email = self.email_parser.parse(content)
+        self.assertEqual(None, parsed_email.ips)
+
+
+    def test_fallback_true(self):
+
+        sample = self.samples['sample16']
+        content = sample.read()
+        parsed_email = self.email_parser.parse(content)
+
+        self.assertEqual(1, len(parsed_email.ips))
+
+
+    def test_no_fallback_specified(self):
+
+        sample = self.samples['sample17']
+        content = sample.read()
+        parsed_email = self.email_parser.parse(content)
+
+        self.assertEqual(1, len(parsed_email.ips))

@@ -360,29 +360,23 @@ def get_defendant_from_item(item):
     except ValidationError:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid item'}
 
-    for i in reversed(range(2, 4)):
+    try:
+        services = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_services_from_items(
+            ips=[ip_addr],
+            urls=[hostname],
+            fqdn=[hostname],
+        )
+        schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
+    except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
+        return 503, {'status': 'Service unavailable', 'code': 503, 'message': 'Unknown exception while identifying defendant'}
 
-        sub_host = None
-        if hostname:
-            sub_host = '.'.join(hostname.split('.')[-i:])
-
+    if services:
         try:
-            services = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_services_from_items(
-                ips=[ip_addr],
-                urls=[sub_host],
-                fqdn=[sub_host],
-            )
-            schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
-        except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
-            return 503, {'status': 'Service unavailable', 'code': 503, 'message': 'Unknown exception while identifying defendant'}
+            customer_id = services[0]['defendant']['customerId']
+            service = services[0]['service']
+        except (IndexError, KeyError):
+            return 500, {'status': 'Internal Server Error', 'code': 500, 'message': 'Unable to parse CustomerDaoBase response'}
 
-        if services:
-            try:
-                customer_id = services[0]['defendant']['customerId']
-                service = services[0]['service']
-                break
-            except (IndexError, KeyError):
-                return 500, {'status': 'Internal Server Error', 'code': 500, 'message': 'Unable to parse CustomerDaoBase response'}
     if not customer_id:
         return 404, {'status': 'No defendant found for this item', 'code': 404}
 

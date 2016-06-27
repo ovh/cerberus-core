@@ -30,6 +30,7 @@ import regexp
 
 TEMPLATE = {
     'email': 'default',
+    'fallback': False,
     'regexp': {
         'ips': {
             'pattern': regexp.IPV4,

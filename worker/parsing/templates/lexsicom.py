@@ -30,6 +30,7 @@ import regexp
 
 TEMPLATE = {
     'email': 'cert-soc@lexsi.com',
+    'fallback': False,
     'regexp': {
         'ips': {
             'pattern': r'(?:(?:Adresse\s*IP|IP address\(es\))\s*:\s*)' + regexp.IPV4,
