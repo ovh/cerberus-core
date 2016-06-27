@@ -425,7 +425,6 @@ class TestParser(GlobalTestCase):
         parsed_email = self.email_parser.parse(content)
         self.assertEqual(None, parsed_email.ips)
 
-
     def test_fallback_true(self):
 
         sample = self.samples['sample16']
@@ -433,7 +432,6 @@ class TestParser(GlobalTestCase):
         parsed_email = self.email_parser.parse(content)
 
         self.assertEqual(1, len(parsed_email.ips))
-
 
     def test_no_fallback_specified(self):
 
