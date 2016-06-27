@@ -150,7 +150,7 @@ def get_prefetch_template(ticket_id, template_id, lang=None, ack_report=None):
     except (ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket or email template not found'}
 
-    if not lang and mail_template.recipientType is not 'Defendant':
+    if not lang and mail_template.recipientType != 'Defendant':
         lang = 'EN'
 
     try:
