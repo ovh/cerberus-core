@@ -71,7 +71,57 @@ FILTER_MAPPING = (
 
 FLAT_TODO_TICKET_STATUS_FILTERS = ('ActionError', 'Answered', 'Alarm', 'Reopened', 'Open')
 TODO_TICKET_STATUS_FILTERS = (['ActionError'], ['Answered'], ['Alarm', 'Reopened'], ['Open'])
+TODO_TICKET_DEFAULT_STATUS = ('ActionError', 'Answered', 'Alarm', 'Reopened', 'Open')
 TODO_TICKET_PRIORITY_FILTERS = ('High', 'Normal', 'Low')
+
+UPDATE_VALID_FIELDS = (
+    'defendant',
+    'category',
+    'level',
+    'alarm',
+    'treatedBy',
+    'confidential',
+    'priority',
+    'pauseStart',
+    'pauseDuration',
+    'moderation',
+    'protected',
+    'escalated',
+    'update'
+)
+
+BULK_VALID_FIELDS = (
+    'category',
+    'level',
+    'alarm',
+    'treatedBy',
+    'confidential',
+    'priority',
+    'moderation',
+    'protected',
+    'escalated',
+    'update',
+    'pauseDuration'
+)
+
+BULK_VALID_STATUS = (
+    'unpaused',
+    'paused',
+    'closed',
+    'reopened'
+)
+
+MODIFICATION_INVALID_FIELDS = (
+    'defendant',
+    'category',
+    'treatedBy',
+    'snoozeStart',
+    'creationDate',
+    'modificationDate'
+)
+
+USER_FILTERS_BEGINNER_PRIORITY = ('Low', 'Normal')
+TICKET_FIELDS = [fld.name for fld in Ticket._meta.fields]
 
 
 def index(**kwargs):
@@ -182,7 +232,7 @@ def __generate_request_filters(filters, user=None, treated_by=None):
     for perm in abuse_permissions:
         if perm.profile.name == 'Expert':
             user_specific_where.append(Q(category=perm.category))
-        elif perm.profile.name in ['Advanced', 'Read-only', 'Beginner']:
+        elif perm.profile.name in ('Advanced', 'Read-only', 'Beginner'):
             user_specific_where.append(Q(category=perm.category, confidential=False))
 
     if len(user_specific_where):
@@ -258,7 +308,7 @@ def show(ticket_id, user):
         just_assigned = False
         if not ticket.treatedBy:
             just_assigned = assign_if_not(ticket, user)
-        ticket_dict = Ticket.objects.filter(id=ticket_id).values(*[f.name for f in Ticket._meta.fields])[0]
+        ticket_dict = Ticket.objects.filter(id=ticket_id).values(*TICKET_FIELDS)[0]
     except (IndexError, ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket not found'}
 
@@ -453,13 +503,9 @@ def update(ticket_id, body, user):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Ticket is protected'}
 
     # remove invalid fields
-    valid_fields = ['defendant', 'category', 'level', 'alarm', 'treatedBy', 'confidential', 'priority', 'pauseStart']
-    valid_fields.extend(['pauseDuration', 'moderation', 'protected', 'escalated', 'update'])
-    body = {k: v for k, v in body.iteritems() if k in valid_fields}
+    body = {k: v for k, v in body.iteritems() if k in UPDATE_VALID_FIELDS}
 
     if body.get('treatedBy'):
-        if body['treatedBy'] in ['abuse.robot', 'monitoring']:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Can not assign ticket to this user'}
         body['treatedBy'] = User.objects.get(username=body['treatedBy'])
 
     body['modificationDate'] = datetime.now()
@@ -496,8 +542,7 @@ def get_modifications(old, new):
         new_value = getattr(new, 'treatedBy').username if getattr(new, 'treatedBy') is not None else 'nobody'
         actions.append('change %s from %s to %s' % ('treatedBy', old_value, new_value))
 
-    invalid_fields = ['defendant', 'category', 'treatedBy', 'snoozeStart', 'creationDate', 'modificationDate']
-    for field in [f.name for f in Ticket._meta.fields if f.name not in invalid_fields]:
+    for field in [f.name for f in Ticket._meta.fields if f.name not in MODIFICATION_INVALID_FIELDS]:
         if getattr(old, field) != getattr(new, field):
             actions.append('change %s from %s to %s' % (field, getattr(old, field), getattr(new, field)))
     return actions
@@ -845,12 +890,11 @@ def bulk_add(body, user, method):
 
     # Update status
     if 'status' in body['properties']:
-        valid_status = ['unpaused', 'paused', 'closed', 'reopened']
-        if body['properties']['status'].lower() not in valid_status:
+        if body['properties']['status'].lower() not in BULK_VALID_STATUS:
             transaction.rollback()
             return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Status not supported'}
 
-        valid_fields = ['pauseDuration', 'resolution']
+        valid_fields = ('pauseDuration', 'resolution')
         properties = {k: v for k, v in body['properties'].iteritems() if k in valid_fields}
 
         for ticket in tickets:
@@ -869,9 +913,7 @@ def bulk_add(body, user, method):
                     return code, resp
 
     # Update general fields
-    valid_fields = ['category', 'level', 'alarm', 'treatedBy', 'confidential', 'priority']
-    valid_fields.extend(['moderation', 'protected', 'escalated', 'update', 'pauseDuration'])
-    properties = {k: v for k, v in body['properties'].iteritems() if k in valid_fields}
+    properties = {k: v for k, v in body['properties'].iteritems() if k in BULK_VALID_FIELDS}
 
     for ticket in tickets:
         code, resp = update(ticket.id, properties, user)
@@ -1341,7 +1383,6 @@ def __get_filtered_todo_tickets(filters, user):
 
     where = __get_user_filters(user)
     order_by = ['modificationDate']
-    fields = [fld.name for fld in Ticket._meta.fields]
 
     if filters.get('onlyUnassigned'):
         where.append(Q(treatedBy=None))
@@ -1355,7 +1396,7 @@ def __get_filtered_todo_tickets(filters, user):
     # Count
     nb_record = Ticket.objects.filter(
         where,
-        status__in=['ActionError', 'Answered', 'Alarm', 'Reopened', 'Open']
+        status__in=TODO_TICKET_DEFAULT_STATUS
     ).distinct().count()
 
     res = []
@@ -1366,7 +1407,7 @@ def __get_filtered_todo_tickets(filters, user):
             order_by.append('-reportTicket__tags__level')
 
         for filters in treated_by_filters:  # Only for Critical
-            tickets = __get_specific_filtered_todo_tickets(where, ids, 'Critical', ticket_status, filters, fields, order_by, limit, offset)
+            tickets = __get_specific_filtered_todo_tickets(where, ids, 'Critical', ticket_status, filters, order_by, limit, offset)
             ids.update([t['id'] for t in tickets])
             res.extend(tickets)
             if len(res) > limit * offset:
@@ -1378,7 +1419,7 @@ def __get_filtered_todo_tickets(filters, user):
         for priority in TODO_TICKET_PRIORITY_FILTERS:
             for filters in treated_by_filters:
 
-                tickets = __get_specific_filtered_todo_tickets(where, ids, priority, ticket_status, filters, fields, order_by, limit, offset)
+                tickets = __get_specific_filtered_todo_tickets(where, ids, priority, ticket_status, filters, order_by, limit, offset)
                 ids.update([t['id'] for t in tickets])
                 res.extend(tickets)
                 if len(res) > limit * offset:
@@ -1406,7 +1447,7 @@ def __get_treated_by_filters(user):
     return treated_by_filters
 
 
-def __get_specific_filtered_todo_tickets(where, ids, priority, status, treated_by, fields, order_by, limit, offset):
+def __get_specific_filtered_todo_tickets(where, ids, priority, status, treated_by, order_by, limit, offset):
 
     return Ticket.objects.filter(
         where,
@@ -1415,7 +1456,7 @@ def __get_specific_filtered_todo_tickets(where, ids, priority, status, treated_b
         status__in=status,
         **treated_by
     ).values(
-        *fields
+        *TICKET_FIELDS
     ).order_by(
         *order_by
     ).annotate(
@@ -1438,7 +1479,7 @@ def __get_user_filters(user):
             user_specific_where.append(Q(category=perm.category, confidential=False))
         elif perm.profile.name == 'Beginner':
             user_specific_where.append(Q(
-                priority__in=['Low', 'Normal'],
+                priority__in=USER_FILTERS_BEGINNER_PRIORITY,
                 category=perm.category,
                 confidential=False,
                 escalated=False,

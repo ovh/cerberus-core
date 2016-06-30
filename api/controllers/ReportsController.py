@@ -72,6 +72,9 @@ FILTER_MAPPING = (
     ('itemFqdnResolved', 'reportItemRelatedReport__fqdnResolved'),
 )
 
+ATTACHMENT_FIELDS = [fld.name for fld in AttachedDocument._meta.fields]
+REPORT_FIELDS = [fld.name for fld in Report._meta.fields]
+
 
 def index(**kwargs):
     """ Main endpoint, get all reports from db and eventually contains
@@ -229,7 +232,7 @@ def show(report_id):
         Get report
     """
     try:
-        report = Report.objects.filter(id=report_id).values(*[f.name for f in Report._meta.fields])[0]
+        report = Report.objects.filter(id=report_id).values(*REPORT_FIELDS)[0]
     except (IndexError, ValueError):
         return 404, {'status': 'Not Found', 'code': 404}
 
@@ -317,7 +320,7 @@ def update_status(body, report, user):
             ticket.status = 'Closed'
             ticket.save()
         body['ticket'] = None
-    elif body['status'].lower() in ['attached', 'validated'] and not report.ticket and all((report.category, report.defendant, report.service)):
+    elif body['status'].lower() in ('attached', 'validated') and not report.ticket and all((report.category, report.defendant, report.service)):
         try:
             ticket = Ticket.objects.get(
                 ~Q(status='Closed'),
@@ -457,9 +460,8 @@ def get_all_attachments(**kwargs):
         return 404, {'status': 'Not Found', 'code': 404, 'message': 'Report not found'}, 0
 
     try:
-        fields = [fld.name for fld in AttachedDocument._meta.fields]
         nb_record_filtered = AttachedDocument.objects.filter(report=report.id).count()
-        attached = AttachedDocument.objects.filter(report=report.id).values(*fields)
+        attached = AttachedDocument.objects.filter(report=report.id).values(*ATTACHMENT_FIELDS)
         attached = attached[(offset - 1) * limit:limit * offset]
         len(attached)  # Force django to evaluate query now
     except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:

@@ -53,7 +53,29 @@ from utils import logger, utils
 
 Logger = logger.get_logger(__name__)
 CRYPTO = utils.Crypto()
+
+DASHBOARD_STATUS = {
+    'idle': ('Open', 'Reopened'),
+    'waiting': ('WaitingAnswer', 'Paused'),
+    'pending': ('Answered', 'Alarm'),
+}
+
+CHECK_PERM_DEFENDANT_LEVEL = ('Beginner', 'Advanced', 'Expert')
 MASS_CONTACT_REQUIRED = ('{{ service }}', '{{ publicId }}', '{% if lang ==')
+
+SEARCH_EXTRA_FIELDS = ['defendantTag', 'providerTag', 'defendant', 'defendantCountry', 'providerEmail', 'item', 'fulltext']
+SEARCH_REPORT_FIELDS = list(set([f.name for f in Report._meta.fields] + SEARCH_EXTRA_FIELDS + ['reportTag']))
+SEARCH_TICKET_FIELDS = list(set([f.name for f in Ticket._meta.fields] + SEARCH_EXTRA_FIELDS + ['ticketTag', 'attachedReportsCount', 'ticketIds']))
+
+SEARCH_MAPPING = {
+    'defendant': ['defendantEmail', 'defendantCustomerId'],
+    'item': ['itemFqdnResolved', 'itemIpReverse', 'itemRawItem'],
+    'ticketIds': ['id', 'publicId'],
+}
+
+TOOLBAR_TODO_STATUS = ('ActionError', 'Alarm', 'Open', 'Reopened')
+TOOLBAR_TODO_COUNT_STATUS = ('ActionError', 'Answered', 'Alarm', 'Reopened', 'Open')
+TOOLBAR_SLEEPING_STATUS = ('Paused', 'WaitingAnswer')
 
 
 def auth(body):
@@ -159,7 +181,7 @@ def check_perms(**kwargs):
         except ValueError:
             code = 400
             response = {'status': 'Bad Request', 'code': 400, 'message': 'Report ID is integer'}
-    if 'defendant' in kwargs and kwargs['method'] != 'GET' and not AbusePermission.objects.filter(user=user.id, profile__name__in=['Beginner', 'Advanced', 'Expert']).count():
+    if 'defendant' in kwargs and kwargs['method'] != 'GET' and not AbusePermission.objects.filter(user=user.id, profile__name__in=CHECK_PERM_DEFENDANT_LEVEL).count():
         code = 403
         response = {'status': 'Forbidden', 'code': 403, 'message': 'Forbidden'}
     return code, response
@@ -419,15 +441,13 @@ def search(**kwargs):
         except (ValueError, SyntaxError):
             return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Unable to decode JSON'}
 
-    extra_fields = ['defendantTag', 'providerTag', 'defendant', 'defendantCountry', 'providerEmail', 'item', 'fulltext']
-
     custom_filters = {
         'ticket': {
-            'fields': list(set([f.name for f in Ticket._meta.fields] + extra_fields + ['ticketTag', 'attachedReportsCount', 'ticketIds'])),
+            'fields': SEARCH_TICKET_FIELDS,
             'filters': deepcopy(filters),
         },
         'report': {
-            'fields': list(set([f.name for f in Report._meta.fields] + extra_fields + ['reportTag'])),
+            'fields': SEARCH_REPORT_FIELDS,
             'filters': deepcopy(filters),
         },
     }
@@ -445,20 +465,13 @@ def search(**kwargs):
     except AttributeError:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
 
-    # Map search to multiple field on model
-    mapping = {
-        'defendant': ['defendantEmail', 'defendantCustomerId'],
-        'item': ['itemFqdnResolved', 'itemIpReverse', 'itemRawItem'],
-        'ticketIds': ['id', 'publicId'],
-    }
-
     for _, values in custom_filters.iteritems():
         if 'where' in values['filters']:
             new_where = deepcopy(values['filters']['where'])
             for key, val in values['filters']['where'].iteritems():
                 for field in values['filters']['where'][key]:
-                    if field.keys()[0] in mapping:
-                        for new_field in mapping[field.keys()[0]]:
+                    if field.keys()[0] in SEARCH_MAPPING:
+                        for new_field in SEARCH_MAPPING[field.keys()[0]]:
                             new_where[key].append({new_field: field[field.keys()[0]]})
                         new_where[key].remove(field)
                     elif 'ticketTag' in field:
@@ -509,9 +522,9 @@ def toolbar(**kwargs):
     res = Ticket.objects.filter(where, treatedBy=user).values('status').annotate(count=Count('status'))
     resp['myTicketsCount'] = reduce(operator.add, [t['count'] if t['status'] != 'Closed' else 0 for t in res]) if res else 0
     resp['myTicketsAnsweredCount'] = reduce(operator.add, [t['count'] if t['status'] == 'Answered' else 0 for t in res]) if res else 0
-    resp['myTicketsTodoCount'] = reduce(operator.add, [t['count'] if t['status'] in ['ActionError', 'Alarm', 'Open', 'Reopened'] else 0 for t in res]) if res else 0
-    resp['myTicketsSleepingCount'] = reduce(operator.add, [t['count'] if t['status'] in ['Paused', 'WaitingAnswer'] else 0 for t in res]) if res else 0
-    resp['todoCount'] = Ticket.objects.filter(where, status__in=['ActionError', 'Answered', 'Alarm', 'Reopened', 'Open']).order_by('id').distinct().count()
+    resp['myTicketsTodoCount'] = reduce(operator.add, [t['count'] if t['status'] in TOOLBAR_TODO_STATUS else 0 for t in res]) if res else 0
+    resp['myTicketsSleepingCount'] = reduce(operator.add, [t['count'] if t['status'] in TOOLBAR_SLEEPING_STATUS else 0 for t in res]) if res else 0
+    resp['todoCount'] = Ticket.objects.filter(where, status__in=TOOLBAR_TODO_COUNT_STATUS).order_by('id').distinct().count()
     resp['escalatedCount'] = Ticket.objects.filter(where, escalated=True).order_by('id').distinct().count()
     return 200, resp
 
@@ -535,15 +548,9 @@ def dashboard(**kwargs):
     resp['reportsByStatus'] = {k['status']: k['count'] for k in res}
     res = Ticket.objects.filter(where, ~Q(status='Closed')).values('status').annotate(count=Count('status'))
     resp['ticketsByStatus'] = {k['status']: k['count'] for k in res}
-
     resp['ticketsByCategory'] = {}
-    status = {
-        'idle': ['Open', 'Reopened'],
-        'waiting': ['WaitingAnswer', 'Paused'],
-        'pending': ['Answered', 'Alarm'],
-    }
 
-    for name, sts in status.iteritems():
+    for name, sts in DASHBOARD_STATUS.iteritems():
         request = Ticket.objects.filter(
             category__in=authorized_categories,
             status__in=sts
