@@ -131,6 +131,8 @@ EMAIL_FETCHER = {
 PARSING = {
     'providers_to_ignore': [
         'bad@provider.com',
+        'invitations@linkedin.com',
+        'messages-noreply@linkedin.com',
     ],
     'networks_to_ignore': [
         '0.0.0.0/8',

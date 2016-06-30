@@ -80,6 +80,11 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
     # Parse email content
     abuse_report = Parser.parse(email_content)
 
+    # Check if provider is not blacklisted
+    if abuse_report.provider in settings.PARSING['providers_to_ignore']:
+        Logger.error(unicode('Provider %s is blacklisted, skipping ...' % (abuse_report.provider)))
+        return
+
     # Check if it's an answer to a ticket
     ticket = __get_ticket_if_answer(abuse_report, filename)
     if ticket:  # OK it's an anwser, updating ticket and exiting
@@ -88,11 +93,6 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
             return
         except MailerServiceException as ex:
             raise MailerServiceException(ex)
-
-    # Check if provider is not blacklisted
-    if abuse_report.provider in settings.PARSING['providers_to_ignore']:
-        Logger.error(unicode('Provider %s is blacklisted, skipping ...' % (abuse_report.provider)))
-        return
 
     # Check if items are linked to customer and get corresponding services
     try:
