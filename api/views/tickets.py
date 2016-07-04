@@ -153,7 +153,7 @@ def bulk_add_tickets():
     user = GeneralController.get_user(request)
     body = request.get_json()
     if request.method == 'PUT':
-        code, resp = TicketsController.bulk_add(body, user, request.method)
+        code, resp = TicketsController.bulk_update(body, user, request.method)
     else:
         code, resp = TicketsController.bulk_delete(body, user, request.method)
     return code, resp

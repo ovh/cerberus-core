@@ -470,13 +470,15 @@ def create(report, user):
     return 201, resp
 
 
-def update(ticket_id, body, user):
-    """ Update a ticket
+def update(ticket, body, user, bulk=False):
     """
-    try:
-        ticket = Ticket.objects.get(id=ticket_id)
-    except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        Update a ticket
+    """
+    if not isinstance(ticket, Ticket):
+        try:
+            ticket = Ticket.objects.get(id=ticket)
+        except (ObjectDoesNotExist, ValueError):
+            return 404, {'status': 'Not Found', 'code': 404}
 
     if 'defendant' in body and body['defendant'] != ticket.defendant:
         code, resp = update_ticket_defendant(ticket, body['defendant'])
@@ -514,7 +516,7 @@ def update(ticket_id, body, user):
     try:
         Ticket.objects.filter(pk=ticket.pk).update(**body)
         ticket = Ticket.objects.get(pk=ticket.pk)
-        actions = get_modifications(old, ticket)
+        actions = _get_modifications(old, ticket)
 
         for action in actions:
             GeneralController.log_action(ticket, user, action)
@@ -522,10 +524,13 @@ def update(ticket_id, body, user):
     except (KeyError, FieldDoesNotExist, FieldError, IntegrityError, TypeError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
 
-    return show(ticket_id, user)
+    if bulk:
+        return 200, None
+
+    return show(ticket.id, user)
 
 
-def get_modifications(old, new):
+def _get_modifications(old, new):
     """ Track ticket changes
     """
     actions = []
@@ -875,14 +880,13 @@ def unpause_ticket(ticket):
     return 200, {'status': 'OK', 'code': 200, 'message': 'Ticket unpaused'}
 
 
-@transaction.commit_manually
-def bulk_add(body, user, method):
+@transaction.atomic
+def bulk_update(body, user, method):
     """
         Add or update infos for multiple tickets
     """
     code, tickets = __check_bulk_conformance(body, user, method)
     if code != 200:
-        transaction.rollback()
         return code, tickets
 
     for ticket in tickets:
@@ -891,48 +895,34 @@ def bulk_add(body, user, method):
     # Update status
     if 'status' in body['properties']:
         if body['properties']['status'].lower() not in BULK_VALID_STATUS:
-            transaction.rollback()
             return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Status not supported'}
 
         valid_fields = ('pauseDuration', 'resolution')
         properties = {k: v for k, v in body['properties'].iteritems() if k in valid_fields}
 
         for ticket in tickets:
-            code, resp = update_status(ticket.id, body['properties']['status'], properties, user)
+            code, resp = update_status(ticket, body['properties']['status'], properties, user)
             if code != 200:
-                transaction.rollback()
                 return code, resp
-
-    # Update tags
-    if 'tags' in body['properties'] and isinstance(body['properties']['tags'], list):
-        for ticket in tickets:
-            for tag in body['properties']['tags']:
-                code, resp = add_tag(ticket.id, tag, user)
-                if code != 200:
-                    transaction.rollback()
-                    return code, resp
 
     # Update general fields
     properties = {k: v for k, v in body['properties'].iteritems() if k in BULK_VALID_FIELDS}
 
     for ticket in tickets:
-        code, resp = update(ticket.id, properties, user)
+        code, resp = update(ticket, properties, user, bulk=True)
         if code != 200:
-            transaction.rollback()
             return code, resp
 
-    transaction.commit()
     return 200, {'status': 'OK', 'code': 200, 'message': 'Ticket(s) successfully updated'}
 
 
-@transaction.commit_manually
+@transaction.atomic
 def bulk_delete(body, user, method):
     """
         Delete infos from multiple tickets
     """
     code, tickets = __check_bulk_conformance(body, user, method)
     if code != 200:
-        transaction.rollback()
         return code, tickets
 
     # Update tags
@@ -942,13 +932,10 @@ def bulk_delete(body, user, method):
                 for tag in body['properties']['tags']:
                     code, resp = remove_tag(ticket.id, tag['id'], user)
                     if code != 200:
-                        transaction.rollback()
                         return code, resp
     except (KeyError, TypeError, ValueError):
-        transaction.rollback()
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid or missing tag(s) id'}
 
-    transaction.commit()
     return 200, {'status': 'OK', 'code': 200, 'message': 'Ticket(s) successfully updated'}
 
 
@@ -961,7 +948,7 @@ def __check_bulk_conformance(body, user, method):
 
     try:
         tickets = Ticket.objects.filter(id__in=list(body['tickets']))
-    except (TypeError, ValueError):
+    except (AttributeError, TypeError, ValueError, KeyError):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid ticket(s) id'}
 
     for ticket in tickets:
