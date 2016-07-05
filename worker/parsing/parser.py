@@ -448,7 +448,8 @@ def clean_parsed_email_items(parsed_email):
         :param `worker.parsing.parser.ParsedEmail` parsed_email: The parsed email
     """
     for attrib in [a for a in ['urls', 'ips', 'fqdn'] if getattr(parsed_email, a)]:
-        setattr(parsed_email, attrib, [__clean_item(item) for item in getattr(parsed_email, attrib)])
+        is_ipaddr = True if attrib == 'ips' else False
+        setattr(parsed_email, attrib, [__clean_item(item, is_ipaddr=is_ipaddr) for item in getattr(parsed_email, attrib)])
 
     # Clean duplicates
     for att in parsed_email.keys():
@@ -468,7 +469,7 @@ def clean_parsed_email_items(parsed_email):
             parsed_email.fqdn = [fqdn for fqdn in parsed_email.fqdn if not re.search(regexp.PROTO_RE + re.escape(fqdn), urls, re.I)]
 
 
-def __clean_item(item):
+def __clean_item(item, is_ipaddr=False):
     """ Remove extra stuff from item
 
         :param str item: A `worker.parsing.parser.ParsedEmail` item
@@ -478,7 +479,9 @@ def __clean_item(item):
     item = item.strip()
     item = item.replace(' ', '')
     item = item.replace('\r\n', '')
-    item = re.sub(r'(?<!\d)0+(?=\d)', '', item)  # '038.140.010.024' -> '38.140.10.24'
+
+    if is_ipaddr:
+        item = re.sub(r'(?<!\d)0+(?=\d)', '', item)  # '038.140.010.024' -> '38.140.10.24'
 
     for key, reg in regexp.DEOBFUSCATE_URL.iteritems():
         item = reg.sub(key, item)
