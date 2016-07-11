@@ -45,6 +45,7 @@ TAGS = {
     'no_autoack': 'never_auto_ack',
     'phishing_autoblocked': 'phishing:autoblocked',
     'phishing_autoclosed': 'phishing:autoclosed',
+    'copyright_autoclosed': 'phishing:autoclosed',
     'phishing_autoreopen': 'phishing:autoreopened',
 }
 
@@ -57,7 +58,7 @@ CODENAMES = {
     'forward_acns': 'forward_acns',
     'no_more_content': 'no_more_content',
     'phishing_blocked': 'phishing_blocked',
-    'phishing_service_blocked': 'phishing_service_blocked',
+    'service_blocked': 'service_blocked',
     'ticket_closed': 'ticket_closed',
 }
 
@@ -71,9 +72,13 @@ GENERAL_CONFIG = {
         'up_threshold': 0,
         'down_threshold': 75,
     },
+    'copyright': {
+        'wait': 172800,
+        'acns_patterns': ('www.acns.net/ACNS',),
+        'trusted_copyright_providers': ['supertrusted@copyrightprovider.com'],
+    },
     'magic_smtp_header': 'Test-Magic-Smtp-Header',
     'report_timeout': 30,
-    'acns_patterns': ('www.acns.net/ACNS',),
 }
 
 DATABASES = {

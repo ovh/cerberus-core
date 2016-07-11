@@ -31,19 +31,24 @@ from time import sleep
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import validate_ipv46_address
+from django.core.validators import validate_email, validate_ipv46_address
 from django.db import transaction
-from django.db.models import ObjectDoesNotExist
+from django.db.models import Q, ObjectDoesNotExist
 from django.template import Context, loader
 
 import database
+import phishing
 
-from abuse.models import (Category, MassContactResult, Report,
-                          ReportItem, Resolution, Ticket, User)
+from abuse.models import (Category, Comment, ContactedProvider,
+                          MassContactResult, Report, ReportItem,
+                          Resolution, Tag, Ticket, TicketComment,
+                          ServiceActionJob, User)
 from adapters.dao.customer.abstract import CustomerDaoException
 from factory.factory import ImplementationFactory
 from utils import pglocks, schema, utils
 from worker import Logger
+
+BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
 
 
 def delay_jobs(ticket=None, delay=None, back=True):
@@ -65,24 +70,205 @@ def delay_jobs(ticket=None, delay=None, back=True):
             Logger.error(unicode('Ticket %d cannot be found in DB. Skipping...' % (ticket)))
             return
 
-    list_of_job_instances = utils.scheduler.get_jobs(
-        until=timedelta(days=5),
-        with_times=True
-    )
+    # a job is here a tuple (Job instance, datetime instance)
+    pending_jobs = {job[0].id: job for job in utils.scheduler.get_jobs(until=timedelta(days=7), with_times=True)}
 
     for job in ticket.jobs.all():
-        if job.asynchronousJobId in utils.scheduler:
-            for scheduled_job in list_of_job_instances:
-                if scheduled_job[0].id == job.asynchronousJobId:
-                    if back:
-                        date = scheduled_job[1] - delay
-                    else:
-                        date = scheduled_job[1] + delay
-                    utils.scheduler.change_execution_time(
-                        scheduled_job[0],
-                        date
-                    )
-                    break
+        if pending_jobs.get(job.asynchronousJobId):
+            current_date = pending_jobs[job.asynchronousJobId][1]
+            new_date = current_date - delay if back else current_date + delay
+            utils.scheduler.change_execution_time(
+                pending_jobs[job.asynchronousJobId][0],
+                new_date
+            )
+
+
+def timeout(ticket_id=None):
+    """
+        If ticket timeout , apply action on service (if defendant not internal/VIP) and ticket is not assigned
+
+        :param int ticket_id: The id of the Cerberus `abuse.models.Ticket`
+    """
+    try:
+        ticket = Ticket.objects.get(id=ticket_id)
+    except (AttributeError, ObjectDoesNotExist, ValueError):
+        Logger.error(unicode('Ticket %d cannot be found in DB. Skipping...' % (ticket_id)))
+        return
+
+    if not _check_timeout_ticket_conformance(ticket):
+        return
+
+    action = ImplementationFactory.instance.get_singleton_of('ActionServiceBase').get_action_for_timeout(ticket)
+    if not action:
+        Logger.error(unicode('Ticket %d service %s: action not found, exiting ...' % (ticket_id, ticket.service.componentType)))
+        return
+
+    # Maybe customer fixed, closing ticket
+    if ticket.category.name.lower() == 'phishing' and phishing.is_all_down_for_ticket(ticket):
+        Logger.info(unicode('All items are down for ticket %d, closing ticket' % (ticket_id)))
+        _close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False)
+        return
+
+    # Getting ip for action
+    ip_addr = _get_ip_for_action(ticket)
+    if not ip_addr:
+        Logger.error(unicode('Error while getting IP for action, exiting'))
+        ticket.status = ticket.previousStatus
+        ticket.status = 'ActionError'
+        database.log_action_on_ticket(ticket, 'change status from %s to %s' % (ticket.previousStatus, ticket.status), BOT_USER)
+        comment = Comment.objects.create(user=BOT_USER, comment='None or multiple ip addresses for this ticket')
+        TicketComment.objects.create(ticket=ticket, comment=comment)
+        database.log_action_on_ticket(ticket, 'add comment', BOT_USER)
+        ticket.save()
+        return
+
+    # Apply action
+    service_action_job = _apply_timeout_action(ticket, ip_addr, action)
+    if not service_action_job.result:
+        Logger.debug(unicode('Error while executing service action, exiting'))
+        return
+
+    Logger.info(unicode('All done, sending close notification to provider(s)'))
+    ticket = Ticket.objects.get(id=ticket.id)
+
+    # Closing ticket
+    _close_ticket(ticket, reason=settings.CODENAMES['fixed'], service_blocked=True)
+
+
+def _check_timeout_ticket_conformance(ticket):
+
+    if not ticket.defendant or not ticket.service:
+        Logger.error(unicode('Ticket %d is invalid (no defendant/service), skipping...' % (ticket.id)))
+        return False
+
+    if ticket.status.lower() in ['closed', 'answered']:
+        Logger.error(unicode('Ticket %d is invalid (no defendant/service or not Alarm), Skipping...' % (ticket.id)))
+        return False
+
+    if ticket.category.name.lower() not in ['phishing', 'copyright']:
+        Logger.error(unicode('Ticket %d is in wrong category (%s, Skipping...' % (ticket.id, ticket.category.name)))
+        return False
+
+    if ticket.treatedBy:
+        Logger.error(unicode('Ticket is %d assigned, skipping' % (ticket.id)))
+        return False
+
+    if ticket.jobs.count():
+        Logger.error(unicode('Ticket %d has existing jobs, exiting ...' % (ticket.id)))
+        return False
+
+    return True
+
+
+def _apply_timeout_action(ticket, ip_addr, action):
+
+    Logger.info(unicode('Executing action %s for ticket %d' % (action.name, ticket.id)))
+    ticket.action = action
+    database.log_action_on_ticket(ticket, 'set action: %s, execution now' % (action.name), BOT_USER)
+    ticket.save()
+    async_job = utils.scheduler.schedule(
+        scheduled_time=datetime.utcnow() + timedelta(seconds=3),
+        func='action.apply_action',
+        kwargs={
+            'ticket_id': ticket.id,
+            'action_id': action.id,
+            'ip_addr': ip_addr,
+            'user_id': BOT_USER.id,
+        },
+        interval=1,
+        repeat=1,
+        result_ttl=500,
+        timeout=3600,
+    )
+
+    Logger.info(unicode('Task has %s job id' % (async_job.id)))
+    job = ServiceActionJob.objects.create(ip=ip_addr, action=action, asynchronousJobId=async_job.id, creationDate=datetime.now())
+    ticket.jobs.add(job)
+
+    while not async_job.is_finished:
+        sleep(5)
+
+    return async_job
+
+
+def _close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False):
+    """
+        Close ticket and add autoclosed Tag
+    """
+    # Send "case closed" email to already contacted Provider(s)
+    providers_emails = ContactedProvider.objects.filter(ticket_id=ticket.id).values_list('provider__email', flat=True).distinct()
+
+    for email in providers_emails:
+        try:
+            validate_email(email.strip())
+            _send_email(ticket, email, settings.CODENAMES['case_closed'])
+            ticket.save()
+            database.log_action_on_ticket(ticket, 'send an email to %s' % (email))
+            Logger.info(unicode('Mail sent to provider %s' % (email)))
+        except (AttributeError, TypeError, ValueError, ValidationError):
+            pass
+
+    if service_blocked:
+        template = settings.CODENAMES['service_blocked']
+    else:
+        template = settings.CODENAMES['ticket_closed']
+
+    # Send "ticket closed" email to defendant
+    _send_email(ticket, ticket.defendant.details.email, template, lang=ticket.defendant.details.lang)
+    if ticket.mailerId:
+        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
+
+    actions = []
+    resolution = Resolution.objects.get(codename=reason)
+    ticket.resolution = resolution
+    ticket.previousStatus = ticket.status
+    ticket.status = 'Closed'
+    ticket.reportTicket.all().update(status='Archived')
+
+    tag_name = settings.TAGS['phishing_autoclosed'] if ticket.category.name.lower() == 'phishing' else settings.TAGS['copyright_autoclosed']
+    ticket.tags.add(Tag.objects.get(name=tag_name))
+    ticket.save()
+
+    msg = 'change status from %s to %s, reason : %s'
+    actions.append(msg % (ticket.previousStatus, ticket.status, ticket.resolution.codename))
+    actions.append('add tag %s ' % (tag_name))
+
+    for action in actions:
+        database.log_action_on_ticket(ticket, action)
+
+
+def _get_ip_for_action(ticket):
+    """
+        Extract and check IP address
+    """
+    # Get ticket IP(s)
+    reports = ticket.reportTicket.all()
+    ips_on_ticket = [itm.ip for rep in reports for itm in rep.reportItemRelatedReport.filter(~Q(ip=None), itemType='IP')]
+    ips_on_ticket.extend([itm.fqdnResolved for rep in reports for itm in rep.reportItemRelatedReport.filter(~Q(fqdnResolved=None), itemType__in=['FQDN', 'URL'])])
+    ips_on_ticket = list(set(ips_on_ticket))
+
+    if len(ips_on_ticket) != 1:
+        Logger.error(unicode('Multiple or no IP on this ticket'))
+        return
+
+    return ips_on_ticket[0]
+
+
+def _send_email(ticket, email, codename, lang='EN'):
+    """
+        Wrapper to send email
+    """
+    prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+        ticket,
+        codename,
+        lang=lang,
+    )
+    ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
+        ticket,
+        email,
+        prefetched_email.subject,
+        prefetched_email.body
+    )
 
 
 def mass_contact(ip_address=None, category=None, campaign_name=None, email_subject=None, email_body=None, user_id=None):

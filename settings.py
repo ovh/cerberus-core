@@ -45,9 +45,13 @@ GENERAL_CONFIG = {
         'up_threshold': 0,
         'down_threshold': 75,
     },
+    'copyright': {
+        'wait': 172800,
+        'acns_patterns': ('www.acns.net/ACNS',),
+        'trusted_copyright_providers': [],
+    },
     'magic_smtp_header': os.getenv('MAGIC_SMTP_HEADER', 'X-MAGIC-SMTP-HEADER-TO-IDENTIFY-TRUSTED-PROVIDER'),
     'report_timeout': 30,
-    'acns_patterns': ('www.acns.net/ACNS',),
 }
 
 # API Config (via ENV)
@@ -86,6 +90,7 @@ TAGS = {
     'no_autoack': 'never_auto_ack',
     'phishing_autoblocked': 'phishing:autoblocked',
     'phishing_autoclosed': 'phishing:autoclosed',
+    'copyright_autoclosed': 'copyright:autoclosed',
     'phishing_autoreopen': 'phishing:autoreopened',
     'phishing_toblock': 'phishing:toblock',
 }
@@ -101,7 +106,7 @@ CODENAMES = {
     'forward_acns': 'forward_acns',
     'no_more_content': 'no_more_content',
     'phishing_blocked': 'phishing_blocked',
-    'phishing_service_blocked': 'phishing_service_blocked',
+    'service_blocked': 'phishing_service_blocked',
     'ticket_closed': 'ticket_closed',
 }
 

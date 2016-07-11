@@ -96,10 +96,10 @@ class GlobalTestCase(TestCase):
         )
 
         MailTemplate.objects.create(
-            codename='phishing_service_blocked',
-            name='Phishing blocked',
-            subject='Phishing blocked',
-            body='Phishing blocked',
+            codename='service_blocked',
+            name='Service blocked',
+            subject='Service blocked',
+            body='Service blocked',
         )
 
         MailTemplate.objects.create(
@@ -109,7 +109,7 @@ class GlobalTestCase(TestCase):
             body='ticket closed',
         )
 
-        for tag in ['phishing:autoblocked', 'phishing:autoclosed', 'phishing:autoreopened']:
+        for tag in ['copyright:autoclosed', 'phishing:autoblocked', 'phishing:autoclosed', 'phishing:autoreopened']:
             Tag.objects.create(codename=tag, name=tag, tagType='Ticket')
 
         Resolution.objects.create(codename='no_more_content')

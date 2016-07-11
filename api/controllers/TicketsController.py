@@ -572,6 +572,17 @@ def update_snooze_duration(ticket_id, body, user):
         if int(data['snoozeDuration']) > 10000000:
             return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid duration'}
 
+        # Delay jobs
+        new_duration = int(data['snoozeDuration'])
+        if new_duration > ticket.snoozeDuration:
+            delay = new_duration - ticket.snoozeDuration
+            delay = timedelta(seconds=delay)
+            utils.queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=False)
+        else:
+            delay = ticket.snoozeDuration - new_duration
+            delay = timedelta(seconds=delay)
+            utils.queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=True)
+
         return __update_duration(ticket, data, user)
     except (KeyError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
@@ -591,6 +602,18 @@ def update_pause_duration(ticket_id, body, user):
         data = {'pauseDuration': body['pauseDuration']}
         if int(data['pauseDuration']) > 10000000:
             return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid duration'}
+
+        # Delay jobs
+        new_duration = int(data['pauseDuration'])
+        if new_duration > ticket.pauseDuration:
+            delay = new_duration - ticket.pauseDuration
+            delay = timedelta(seconds=delay)
+            utils.queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=False)
+        else:
+            delay = ticket.pauseDuration - new_duration
+            delay = timedelta(seconds=delay)
+            utils.queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=True)
+
         return __update_duration(ticket, data, user)
     except (KeyError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}

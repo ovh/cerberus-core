@@ -236,13 +236,14 @@ class TestWorkers(GlobalTestCase):
         cerberus_report.ticket.save()
         cerberus_report.save()
 
-        from worker import workflow, phishing
+        from worker import workflow
+        from worker import ticket as ticket_func
 
         workflow.update_waiting()
 
         ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
         self.assertEqual('Alarm', ticket.status)
-        phishing.timeout(ticket.id)
+        ticket_func.timeout(ticket.id)
         ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
         self.assertEqual('Closed', ticket.status)
         self.assertEqual(settings.CODENAMES['fixed_customer'], ticket.resolution.codename)
@@ -258,16 +259,62 @@ class TestWorkers(GlobalTestCase):
         cerberus_report.ticket.save()
         cerberus_report.save()
 
-        from worker import workflow, phishing
+        workflow.update_waiting()
+
+        ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
+        self.assertEqual('Alarm', ticket.status)
+        ticket_func.timeout(ticket.id)
+        ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
+        self.assertEqual('Closed', ticket.status)
+        self.assertEqual(settings.CODENAMES['fixed'], ticket.resolution.codename)
+
+    @patch('rq.queue.Queue.enqueue')
+    @patch('rq_scheduler.scheduler.Scheduler.schedule')
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_copyright_timeout(self, mock_rq_enqueue_in, mock_rq_schedule, mock_rq_enqueue):
+        """
+            Test copyright timeout
+        """
+        from worker import report
+
+        mock_rq_enqueue_in.return_value = None
+        mock_rq_schedule.return_value = FakeJob()
+        mock_rq_enqueue.return_value = FakeJob()
+
+        sample = self._samples['sample18']
+        content = sample.read()
+        report.create_from_email(email_content=content, send_ack=False)
+        cerberus_report = Report.objects.last()
+        cerberus_report.reportItemRelatedReport.all().update(fqdnResolved='1.2.3.4')
+
+        # Reopening ticket
+        cerberus_report = Report.objects.last()
+        cerberus_report.status = 'Attached'
+        cerberus_report.ticket.status = 'WaitingAnswer'
+        cerberus_report.ticket.snoozeDuration = 1
+        cerberus_report.ticket.snoozeStart = datetime.now() - timedelta(days=1)
+        cerberus_report.ticket.save()
+        cerberus_report.save()
+
+        from worker import workflow
+        from worker import ticket as ticket_func
 
         workflow.update_waiting()
 
         ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
         self.assertEqual('Alarm', ticket.status)
-        phishing.timeout(ticket.id)
+        ticket_func.timeout(ticket.id)
         ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
         self.assertEqual('Closed', ticket.status)
         self.assertEqual(settings.CODENAMES['fixed'], ticket.resolution.codename)
+
+        # Check if not trusted
+        Report.objects.all().delete()
+        Ticket.objects.all().delete()
+        content = content.replace("Test-Magic-Smtp-Header: it's here", "")
+        report.create_from_email(email_content=content, send_ack=False)
+        cerberus_report = Report.objects.last()
+        self.assertEqual('New', cerberus_report.status)
 
     @patch('rq.get_current_job')
     @patch('default.adapters.services.phishing.impl.DefaultPhishingService.ping_url')
@@ -372,6 +419,9 @@ class TestWorkers(GlobalTestCase):
         content = sample.read()
         report.create_from_email(email_content=content)
         cerberus_report = Report.objects.last()
+
+        emails = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').get_emails(cerberus_report.ticket)
+        self.assertEqual(2, len(emails))
         self.assertEqual('Archived', cerberus_report.status)
         self.assertEqual('Closed', cerberus_report.ticket.status)
 

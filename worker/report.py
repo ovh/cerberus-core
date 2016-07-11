@@ -196,6 +196,7 @@ def __create_with_services(abuse_report, filename, services):
 
     for data in services:  # For identified (service, defendant, items) tuple
 
+        is_new_ticket = False
         report = __create_without_services(abuse_report, filename, create_if_trusted=False)
         created_reports.append(report)
         report.defendant = database.get_or_create_defendant(data['defendant'])
@@ -222,17 +223,15 @@ def __create_with_services(abuse_report, filename, services):
 
         # Phishing specific workflow
         if report.category.name.lower() == 'phishing' and is_there_some_urls:
-            Logger.debug(unicode('New phishing report %d' % (report.id)))
             is_workflow_applied = __do_phishing_workflow(report, no_phishtocheck)
             if is_workflow_applied:
                 continue
 
-        # ACNS specific workflow
-        if (trusted and report.category.name.lower() == 'copyright' and
-                any([pattern in report.body for pattern in settings.GENERAL_CONFIG['acns_patterns']])):
-            Logger.debug(unicode('New ACNS/copyright report %d, applying specific workflow' % (report.id)))
-            __do_copyright_acns_workflow(report)
-            continue
+        # Copyright specific workflow
+        if trusted and report.category.name.lower() == 'copyright':
+            is_workflow_applied = __do_copyright_workflow(report, ticket, trusted)
+            if is_workflow_applied:
+                continue
 
         # If attach report only and no ticket found, continue
         if not ticket and attach_only:
@@ -245,11 +244,18 @@ def __create_with_services(abuse_report, filename, services):
         if not ticket and trusted:
             ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
             action = 'create this ticket with report %d from %s (%s ...)'
+            is_new_ticket = True
 
         if ticket:
-            # Block phishing url signaled by trusted provider
-            if report.provider.apiKey and report.category.name.lower() == 'phishing' and is_there_some_urls:
-                phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
+            if report.category.name.lower() == 'phishing':
+                if is_new_ticket:
+                    utils.scheduler.enqueue_in(
+                        timedelta(days=settings.GENERAL_CONFIG['phishing']['wait']),
+                        'ticket.timeout',
+                        ticket_id=ticket.id
+                    )
+                if report.provider.apiKey and is_there_some_urls:  # Block phishing url reported by trusted provider
+                    phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
 
             report.ticket = Ticket.objects.get(id=ticket.id)
             report.status = 'Attached'
@@ -398,8 +404,7 @@ def __do_phishing_workflow(report, no_phishtocheck):
     """
         Apply specific workflow for phishing report
     """
-    all_down = False
-    Logger.debug(unicode('Phishing report %d' % (report.id)))
+    Logger.debug(unicode('New phishing report %d' % (report.id)))
     all_down = phishing.check_if_all_down(report=report)
 
     # Archived report immediatly
@@ -425,42 +430,99 @@ def __do_phishing_workflow(report, no_phishtocheck):
     return False
 
 
-def __do_copyright_acns_workflow(report):
+def __do_copyright_workflow(report, ticket, trusted):
     """
-        Apply specific workflow for copyright-acns report
+        Apply specific workflow for copyright report
     """
-    # Create ticket
-    ticket = database.create_ticket(report.defendant, report.category, report.service, attach_new=False)
-    database.log_action_on_ticket(
-        ticket,
-        'create this ticket with report %d from %s (%s ...)' % (report.id, report.provider.email, report.subject[:30])
+    workflow_applied = False
+    is_new_ticket = False
+    trusted_copyright_provider = report.provider.email in settings.GENERAL_CONFIG['copyright']['trusted_copyright_providers'] and trusted
+    acns_pattern_detected = any([pattern in report.body for pattern in settings.GENERAL_CONFIG['copyright']['acns_patterns']])
+
+    if trusted_copyright_provider or acns_pattern_detected:
+
+        workflow_applied = True
+
+        action = 'attach report %d from %s (%s ...) to this ticket'
+        if not ticket:  # Create ticket
+            attach_new = True if trusted_copyright_provider else False
+            ticket = database.create_ticket(
+                report.defendant,
+                report.category,
+                report.service,
+                attach_new=attach_new
+            )
+            action = 'create this ticket with report %d from %s (%s ...)'
+            is_new_ticket = True
+
+        database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
+
+        # Add proof
+        content = '' if trusted_copyright_provider else regexp.ACNS_PROOF.search(report.body).group()
+        Proof.objects.create(
+            content=content,
+            ticket=ticket,
+        )
+
+        # Send emails to provider/defendant (template, email, lang)
+        templates = [
+            (settings.CODENAMES['ack_received'], report.provider.email, 'EN'),
+            (settings.CODENAMES['first_alert'], report.defendant.details.email, report.defendant.details.lang),
+        ]
+        for codename, email, lang in templates:
+            prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+                ticket,
+                codename,
+                lang=lang,
+                acknowledged_report=report.id,
+            )
+            ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
+                ticket,
+                email,
+                prefetched_email.subject,
+                prefetched_email.body
+            )
+            database.log_action_on_ticket(ticket, 'send an email to %s' % (email))
+
+        if trusted_copyright_provider:
+            Logger.debug(unicode('New trusted copyright report %d from %s, applying specific workflow' % (report.id, report.provider.email)))
+            _do_trusted_copyright_workflow(report, ticket, is_new_ticket)
+        else:
+            Logger.debug(unicode('New ACNS/copyright report %d, applying specific workflow' % (report.id)))
+            _do_acns_workflow(report, ticket)
+
+        database.set_ticket_higher_priority(report.ticket)
+
+    return workflow_applied
+
+
+def _do_trusted_copyright_workflow(report, ticket, is_new_ticket):
+
+    ticket.save()
+    report.ticket = ticket
+    report.status = 'Attached'
+    report.save()
+
+    if not is_new_ticket:  # Ticket already waiting
+        return
+
+    utils.scheduler.enqueue_in(
+        timedelta(days=settings.GENERAL_CONFIG['copyright']['wait']),
+        'ticket.timeout',
+        ticket_id=ticket.id
     )
 
-    # Add proof
-    Proof.objects.create(
-        content=regexp.ACNS_PROOF.search(report.body).group(),
-        ticket=ticket,
-    )
+    ticket_snooze = settings.GENERAL_CONFIG['copyright']['wait']
+    if not ticket.status == 'WaitingAnswer' and not ticket.snoozeDuration and not ticket.snoozeStart:
+        ticket.previousStatus = ticket.status
+        ticket.status = 'WaitingAnswer'
+        ticket.snoozeDuration = ticket_snooze
+        ticket.snoozeStart = datetime.now()
 
-    # Send emails to provider/defendant (template, email, lang)
-    templates = [
-        (settings.CODENAMES['ack_received'], report.provider.email, 'EN'),
-        (settings.CODENAMES['first_alert'], report.defendant.details.email, report.defendant.details.lang),
-    ]
-    for codename, email, lang in templates:
-        prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
-            ticket,
-            codename,
-            lang=lang,
-            acknowledged_report=report.id,
-        )
-        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
-            ticket,
-            email,
-            prefetched_email.subject,
-            prefetched_email.body
-        )
-        database.log_action_on_ticket(ticket, 'send an email to %s' % (email))
+    ticket.save()
+
+
+def _do_acns_workflow(report, ticket):
 
     # Close ticket
     ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)

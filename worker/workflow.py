@@ -31,8 +31,8 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 
 import database
+
 from abuse.models import Ticket
-from utils import utils
 from worker import Logger
 
 WAITING = 'WaitingAnswer'
@@ -89,13 +89,6 @@ def update_waiting():
                 ticket.reportTicket.all().update(status='Attached')
                 ticket.save()
                 database.log_action_on_ticket(ticket, 'change status from %s to %s' % (ticket.previousStatus, ticket.status))
-
-                if ticket.category.name.lower() == 'phishing':
-                    utils.queue.enqueue(
-                        'phishing.timeout',
-                        ticket_id=ticket.id,
-                        timeout=3600
-                    )
 
         except (AttributeError, ValueError) as ex:
             Logger.debug(unicode('Error while updating ticket %d : %s' % (ticket.id, ex)))
