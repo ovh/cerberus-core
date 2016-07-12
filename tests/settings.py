@@ -32,6 +32,12 @@ CUSTOM_IMPLEMENTATIONS = (
     'default.adapters.services.action.impl.DefaultActionService',
 )
 
+CUSTOM_WORKFLOW_HOOKS = (
+    'worker.hooks.phishing.PhishingWorkflowHook',
+    'worker.hooks.copyright.CopyrightWorkflowHook',
+    'worker.hooks.acns.AcnsWorkflowHook',
+)
+
 API = {
     'host': '127.0.0.1',
     'port': 6060,

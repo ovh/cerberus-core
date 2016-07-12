@@ -27,6 +27,8 @@ import inspect
 
 from django.conf import settings
 
+from worker.hooks.abstract import WorkflowHookBase
+
 
 class WrongImplementationException(Exception):
     """
@@ -36,6 +38,16 @@ class WrongImplementationException(Exception):
     """
     def __init__(self, message):
         super(WrongImplementationException, self).__init__(message)
+
+
+class WrongHookException(Exception):
+    """
+        Exception raised when provided hook implementation does not inherit of our interface.
+
+        .. py:class:: WrongHookException
+    """
+    def __init__(self, message):
+        super(WrongHookException, self).__init__(message)
 
 
 class ImplementationNotFoundException(Exception):
@@ -129,6 +141,41 @@ class ImplementationFactory(object):
         self._registered_implementations[base.__name__] = class_obj
 
 
+class ReportWorkflowHookFactory(object):
+    """
+        This handy magical class provides an easy way to let users inject their own report workflow hook
+        used in report processing (worker/report.py).
+    """
+    def __init__(self):
+
+        self.registered_hook_instances = set()
+        self.read_hooks_available()
+
+    def read_hooks_available(self):
+        """
+            Read custom implementation from hook direct
+        """
+        for hook in settings.CUSTOM_WORKFLOW_HOOKS:
+            class_object = self.get_impl_adapter_from_string(hook)
+
+            # Ensure the implementation really implements provided interface
+            if not issubclass(class_object, WorkflowHookBase):
+                raise WrongHookException(hook)
+
+            self.__register_impl(class_object)
+
+    @staticmethod
+    def get_impl_adapter_from_string(string):
+        module_name, cls_name = string.rsplit('.', 1)
+        return getattr(importlib.import_module(module_name), cls_name)
+
+    def __register_impl(self, class_obj):
+        self.registered_hook_instances.add(class_obj())
+
+
 # Before instantiate the singleton, check it has not already been done.
 if not hasattr(ImplementationFactory, 'instance'):
     ImplementationFactory.instance = ImplementationFactory()
+
+if not hasattr(ReportWorkflowHookFactory, 'instance'):
+    ReportWorkflowHookFactory.instance = ReportWorkflowHookFactory()

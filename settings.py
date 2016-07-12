@@ -81,6 +81,12 @@ CUSTOM_IMPLEMENTATIONS = (
     'default.adapters.services.action.impl.DefaultActionService',
 )
 
+CUSTOM_WORKFLOW_HOOKS = (
+    'worker.hooks.phishing.PhishingWorkflowHook',
+    'worker.hooks.copyright.CopyrightWorkflowHook',
+    'worker.hooks.acns.AcnsWorkflowHook',
+)
+
 # Cerberus use a lot of 'tags',required are here with their mapping to default provided data
 #
 TAGS = {

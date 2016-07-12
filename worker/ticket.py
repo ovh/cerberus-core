@@ -106,7 +106,7 @@ def timeout(ticket_id=None):
     # Maybe customer fixed, closing ticket
     if ticket.category.name.lower() == 'phishing' and phishing.is_all_down_for_ticket(ticket):
         Logger.info(unicode('All items are down for ticket %d, closing ticket' % (ticket_id)))
-        _close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False)
+        close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False)
         return
 
     # Getting ip for action
@@ -132,7 +132,7 @@ def timeout(ticket_id=None):
     ticket = Ticket.objects.get(id=ticket.id)
 
     # Closing ticket
-    _close_ticket(ticket, reason=settings.CODENAMES['fixed'], service_blocked=True)
+    close_ticket(ticket, reason=settings.CODENAMES['fixed'], service_blocked=True)
 
 
 def _check_timeout_ticket_conformance(ticket):
@@ -191,7 +191,7 @@ def _apply_timeout_action(ticket, ip_addr, action):
     return async_job
 
 
-def _close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False):
+def close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False):
     """
         Close ticket and add autoclosed Tag
     """
@@ -517,4 +517,9 @@ def create_ticket_from_phishtocheck(report=None, user=None):
         database.log_action_on_ticket(ticket, 'send an email to %s' % (report.provider.email))
 
     utils.queue.enqueue('phishing.block_url_and_mail', ticket_id=ticket.id, report_id=report.id, timeout=3600)
+    utils.scheduler.enqueue_in(
+        timedelta(seconds=settings.GENERAL_CONFIG['phishing']['wait']),
+        'ticket.timeout',
+        ticket_id=ticket.id
+    )
     return ticket
