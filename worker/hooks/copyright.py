@@ -76,13 +76,11 @@ class CopyrightWorkflowHook(WorkflowHookBase):
                 attach_new=True
             )
             action = 'create this ticket with report %d from %s (%s ...)'
-            Logger.debug('creating ticket *************')
             utils.scheduler.enqueue_in(
                 timedelta(seconds=settings.GENERAL_CONFIG['copyright']['wait']),
                 'ticket.timeout',
                 ticket_id=ticket.id
             )
-            Logger.debug('scheduling ticket *************')
             ticket_snooze = settings.GENERAL_CONFIG['copyright']['wait']
             ticket.previousStatus = ticket.status
             ticket.status = 'WaitingAnswer'
