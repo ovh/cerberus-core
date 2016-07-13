@@ -36,6 +36,7 @@ from django.db import transaction
 from django.db.models import Q, ObjectDoesNotExist
 from django.template import Context, loader
 
+import common
 import database
 import phishing
 
@@ -203,7 +204,6 @@ def close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_bl
             validate_email(email.strip())
             _send_email(ticket, email, settings.CODENAMES['case_closed'])
             ticket.save()
-            database.log_action_on_ticket(ticket, 'send an email to %s' % (email))
             Logger.info(unicode('Mail sent to provider %s' % (email)))
         except (AttributeError, TypeError, ValueError, ValidationError):
             pass
@@ -258,16 +258,11 @@ def _send_email(ticket, email, codename, lang='EN'):
     """
         Wrapper to send email
     """
-    prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+    common.send_email(
         ticket,
+        [email],
         codename,
         lang=lang,
-    )
-    ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
-        ticket,
-        email,
-        prefetched_email.subject,
-        prefetched_email.body
     )
 
 
@@ -503,18 +498,12 @@ def create_ticket_from_phishtocheck(report=None, user=None):
     # Sending email to provider
     if settings.TAGS['no_autoack'] not in report.provider.tags.all().values_list('name', flat=True):
 
-        prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+        common.send_email(
             ticket,
+            [report.provider.email],
             settings.CODENAMES['ack_received'],
-            acknowledged_report=report.id,
+            acknowledged_report_id=report.id,
         )
-        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
-            ticket,
-            report.provider.email,
-            prefetched_email.subject,
-            prefetched_email.body
-        )
-        database.log_action_on_ticket(ticket, 'send an email to %s' % (report.provider.email))
 
     utils.queue.enqueue('phishing.block_url_and_mail', ticket_id=ticket.id, report_id=report.id, timeout=3600)
     utils.scheduler.enqueue_in(

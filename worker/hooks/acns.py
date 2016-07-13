@@ -63,7 +63,7 @@ class AcnsWorkflowHook(WorkflowHookBase):
             :return: If the workflow is applied
             :rtype: bool
         """
-        from worker import database
+        from worker import common, database
 
         ticket = database.create_ticket(
             report.defendant,
@@ -87,19 +87,13 @@ class AcnsWorkflowHook(WorkflowHookBase):
             (settings.CODENAMES['first_alert'], report.defendant.details.email, report.defendant.details.lang),
         ]
         for codename, email, lang in templates:
-            prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+            common.send_email(
                 ticket,
+                [email],
                 codename,
                 lang=lang,
-                acknowledged_report=report.id,
+                acknowledged_report_id=report.id,
             )
-            ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
-                ticket,
-                email,
-                prefetched_email.subject,
-                prefetched_email.body
-            )
-            database.log_action_on_ticket(ticket, 'send an email to %s' % (email))
 
         # Close ticket
         ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)

@@ -29,7 +29,9 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import ObjectDoesNotExist, Q
 
+import common
 import database
+
 from abuse.models import (AttachedDocument, Report, ReportItem, Service,
                           ReportThreshold, Ticket, Defendant)
 from adapters.dao.customer.abstract import CustomerDaoException
@@ -275,19 +277,13 @@ def __send_ack(report, lang=None):
         :param string lang: The langage to use
     """
     if settings.TAGS['no_autoack'] not in report.provider.tags.all().values_list('name', flat=True):
-        prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+        common.send_email(
             report.ticket,
+            [report.provider.email],
             settings.CODENAMES['ack_received'],
             lang=lang,
-            acknowledged_report=report.id,
+            acknowledged_report_id=report.id,
         )
-        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
-            report.ticket,
-            report.provider.email,
-            prefetched_email.subject,
-            prefetched_email.body
-        )
-        database.log_action_on_ticket(report.ticket, 'send an email to %s' % (report.provider.email))
 
     report.ticket = Ticket.objects.get(id=report.ticket.id)
     report.save()

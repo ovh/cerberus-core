@@ -96,7 +96,7 @@ class PhishingWorkflowHook(WorkflowHookBase):
                     'ticket.timeout',
                     ticket_id=ticket.id
                 )
-                ticket_snooze = settings.GENERAL_CONFIG['copyright']['phishing']
+                ticket_snooze = settings.GENERAL_CONFIG['phishing']['wait']
                 ticket.previousStatus = ticket.status
                 ticket.status = 'WaitingAnswer'
                 ticket.snoozeDuration = ticket_snooze

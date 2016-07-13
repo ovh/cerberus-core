@@ -28,6 +28,7 @@ from django.conf import settings
 from django.db.models import ObjectDoesNotExist
 from rq import get_current_job
 
+import common
 import database
 from abuse.models import (ServiceActionJob, ContactedProvider, Resolution, Ticket,
                           User)
@@ -189,22 +190,16 @@ def __close_ticket(ticket, resolution_id):
     providers_emails = ContactedProvider.objects.filter(ticket_id=ticket.id).values_list('provider__email', flat=True).distinct()
     providers_emails = list(set(providers_emails))
 
-    prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+    common.send_email(
         ticket,
-        settings.CODENAMES['case_closed'],
+        providers_emails,
+        settings.CODENAMES['case_closed']
     )
-
-    for email in providers_emails:
-        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
-            ticket,
-            email,
-            prefetched_email.subject,
-            prefetched_email.body
-        )
 
     # Close ticket
     if ticket.mailerId:
         ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
+
     ticket.previousStatus = ticket.status
     ticket.status = 'Closed'
     ticket.resolution_id = resolution_id

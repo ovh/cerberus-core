@@ -29,7 +29,9 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db.models import ObjectDoesNotExist
 
+import common
 import database
+
 from abuse.models import Proof, Report, Resolution, Tag, Ticket, User
 from adapters.services.phishing.abstract import PhishingServiceException
 from factory.factory import ImplementationFactory
@@ -131,7 +133,6 @@ def close_because_all_down(report=None, denied_by=None):
         Logger.info(unicode('Sending email to provider'))
         __send_email(report.ticket, report.provider.email, settings.CODENAMES['no_more_content'])
         report.ticket.save()
-        database.log_action_on_ticket(report.ticket, 'send an email to %s' % (report.provider.email))
         Logger.info(unicode('Mail sent to provider'))
         ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(report.ticket)
 
@@ -207,16 +208,11 @@ def __send_email(ticket, email, codename, lang='EN'):
     """
         Wrapper to send email
     """
-    prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+    common.send_email(
         ticket,
+        [email],
         codename,
         lang=lang,
-    )
-    ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
-        ticket,
-        email,
-        prefetched_email.subject,
-        prefetched_email.body
     )
 
 
@@ -247,7 +243,6 @@ def block_url_and_mail(ticket_id=None, report_id=None):
     database.add_phishing_blocked_tag(report)
     __send_email(ticket, report.defendant.details.email, settings.CODENAMES['phishing_blocked'], report.defendant.details.lang)
     ticket = Ticket.objects.get(id=ticket.id)
-    database.log_action_on_ticket(ticket, 'send an email to %s' % (ticket.defendant.details.email))
 
     ticket_snooze = settings.GENERAL_CONFIG['phishing']['wait']
     if not ticket.status == 'WaitingAnswer' and not ticket.snoozeDuration and not ticket.snoozeStart:

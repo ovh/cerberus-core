@@ -27,7 +27,6 @@ from datetime import datetime, timedelta
 from django.conf import settings
 
 from abuse.models import Proof, Ticket
-from factory.factory import ImplementationFactory
 from utils import utils
 from worker.hooks.abstract import WorkflowHookBase
 
@@ -64,7 +63,7 @@ class CopyrightWorkflowHook(WorkflowHookBase):
             :return: If the workflow is applied
             :rtype: bool
         """
-        from worker import database
+        from worker import common, database
 
         action = 'attach report %d from %s (%s ...) to this ticket'
         if not ticket:  # Create ticket
@@ -99,19 +98,13 @@ class CopyrightWorkflowHook(WorkflowHookBase):
             (settings.CODENAMES['first_alert'], report.defendant.details.email, report.defendant.details.lang),
         ]
         for codename, email, lang in templates:
-            prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+            common.send_email(
                 ticket,
+                [email],
                 codename,
                 lang=lang,
-                acknowledged_report=report.id,
+                acknowledged_report_id=report.id,
             )
-            ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
-                ticket,
-                email,
-                prefetched_email.subject,
-                prefetched_email.body
-            )
-            database.log_action_on_ticket(ticket, 'send an email to %s' % (email))
 
         report.ticket = Ticket.objects.get(id=ticket.id)
         report.status = 'Attached'
