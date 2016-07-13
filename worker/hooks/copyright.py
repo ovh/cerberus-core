@@ -26,10 +26,9 @@ from datetime import datetime, timedelta
 
 from django.conf import settings
 
-from abuse.models import Ticket
+from abuse.models import Proof, Ticket
 from factory.factory import ImplementationFactory
 from utils import utils
-from worker import Logger
 from worker.hooks.abstract import WorkflowHookBase
 
 
@@ -91,6 +90,10 @@ class CopyrightWorkflowHook(WorkflowHookBase):
         database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
 
         # Send emails to provider/defendant (template, email, lang)
+
+        ticket.proof.all().delete()
+        Proof.objects.create(content=report.body, ticket=ticket)
+
         templates = [
             (settings.CODENAMES['ack_received'], report.provider.email, 'EN'),
             (settings.CODENAMES['first_alert'], report.defendant.details.email, report.defendant.details.lang),

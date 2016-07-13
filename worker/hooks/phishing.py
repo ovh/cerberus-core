@@ -86,7 +86,6 @@ class PhishingWorkflowHook(WorkflowHookBase):
                 'id': report.id,
                 'message': 'New PhishToCheck report %d' % (report.id),
             })
-            return True
         else:
             if not ticket and is_trusted:  # Create ticket
                 ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
@@ -107,11 +106,10 @@ class PhishingWorkflowHook(WorkflowHookBase):
             if is_there_some_urls:  # Block urls
                 phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
 
+        if ticket:
             report.ticket = Ticket.objects.get(id=ticket.id)
             report.status = 'Attached'
             report.save()
             database.set_ticket_higher_priority(report.ticket)
 
-            return True
-
-        return False
+        return True
