@@ -127,9 +127,9 @@ def create(body):
 
     try:
         cat = None
-        if 'defaultCategory' in body and body['defaultCategory'] is not None:
+        if body.get('defaultCategory'):
             cat = Category.objects.get(name=body['defaultCategory'])
-            body.pop('defaultCategory', None)
+        body.pop('defaultCategory', None)
         body = {k: v for k, v in body.iteritems() if k in PROVIDER_FIELDS}
         provider = Provider.objects.create(defaultCategory=cat, **body)
         return 201, model_to_dict(provider)
@@ -146,7 +146,11 @@ def update(prov, body):
         return 404, {'status': 'Not Found', 'code': 404, 'message': 'Provider does not exist'}
     try:
         body = {k: v for k, v in body.iteritems() if k in PROVIDER_FIELDS}
-        Provider.objects.filter(pk=provider.pk).update(**body)
+        cat = None
+        if body.get('defaultCategory'):
+            cat = Category.objects.get(name=body['defaultCategory'])
+        body.pop('defaultCategory', None)
+        Provider.objects.filter(pk=provider.pk).update(defaultCategory=cat, **body)
         provider = Provider.objects.get(pk=provider.pk)
     except (FieldError, IntegrityError, ObjectDoesNotExist) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
