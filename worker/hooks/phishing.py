@@ -78,6 +78,7 @@ class PhishingWorkflowHook(WorkflowHookBase):
             return True
 
         # Report has to be manually checked
+        action = None
         if not report.provider.apiKey:  # Means it is not a trusted phishing provider
             report.status = 'PhishToCheck'
             report.save()
@@ -102,8 +103,6 @@ class PhishingWorkflowHook(WorkflowHookBase):
                 ticket.snoozeDuration = ticket_snooze
                 ticket.snoozeStart = datetime.now()
                 ticket.save()
-            else:
-                action = 'attach report %d from %s (%s ...) to this ticket'
 
             if is_there_some_urls:  # Block urls
                 phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
@@ -112,6 +111,7 @@ class PhishingWorkflowHook(WorkflowHookBase):
             report.ticket = Ticket.objects.get(id=ticket.id)
             report.status = 'Attached'
             report.save()
+            action = action if action else 'attach report %d from %s (%s ...) to this ticket'
             database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
             database.set_ticket_higher_priority(report.ticket)
 

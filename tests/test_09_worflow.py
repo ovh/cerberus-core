@@ -69,7 +69,7 @@ class TestWorkers(GlobalTestCase):
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
     def test_phishing_report_trusted(self, mock_rq):
         """
-            Sample6 is a trusted phishing report
+            Sample6 is a phishing report
         """
         ReportWorkflowHookFactory.instance.read_hooks_available()
         from worker import report
@@ -88,7 +88,7 @@ class TestWorkers(GlobalTestCase):
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
     def test_phishing_report_not_trusted(self, mock_rq):
         """
-            Sample7 is not a trusted phishing report
+            Sample7 is a phishing report
         """
         ReportWorkflowHookFactory.instance.read_hooks_available()
         from worker import report
@@ -116,7 +116,7 @@ class TestWorkers(GlobalTestCase):
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
     def test_phishing_report_down(self, mock_rq, mock_ping):
         """
-            Sample6 is a trusted phishing report, now down items
+            Sample6 is a phishing report, now down items
         """
         ReportWorkflowHookFactory.instance.read_hooks_available()
         from worker import report
@@ -408,3 +408,40 @@ class TestWorkers(GlobalTestCase):
 
         self.assertEqual('New', cerberus_report.status)
         self.assertFalse(cerberus_report.ticket)
+
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_phishing_trusted_provider(self, mock_rq):
+        """
+            Sample20 came from a trusted phishing provider
+        """
+        ReportWorkflowHookFactory.instance.read_hooks_available()
+        from worker import report
+
+        mock_rq.return_value = None
+        sample = self._samples['sample20']
+        content = sample.read()
+        report.create_from_email(email_content=content, send_ack=False)
+
+        self.assertEqual(1, Report.objects.count())
+        cerberus_report = Report.objects.last()
+        self.assertEqual('Phishing', cerberus_report.category.name)
+        self.assertTrue(cerberus_report.ticket)
+        self.assertTrue('Attached', cerberus_report.status)
+
+        sample = self._samples['sample6']
+        content = sample.read()
+        report.create_from_email(email_content=content, send_ack=False)
+
+        cerberus_report = Report.objects.last()
+        self.assertEqual('Phishing', cerberus_report.category.name)
+        self.assertFalse(cerberus_report.ticket)
+        self.assertEqual('PhishToCheck', cerberus_report.status)
+
+        sample = self._samples['sample7']
+        content = sample.read()
+        report.create_from_email(email_content=content, send_ack=False)
+
+        cerberus_report = Report.objects.last()
+        self.assertEqual('Phishing', cerberus_report.category.name)
+        self.assertFalse(cerberus_report.ticket)
+        self.assertEqual('PhishToCheck', cerberus_report.status)

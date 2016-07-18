@@ -109,6 +109,13 @@ class GlobalTestCase(TestCase):
             body='ticket closed',
         )
 
+        MailTemplate.objects.create(
+            codename='phishing_blocked',
+            name='phishing blocked',
+            subject='phishing blocked',
+            body='phishing blocked',
+        )
+
         for tag in ['copyright:autoclosed', 'phishing:autoblocked', 'phishing:autoclosed', 'phishing:autoreopened']:
             Tag.objects.create(codename=tag, name=tag, tagType='Ticket')
 
@@ -134,6 +141,7 @@ class GlobalTestCase(TestCase):
         Provider.objects.create(email='low@provider.com', priority='Low')
         Provider.objects.create(email='normal@provider.com', priority='Normal')
         Provider.objects.create(email='critical@provider.com', priority='Critical')
+        Provider.objects.create(email='trusted.phishing@provider.com', priority='Critical', apiKey='token')
 
     def tearDown(self):
 
