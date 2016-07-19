@@ -354,21 +354,20 @@ def get_defendant_from_item(item):
     item['rawItem'] = _get_deobfuscate_item(item['rawItem'])
 
     try:
-        ip_addr, hostname = get_item_ip_hostname(item)
+        ip_addr, hostname, url = _get_item_ip_hostname_url(item)
         if not ip_addr and not hostname:
             return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Unable to get infos for this item'}
     except ValidationError:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid item'}
 
-    try:
-        services = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_services_from_items(
-            ips=[ip_addr],
-            urls=[hostname],
-            fqdn=[hostname],
-        )
-        schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
-    except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
-        return 503, {'status': 'Service unavailable', 'code': 503, 'message': 'Unknown exception while identifying defendant'}
+    for param in ({'urls': [url]}, {'ips': [ip_addr], 'fqdn': [hostname]}):
+        try:
+            services = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_services_from_items(**param)
+            schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
+            if services:
+                break
+        except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
+            return 503, {'status': 'Service unavailable', 'code': 503, 'message': 'Unknown exception while identifying defendant'}
 
     if services:
         try:
@@ -383,14 +382,15 @@ def get_defendant_from_item(item):
     return 200, {'customerId': customer_id, 'service': service}
 
 
-def get_item_ip_hostname(item):
+def _get_item_ip_hostname_url(item):
     """ Get item infos
     """
-    ip_addr = hostname = None
+    ip_addr = hostname = url = None
     try:
         validate = URLValidator()
         validate(item['rawItem'])
         item['itemType'] = 'URL'
+        url = item['rawItem']
     except ValidationError:
         try:
             validate_ipv46_address(item['rawItem'])
@@ -412,7 +412,7 @@ def get_item_ip_hostname(item):
         if ips:
             ip_addr = ips[0]
 
-    return ip_addr, hostname
+    return ip_addr, hostname, url
 
 
 def update_item_infos(item):
