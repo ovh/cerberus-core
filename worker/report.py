@@ -439,7 +439,7 @@ def __update_ticket_if_answer(ticket, abuse_report, filename):
         If the email is an answer to a cerberus ticket:
 
         - update ticket status
-        - cancel all pending ServiceAction jobs
+        - cancel all pending ServiceAction jobs and ticket.timeout jobs
         - append response to ticket's email thread
         - save attachments
 
@@ -467,12 +467,7 @@ def __update_ticket_if_answer(ticket, abuse_report, filename):
         ticket.reportTicket.all().update(status='Attached')
         ticket.save()
         actions.append('change status from %s to %s' % (ticket.previousStatus, ticket.status))
-
-        for job in ticket.jobs.all():
-            if job.asynchronousJobId in utils.scheduler:
-                utils.scheduler.cancel(job.asynchronousJobId)
-                job.status = 'cancelled by answered'
-                job.save()
+        _cancel_ticket_jobs(ticket)
 
     for action in actions:
         database.log_action_on_ticket(ticket, action)
@@ -490,6 +485,19 @@ def __update_ticket_if_answer(ticket, abuse_report, filename):
             filename,
             abuse_report.attachments,
         )
+
+
+def _cancel_ticket_jobs(ticket):
+
+    for job in ticket.jobs.all():
+        if job.asynchronousJobId in utils.scheduler:
+            utils.scheduler.cancel(job.asynchronousJobId)
+            job.status = 'cancelled by answered'
+            job.save()
+
+    for job in utils.scheduler.get_jobs():
+        if job.func_name == 'ticket.timeout' and job.kwargs['ticket_id'] == ticket.id:
+            utils.scheduler.cancel(job.id)
 
 
 def archive_if_timeout(report_id=None):
