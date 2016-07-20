@@ -122,7 +122,7 @@ class TestWorkers(GlobalTestCase):
         from worker import report
 
         mock_rq.return_value = None
-        mock_ping.return_value = PingResponse(100, '404', 'Not Found', 'Not Found')
+        mock_ping.return_value = PingResponse(100, '404', 'Not Found', 'Not Found', False)
         sample = self._samples['sample6']
         content = sample.read()
         report.create_from_email(email_content=content, send_ack=False)
@@ -147,7 +147,7 @@ class TestWorkers(GlobalTestCase):
         from worker import report
 
         mock_rq_enqueue_in.return_value = None
-        mock_ping.return_value = PingResponse(100, '404', 'Not Found', 'Not Found for test_phishing_timeout')
+        mock_ping.return_value = PingResponse(100, '404', 'Not Found', 'Not Found for test_phishing_timeout', False)
         mock_rq_schedule.return_value = FakeJob()
         mock_rq_enqueue.return_value = FakeJob()
 
@@ -178,7 +178,7 @@ class TestWorkers(GlobalTestCase):
 
         # Reopening ticket
         UrlStatus.objects.all().delete()
-        mock_ping.return_value = PingResponse(0, '200', 'UP', 'UP for test_phishing_timeout')
+        mock_ping.return_value = PingResponse(0, '200', 'UP', 'UP for test_phishing_timeout', False)
         cerberus_report = Report.objects.last()
         cerberus_report.status = 'Attached'
         cerberus_report.ticket.status = 'WaitingAnswer'
@@ -256,7 +256,7 @@ class TestWorkers(GlobalTestCase):
         from worker import report
 
         mock_rq.return_value = None
-        mock_ping.return_value = PingResponse(100, '404', 'Not Found', 'Not Found')
+        mock_ping.return_value = PingResponse(100, '404', 'Not Found', 'Not Found', False)
         mock_current_job.return_value = FakeJob()
 
         sample = self._samples['sample6']

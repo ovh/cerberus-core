@@ -67,7 +67,12 @@ Schemas = {
                 'timestamp': int,
                 'location': unicode,
                 'screenshotId': unicode,
-                'phishingGrade': Any(None, float),
+                Optional('phishingGrade'): Any(None, float),
+                Optional('phishingGradeDetails'): {
+                    'category': Any(None, unicode, str),
+                    'grade': Any(None, float),
+                    'comment': Any(None, unicode, str),
+                },
                 'score': int,
                 'response': {
                     'directAccess': {

@@ -25,7 +25,7 @@
 import abc
 from collections import namedtuple
 
-PingResponse = namedtuple('Ping', ['score', 'http_code', 'direct_status', 'proxied_status'])
+PingResponse = namedtuple('Ping', ['score', 'http_code', 'direct_status', 'proxied_status', 'is_phishing'])
 
 
 class PhishingServiceException(Exception):
@@ -59,7 +59,8 @@ class PhishingServiceBase(object):
 
             :param str url: The url to ping.
             :param str country: A country, usefull for geo-phishing
-            :return: A PingResponse object containing these infos: direct_status, proxied_status, http_code, score (0 for 'UP' to 100 for 'DOWN')
+            :return: A PingResponse object containing these infos:
+                direct_status, proxied_status, http_code, score (0 for 'UP' to 100 for 'DOWN') and is_phishing (computed by your solution)
             :rtype: PingResponse
             :raises PhishingServiceException: if any error occur
         """
@@ -76,6 +77,11 @@ class PhishingServiceBase(object):
                 'location': 'https://your.screenshot.storage/example.png',
                 'screenshotId': '123456',
                 'phishingGrade': '0.9',  # Between 0 and 1 (0, not phishing, 1 phishing)
+                'phishingGradeDetails': {
+                    'category': 'PHISHING',  # Can be "LEGIT" or "PHISHING"
+                    'grade': 0.1,  # Same as phishingGrade
+                    'comment': 'no comment',
+                },
                 'score': 0,  # Between 0 and 100 (0, UP, 100, DOWN)
                 'response': {
                     'directAccess': {

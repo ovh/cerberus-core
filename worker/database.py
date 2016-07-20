@@ -61,7 +61,7 @@ class MultipleDefendantWithSameCustomerId(Exception):
         super(MultipleDefendantWithSameCustomerId, self).__init__(message)
 
 
-def insert_url_status(item, direct_status, proxied_status, http_code, score):
+def insert_url_status(item, direct_status, proxied_status, http_code, score, is_phishing):
     """
         Insert url status in db
     """
@@ -71,6 +71,7 @@ def insert_url_status(item, direct_status, proxied_status, http_code, score):
         'proxiedStatus': proxied_status,
         'httpCode': http_code,
         'score': score,
+        'isPhishing': is_phishing,
     })
 
 
@@ -79,6 +80,13 @@ def get_item_status_score(item_id, last=3):
         Get item scoring
     """
     return UrlStatus.objects.filter(item_id=item_id).values_list('score', flat=True).order_by('-date')[:last]
+
+
+def get_item_status_phishing(item_id, last=3):
+    """
+        Get item scoring
+    """
+    return UrlStatus.objects.filter(item_id=item_id).values_list('isPhishing', flat=True).order_by('-date')[:last]
 
 
 def log_action_on_ticket(ticket, action, user=None):

@@ -37,11 +37,12 @@ class DefaultPhishingService(PhishingServiceBase):
 
             :param str url: The url to ping.
             :param str country: A country, usefull for geo-phishing
-            :return: A dict containing these infos: direct_status, proxied_status, http, score (0 for 'UP' to 100 for 'DOWN')
+            :return: A dict containing these infos:
+                direct_status, proxied_status, http_code, score (0 for 'UP' to 100 for 'DOWN') and is_phishing (computed by your solution)
             :rtype: dict
             :raises PhishingServiceException: if any error occur
         """
-        return PingResponse(0, '200', 'OK', 'OK')
+        return PingResponse(0, '200', 'OK', 'OK', False)
 
     @staticmethod
     def get_screenshots(url, limit=10):
@@ -53,6 +54,11 @@ class DefaultPhishingService(PhishingServiceBase):
             'location': u'https://www.ovh.com/fr/news/logos/with-baseline/logo-ovh-avec-150DPI.png',
             'screenshotId': u'123456',
             'phishingGrade': 0.0,
+            'phishingGradeDetails': {
+                'category': 'LEGIT',  # Can be "LEGIT" or "PHISHING"
+                'grade': 0.0,  # Same as phishingGrade
+                'comment': 'no comment',
+            },
             'score': 0,
             'response': {
                 'directAccess': {

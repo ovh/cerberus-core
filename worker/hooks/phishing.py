@@ -77,8 +77,18 @@ class PhishingWorkflowHook(WorkflowHookBase):
             # Just pass
             return True
 
-        # Report has to be manually checked
+        # All items are clearly phishing ?
         action = None
+        if all((is_trusted, is_there_some_urls, are_all_items_phishing)):
+            print " here " * 50
+            if not ticket:
+                ticket = _create_ticket(report)
+                action = 'create this ticket with report %d from %s (%s ...)'
+            if is_there_some_urls:  # Block urls
+                phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
+            return True
+
+        # Report has to be manually checked
         if not report.provider.apiKey:  # Means it is not a trusted phishing provider
             report.status = 'PhishToCheck'
             report.save()
@@ -90,19 +100,8 @@ class PhishingWorkflowHook(WorkflowHookBase):
             return True
         else:
             if not ticket and is_trusted:  # Create ticket
-                ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
+                ticket = _create_ticket(report)
                 action = 'create this ticket with report %d from %s (%s ...)'
-                utils.scheduler.enqueue_in(
-                    timedelta(seconds=settings.GENERAL_CONFIG['phishing']['wait']),
-                    'ticket.timeout',
-                    ticket_id=ticket.id
-                )
-                ticket_snooze = settings.GENERAL_CONFIG['phishing']['wait']
-                ticket.previousStatus = ticket.status
-                ticket.status = 'WaitingAnswer'
-                ticket.snoozeDuration = ticket_snooze
-                ticket.snoozeStart = datetime.now()
-                ticket.save()
 
             if is_there_some_urls:  # Block urls
                 phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
@@ -116,3 +115,44 @@ class PhishingWorkflowHook(WorkflowHookBase):
             database.set_ticket_higher_priority(report.ticket)
 
         return True
+
+
+def are_all_items_phishing(report):
+    """
+        Returns if all items for given report are clearly phishing items (based on 'ping_url' service)
+
+        :param `abuse.models.Report` report: A Cerberus report instance
+        :return: If all items are clearly phishing items
+        :rtype: bool
+    """
+    from worker import database
+    result = set()
+
+    for item in report.reportItemRelatedReport.filter(itemType='URL'):
+        is_phishing = database.get_item_status_phishing(item.id, last=1)
+        for res in is_phishing:
+            result.add(res)
+
+    response = False
+    if len(result) == 1 and True in result:
+        response = True
+
+    return response
+
+
+def _create_ticket(report):
+
+    from worker import database
+    ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
+    utils.scheduler.enqueue_in(
+        timedelta(seconds=settings.GENERAL_CONFIG['phishing']['wait']),
+        'ticket.timeout',
+        ticket_id=ticket.id
+    )
+    ticket_snooze = settings.GENERAL_CONFIG['phishing']['wait']
+    ticket.previousStatus = ticket.status
+    ticket.status = 'WaitingAnswer'
+    ticket.snoozeDuration = ticket_snooze
+    ticket.snoozeStart = datetime.now()
+    ticket.save()
+    return ticket

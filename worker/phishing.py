@@ -98,7 +98,8 @@ def __update_item_status(item, country='FR'):
             response.direct_status,
             response.proxied_status,
             response.http_code,
-            response.score
+            response.score,
+            response.is_phishing,
         )
     except PhishingServiceException:
         pass

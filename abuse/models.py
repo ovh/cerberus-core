@@ -464,6 +464,7 @@ class UrlStatus(models.Model):
     proxiedStatus = TruncatedCharField(max_length=10, null=True, choices=STATUS, default='UNKNOWN')
     httpCode = models.IntegerField(null=True)
     score = models.IntegerField(null=True)
+    isPhishing = models.BooleanField(null=False, default=False)
     date = models.DateTimeField(auto_now=True, null=False)
 
 
