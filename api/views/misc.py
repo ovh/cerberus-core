@@ -61,7 +61,8 @@ def auth():
 @token_required
 @catch_500
 def logout():
-    """ Logout user
+    """
+        Logout user
     """
     code, resp = GeneralController.logout(request)
     return code, resp
@@ -72,7 +73,8 @@ def logout():
 @token_required
 @catch_500
 def ping():
-    """ Keep alive between UX and API
+    """
+        Keep alive between UX and API
     """
     return 200, {'status': 'OK', 'code': 200}
 
@@ -83,9 +85,21 @@ def ping():
 @catch_500
 def get_url_http_headers():
     """
-        Keep alive between UX and API
+        Curl-like
     """
     code, resp = ReportItemsController.get_http_headers(request.args.get('url'))
+    return code, resp
+
+
+@misc_views.route('/api/tools/whois', methods=['GET'])
+@jsonify
+@token_required
+@catch_500
+def get_whois():
+    """
+        Whois-like
+    """
+    code, resp = ReportItemsController.get_whois(request.args.get('item'))
     return code, resp
 
 
@@ -94,7 +108,8 @@ def get_url_http_headers():
 @token_required
 @catch_500
 def get_user_notifications():
-    """ Get user notifications
+    """
+        Get user notifications
     """
     user = GeneralController.get_user(request)
     code, resp = GeneralController.get_notifications(user)

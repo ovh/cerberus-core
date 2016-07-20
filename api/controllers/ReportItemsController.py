@@ -530,3 +530,22 @@ def _get_deobfuscate_item(item):
     item = reg.sub('http', item)
     item = item.replace('[.]', '.')
     return item
+
+
+def get_whois(item):
+    """
+        Whois-like services based on utils/ips.py
+    """
+    try:
+        item = {'rawItem': _get_deobfuscate_item(item)}
+    except AttributeError:
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid item'}
+
+    try:
+        ip_addr, _, _ = _get_item_ip_hostname_url(item)
+        if not ip_addr:
+            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Unable to get infos for this item'}
+    except ValidationError:
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid item'}
+
+    return 200, {'ipCategory': utils.get_ip_network(ip_addr)}
