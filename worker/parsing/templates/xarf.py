@@ -30,7 +30,7 @@ import regexp
 
 TEMPLATE = {
     'email': 'x-arf',
-    'fallback': False,
+    'fallback': True,
     'regexp': {
         'ips': {
             'pattern': r'(?:Source\s*:\s*)' + regexp.IPV4,

@@ -187,9 +187,14 @@ class EmailParser(object):
             if content_disposition:
                 content_disposition = content_disposition.decode('utf-8').encode('utf-8')
 
-            if content_disposition and content_disposition.decode('utf-8').strip().split(';')[0].lower() in ['attachment', 'inline']:
-                attachments.append(parse_attachment(message))
-                continue
+            if content_disposition:
+                disposition = content_disposition.decode('utf-8').strip().split(';')[0].lower()
+                if disposition == 'attachment':
+                    attachments.append(parse_attachment(message))
+                    continue
+                elif disposition == 'inline' and content_type not in ['text/html', 'text/plain']:
+                    attachments.append(parse_attachment(message))
+                    continue
 
             content = message.get_payload(decode=True)
             if not content:
