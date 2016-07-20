@@ -79,8 +79,7 @@ class PhishingWorkflowHook(WorkflowHookBase):
 
         # All items are clearly phishing ?
         action = None
-        if all((is_trusted, is_there_some_urls, are_all_items_phishing)):
-            print " here " * 50
+        if all((is_trusted, is_there_some_urls, are_all_items_phishing(report))):
             if not ticket:
                 ticket = _create_ticket(report)
                 action = 'create this ticket with report %d from %s (%s ...)'

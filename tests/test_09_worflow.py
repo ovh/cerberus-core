@@ -445,3 +445,28 @@ class TestWorkers(GlobalTestCase):
         self.assertEqual('Phishing', cerberus_report.category.name)
         self.assertFalse(cerberus_report.ticket)
         self.assertEqual('PhishToCheck', cerberus_report.status)
+
+    @patch('rq.queue.Queue.enqueue')
+    @patch('rq_scheduler.scheduler.Scheduler.schedule')
+    @patch('default.adapters.services.phishing.impl.DefaultPhishingService.ping_url')
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_clearly_identified_phishing(self, mock_rq_enqueue_in, mock_ping, mock_rq_schedule, mock_rq_enqueue):
+        """
+            Test when phishing is clearly identified (PingResponse last parameter is True)
+        """
+        ReportWorkflowHookFactory.instance.read_hooks_available()
+        from worker import report
+
+        mock_rq_enqueue_in.return_value = None
+        mock_ping.return_value = PingResponse(0, '200', 'OK', 'OK', True)
+        mock_rq_schedule.return_value = FakeJob()
+        mock_rq_enqueue.return_value = FakeJob()
+
+        sample = self._samples['sample6']
+        content = sample.read()
+        report.create_from_email(email_content=content, send_ack=False)
+
+        cerberus_report = Report.objects.last()
+        self.assertEqual('Phishing', cerberus_report.category.name)
+        self.assertTrue(cerberus_report.ticket)
+        self.assertEqual('WaitingAnswer', cerberus_report.ticket.status)
