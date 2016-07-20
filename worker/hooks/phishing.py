@@ -28,6 +28,7 @@ from django.conf import settings
 
 from abuse.models import Ticket
 from utils import utils
+from worker import Logger
 from worker.hooks.abstract import WorkflowHookBase
 
 
@@ -71,6 +72,7 @@ class PhishingWorkflowHook(WorkflowHookBase):
         # Archived report immediatly
         if all_down:
             phishing.close_because_all_down(report=report)
+            Logger.debug(unicode('All down phishing workflow applied'))
             return True
 
         if no_phishtocheck:
@@ -86,6 +88,7 @@ class PhishingWorkflowHook(WorkflowHookBase):
 
             phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
             _attach_ticket_to_report(report, ticket, action)
+            Logger.debug(unicode('Clearly phishing workflow applied'))
             return True
 
         # Report has to be manually checked
@@ -97,6 +100,7 @@ class PhishingWorkflowHook(WorkflowHookBase):
                 'id': report.id,
                 'message': 'New PhishToCheck report %d' % (report.id),
             })
+            Logger.debug(unicode('PhishToCheck workflow applied'))
             return True
         else:
             if not ticket and is_trusted:  # Create ticket
@@ -109,6 +113,7 @@ class PhishingWorkflowHook(WorkflowHookBase):
             if ticket:
                 _attach_ticket_to_report(report, ticket, action)
 
+            Logger.debug(unicode('Trusted phishing provider workflow applied'))
             return True
 
 
