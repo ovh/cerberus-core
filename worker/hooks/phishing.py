@@ -63,7 +63,7 @@ class PhishingWorkflowHook(WorkflowHookBase):
             :return: If the workflow is applied
             :rtype: bool
         """
-        from worker import database, phishing
+        from worker import phishing
 
         is_there_some_urls = report.reportItemRelatedReport.filter(itemType='URL').exists()
         all_down = phishing.check_if_all_down(report=report)
@@ -83,8 +83,9 @@ class PhishingWorkflowHook(WorkflowHookBase):
             if not ticket:
                 ticket = _create_ticket(report)
                 action = 'create this ticket with report %d from %s (%s ...)'
-            if is_there_some_urls:  # Block urls
-                phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
+
+            phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
+            _attach_ticket_to_report(report, ticket, action)
             return True
 
         # Report has to be manually checked
@@ -105,15 +106,10 @@ class PhishingWorkflowHook(WorkflowHookBase):
             if is_there_some_urls:  # Block urls
                 phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
 
-        if ticket:
-            report.ticket = Ticket.objects.get(id=ticket.id)
-            report.status = 'Attached'
-            report.save()
-            action = action if action else 'attach report %d from %s (%s ...) to this ticket'
-            database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
-            database.set_ticket_higher_priority(report.ticket)
+            if ticket:
+                _attach_ticket_to_report(report, ticket, action)
 
-        return True
+            return True
 
 
 def are_all_items_phishing(report):
@@ -155,3 +151,15 @@ def _create_ticket(report):
     ticket.snoozeStart = datetime.now()
     ticket.save()
     return ticket
+
+
+def _attach_ticket_to_report(report, ticket, action):
+
+    from worker import database
+
+    report.ticket = Ticket.objects.get(id=ticket.id)
+    report.status = 'Attached'
+    report.save()
+    action = action if action else 'attach report %d from %s (%s ...) to this ticket'
+    database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
+    database.set_ticket_higher_priority(report.ticket)

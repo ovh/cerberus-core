@@ -470,3 +470,4 @@ class TestWorkers(GlobalTestCase):
         self.assertEqual('Phishing', cerberus_report.category.name)
         self.assertTrue(cerberus_report.ticket)
         self.assertEqual('WaitingAnswer', cerberus_report.ticket.status)
+        self.assertEqual('Attached', cerberus_report.status)
