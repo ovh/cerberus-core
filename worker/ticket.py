@@ -488,6 +488,11 @@ def create_ticket_from_phishtocheck(report=None, user=None):
     if not ticket:
         ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
         action = 'create this ticket with report %d from %s (%s ...)'
+        utils.scheduler.enqueue_in(
+            timedelta(seconds=settings.GENERAL_CONFIG['phishing']['wait']),
+            'ticket.timeout',
+            ticket_id=ticket.id
+        )
 
     report.ticket = ticket
     report.status = 'Attached'
@@ -506,9 +511,4 @@ def create_ticket_from_phishtocheck(report=None, user=None):
         )
 
     utils.queue.enqueue('phishing.block_url_and_mail', ticket_id=ticket.id, report_id=report.id, timeout=3600)
-    utils.scheduler.enqueue_in(
-        timedelta(seconds=settings.GENERAL_CONFIG['phishing']['wait']),
-        'ticket.timeout',
-        ticket_id=ticket.id
-    )
     return ticket
