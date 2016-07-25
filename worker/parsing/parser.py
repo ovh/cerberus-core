@@ -493,6 +493,7 @@ def __clean_item(item, is_ipaddr=False):
 
     item = item.replace('[.]', '.')
     item = re.sub(r'([^:])/{2,}', r'\1/', item)
+    item = item.split(',,')[0]
     return item
 
 
