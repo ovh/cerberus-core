@@ -43,7 +43,8 @@ import GeneralController
 import ProvidersController
 from abuse.models import (AbusePermission, ServiceAction, ServiceActionJob,
                           ContactedProvider, Defendant, History, Proof, Report,
-                          Resolution, Service, Tag, Ticket, TicketComment)
+                          Resolution, Service, Tag, Ticket, TicketComment,
+                          TicketWorkflowPreset)
 from adapters.services.action.abstract import ActionServiceException
 from adapters.services.mailer.abstract import MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
@@ -474,6 +475,10 @@ def update(ticket, body, user, bulk=False):
     """
         Update a ticket
     """
+    allowed, body = _precheck_user_fields_update_authorizations(user, body)
+    if not allowed:
+        return 403, {'status': 'Forbidden', 'code': 403, 'message': 'You are not allowed to edit any fields'}
+
     if not isinstance(ticket, Ticket):
         try:
             ticket = Ticket.objects.get(id=ticket)
@@ -1022,8 +1027,11 @@ def remove_tag(ticket_id, tag_id, user):
 
 
 def interact(ticket_id, body, user):
-    """ Magic endpoint to save operator's time
     """
+        Magic endpoint to save operator's time
+    """
+    if not _precheck_user_interact_authorizations(user, body):
+        return 403, {'status': 'Forbidden', 'code': 403, 'message': 'You are not allowed use this interact parameters'}
     try:
         ticket = Ticket.objects.get(id=ticket_id)
     except (ObjectDoesNotExist, ValueError):
@@ -1522,3 +1530,44 @@ def get_emails(ticket_id):
         return 200, emails
     except MailerServiceException as ex:
         return 500, {'status': 'Internal Server Error', 'code': 500, 'message': str(ex)}
+
+
+def _precheck_user_interact_authorizations(user, body):
+    """
+       Check if user's interact parameters are allowed
+    """
+    allowed_actions = TicketWorkflowPreset.objects.filter(
+        roles=user.operator.role
+    ).values_list(
+        'config__action__codename',
+        flat=True
+    )
+    try:
+        return body['action']['codename'] in allowed_actions
+    except KeyError:
+        return False
+
+
+def _precheck_user_fields_update_authorizations(user, body):
+    """
+       Check if user's update paramaters are allowed
+    """
+    authorizations = user.operator.role.modelsAuthorizations
+    if authorizations.get('ticket') and authorizations['ticket'].get('fields'):
+        body = {k: v for k, v in body.iteritems() if k in authorizations['ticket']['fields']}
+        if not body:
+            return False, body
+        return True, body
+    return False, body
+
+
+def precheck_user_status_update_authorizations(user, request):
+    """
+       Check if user's update paramaters are allowed
+    """
+    # PUT /api/tickets/870/status/unpaused
+    authorizations = user.operator.role.modelsAuthorizations
+    if authorizations.get('ticket') and authorizations['ticket'].get('status'):
+        return request.path in authorizations['ticket']['status']
+    else:
+        return False

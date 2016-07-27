@@ -24,7 +24,7 @@
 
 from flask import Blueprint, request
 
-from api.controllers import PresetsController
+from api.controllers import GeneralController, PresetsController
 from decorators import (admin_required, catch_500, json_required, jsonify,
                         token_required)
 
@@ -36,12 +36,14 @@ preset_views = Blueprint('preset_views', __name__)
 @token_required
 @catch_500
 def get_all_presets():
-    """ Get all Abuse mail temapltes
+    """
+        Get all `abuse.models.TicketWorkflowPreset` available
     """
     filters = None
     if 'filters' in request.args:
         filters = request.args['filters']
-    code, resp = PresetsController.index(filters=filters)
+    user = GeneralController.get_user(request)
+    code, resp = PresetsController.index(user, filters=filters)
     return code, resp
 
 
@@ -52,10 +54,12 @@ def get_all_presets():
 @json_required
 @catch_500
 def create_preset():
-    """ Get all Abuse mail temapltes
+    """
+        Create a `abuse.models.TicketWorkflowPreset`
     """
     body = request.get_json()
-    code, resp = PresetsController.create(body)
+    user = GeneralController.get_user(request)
+    code, resp = PresetsController.create(user, body)
     return code, resp
 
 
@@ -64,9 +68,11 @@ def create_preset():
 @token_required
 @catch_500
 def get_preset(preset=None):
-    """ Get given preset info
     """
-    code, resp = PresetsController.show(preset)
+        Get given preset info
+    """
+    user = GeneralController.get_user(request)
+    code, resp = PresetsController.show(user, preset)
     return code, resp
 
 
@@ -77,10 +83,12 @@ def get_preset(preset=None):
 @json_required
 @catch_500
 def update_preset(preset=None):
-    """ Get given preset info
+    """
+        Update given preset info
     """
     body = request.get_json()
-    code, resp = PresetsController.update(preset, body)
+    user = GeneralController.get_user(request)
+    code, resp = PresetsController.update(user, preset, body)
     return code, resp
 
 
@@ -90,9 +98,11 @@ def update_preset(preset=None):
 @admin_required
 @catch_500
 def delete_preset(preset=None):
-    """ Get given preset info
     """
-    code, resp = PresetsController.delete(preset)
+        Delete given preset info
+    """
+    user = GeneralController.get_user(request)
+    code, resp = PresetsController.delete(user, preset)
     return code, resp
 
 
@@ -103,8 +113,10 @@ def delete_preset(preset=None):
 @json_required
 @catch_500
 def order_presets():
-    """ Update preset order for display
+    """
+        Update preset order for display
     """
     body = request.get_json()
-    code, resp = PresetsController.update_order(body)
+    user = GeneralController.get_user(request)
+    code, resp = PresetsController.update_order(user, body)
     return code, resp

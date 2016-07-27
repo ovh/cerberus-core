@@ -25,6 +25,7 @@
 
 from django.db import models
 from django.contrib.auth.models import User
+from jsonfield import JSONField
 
 
 # http://stackoverflow.com/questions/1809531/truncating-unicode-so-it-fits-a-maximum-size-when-encoded-for-wire-transfer
@@ -74,6 +75,38 @@ class Category(models.Model):
     name = TruncatedCharField(primary_key=True, max_length=32)
     label = TruncatedCharField(unique=True, null=False, blank=True, max_length=255)
     description = TruncatedCharField(null=False, blank=True, max_length=255)
+
+
+class ApiRoute(models.Model):
+    """
+        List all available API routes
+    """
+    METHOD = (
+        ('GET', 'GET'),
+        ('POST', 'POST'),
+        ('PUT', 'PUT'),
+        ('PATCH', 'PATCH'),
+        ('DELETE', 'DELETE'),
+    )
+    method = TruncatedCharField(max_length=32, null=False, choices=METHOD)
+    endpoint = TruncatedCharField(null=False, max_length=512)
+
+
+class Role(models.Model):
+    """
+        A `abuse.models.Role` defines a set of allowed `abuse.models.ApiRoute`
+    """
+    name = TruncatedCharField(null=False, max_length=256)
+    allowedRoutes = models.ManyToManyField(ApiRoute, db_column='endpoints')
+    modelsAuthorizations = JSONField()
+
+
+class Operator(models.Model):
+    """
+        Cerberus `abuse.models.User` + `abuse.models.Role` = `abuse.models.Operator`
+    """
+    user = models.OneToOneField(User)
+    role = models.OneToOneField(Role)
 
 
 class Tag(models.Model):
@@ -286,6 +319,7 @@ class Report(models.Model):
         ('Archived', 'Archived'),
         ('Attached', 'Attached'),
         ('PhishToCheck', 'PhishToCheck'),
+        ('ToValidate', 'ToValidate'),
     )
 
     REPORT_TREATED_MODE = (
@@ -503,6 +537,7 @@ class TicketWorkflowPreset(models.Model):
     config = models.ForeignKey(TicketWorkflowPresetConfig, null=True)
     groupId = models.PositiveSmallIntegerField(null=True)
     orderId = models.PositiveSmallIntegerField(null=True)
+    roles = models.ManyToManyField(Role)
 
 
 class ItemScreenshotFeedback(models.Model):

@@ -45,8 +45,9 @@ from django.forms.models import model_to_dict
 
 import ReportsController
 import TicketsController
-from abuse.models import (AbusePermission, Category, History, Profile, Report,
-                          MassContact, MassContactResult, ReportItem, Resolution, Tag, Ticket)
+from abuse.models import (AbusePermission, Category, History, Profile,
+                          Report, MassContact, MassContactResult, ReportItem,
+                          Resolution, Tag, Ticket)
 from adapters.services.kpi.abstract import KPIServiceException
 from factory.factory import ImplementationFactory
 from utils import logger, utils
@@ -188,7 +189,8 @@ def check_perms(**kwargs):
 
 
 def check_token(request):
-    """ Check token and return associated user
+    """
+        Check token and return associated user
     """
     try:
         token = request.environ['HTTP_X_API_TOKEN']
@@ -526,6 +528,7 @@ def toolbar(**kwargs):
     resp['myTicketsSleepingCount'] = reduce(operator.add, [t['count'] if t['status'] in TOOLBAR_SLEEPING_STATUS else 0 for t in res]) if res else 0
     resp['todoCount'] = Ticket.objects.filter(where, status__in=TOOLBAR_TODO_COUNT_STATUS).order_by('id').distinct().count()
     resp['escalatedCount'] = Ticket.objects.filter(where, escalated=True).order_by('id').distinct().count()
+    resp['toValidateCount'] = Report.objects.filter(status='ToValidate').count()
     return 200, resp
 
 

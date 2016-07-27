@@ -301,7 +301,8 @@ def get_ticket_prefetched_template(ticket=None, template=None):
 def get_ticket_prefetched_preset(ticket=None, preset=None):
     """ Get a template prefetched with ticket infos
     """
-    code, resp = PresetsController.get_prefetch_preset(ticket, preset)
+    user = GeneralController.get_user(request)
+    code, resp = PresetsController.get_prefetch_preset(user, ticket, preset)
     return code, resp
 
 

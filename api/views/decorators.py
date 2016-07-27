@@ -28,6 +28,7 @@ from functools import wraps
 from json import dumps
 
 from django.db import DatabaseError, InterfaceError, OperationalError
+from django.db.models import ObjectDoesNotExist
 from flask import Response, request
 from flask.wrappers import BadRequest
 from voluptuous import Invalid, MultipleInvalid, Schema
@@ -89,8 +90,20 @@ def token_required(func):
         valid, message = GeneralController.check_token(request)
         if not valid:
             return 401, {'status': 'Unauthorized', 'code': 401, 'message': message}
+        user = GeneralController.get_user(request)
+        if not _check_user_allowed_endpoint(user, request.endpoint, request.method):
+            message = 'You are not allowed to %s %s' % (request.method, request.path)
+            return 403, {'status': 'Forbidden', 'code': 403, 'message': message}
         return func(*args, **kwargs)
     return check_token
+
+
+def _check_user_allowed_endpoint(user, endpoint, method):
+
+    try:
+        return user.operator.role.allowedRoutes.filter(method=method, endpoint=endpoint).exists()
+    except ObjectDoesNotExist:
+        return False
 
 
 def admin_required(func):

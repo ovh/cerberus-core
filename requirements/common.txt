@@ -5,6 +5,7 @@ django==1.7.7
 djehouty
 flask==0.10.1
 html2text
+jsonfield
 netaddr
 logutils
 psycopg2
