@@ -105,8 +105,8 @@ class Operator(models.Model):
     """
         Cerberus `abuse.models.User` + `abuse.models.Role` = `abuse.models.Operator`
     """
-    user = models.OneToOneField(User)
-    role = models.OneToOneField(Role)
+    user = models.OneToOneField(User, null=False)
+    role = models.ForeignKey(Role, null=False)
 
 
 class Tag(models.Model):
