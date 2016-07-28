@@ -533,7 +533,7 @@ def toolbar(**kwargs):
     try:
         scheduling_algorithm = user.operator.role.modelsAuthorizations['ticket']['schedulingAlgorithm']
         todo_count = TicketSchedulingAlgorithmFactory.instance.get_singleton_of(scheduling_algorithm).count(where=where)
-    except (ObjectDoesNotExist, KeyError):
+    except (TypeError, AttributeError, ObjectDoesNotExist, KeyError):
         todo_count = 0
 
     resp['todoCount'] = todo_count
