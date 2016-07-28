@@ -262,6 +262,10 @@ def update(report_id, body, user):
     """
     from worker import database
 
+    allowed, body = _precheck_user_fields_update_authorizations(user, body)
+    if not allowed:
+        return 403, {'status': 'Forbidden', 'code': 403, 'message': 'You are not allowed to edit any fields'}
+
     try:
         report = Report.objects.get(id=int(report_id))
     except (ObjectDoesNotExist, ValueError):
@@ -269,7 +273,7 @@ def update(report_id, body, user):
 
     # Update status
     if body.get('status') != report.status:
-        code, resp = update_status(body, report, user)
+        code, resp = _update_status(body, report, user)
         if code != 200:
             return code, resp
 
@@ -305,8 +309,9 @@ def update(report_id, body, user):
     return show(report_id)
 
 
-def update_status(body, report, user):
-    """ Update report status
+def _update_status(body, report, user):
+    """
+        Update report status
     """
     if body['status'].lower() not in STATUS:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid status'}
@@ -320,23 +325,18 @@ def update_status(body, report, user):
             ticket.status = 'Closed'
             ticket.save()
         body['ticket'] = None
-    elif body['status'].lower() in ('attached', 'validated') and not report.ticket and all((report.category, report.defendant, report.service)):
-        try:
-            ticket = Ticket.objects.get(
-                ~Q(status='Closed'),
-                category=report.category.pk,
-                defendant=report.defendant.id,
-                service=report.service,
-                update=True
-            )
-            body['ticket'] = ticket.id
-            body['status'] = 'Attached'
-        except ObjectDoesNotExist:  # Else create it
-            if body['status'].lower() == 'attached':
-                TicketsController.create(body, user)
-                return show(report)
-            if body['status'].lower() == 'validated':
-                body['status'] = 'New'
+    elif report.status.lower() == 'tovalidate' and body['status'].lower() == 'attached':
+        report.status = 'New'
+        report.save()
+        utils.queue.enqueue(
+            'report.reparse_validated',
+            report_id=report.id,
+            user_id=user.id,
+            timeout=3600
+        )
+        return 200, {'status': 'OK', 'code': 200, 'message': 'Report successfully updated'}
+    elif body['status'].lower() == 'attached' and not report.ticket and all((report.category, report.defendant, report.service)):
+        return TicketsController.create(body, user)
 
     return 200, body
 
@@ -717,3 +717,16 @@ def parse_screenshot_feedback(report_id, body, user):
     else:  # Else create/attach report to ticket + block_url + mail to defendant + email to provider
         utils.queue.enqueue('ticket.create_ticket_from_phishtocheck', report=report.id, user=user.id, timeout=600)
         return 200, {'status': 'OK', 'code': 200, 'message': 'Report will be attached to ticket in few seconds'}
+
+
+def _precheck_user_fields_update_authorizations(user, body):
+    """
+       Check if user's update paramaters are allowed
+    """
+    authorizations = user.operator.role.modelsAuthorizations
+    if authorizations.get('report') and authorizations['report'].get('fields'):
+        body = {k: v for k, v in body.iteritems() if k in authorizations['report']['fields']}
+        if not body:
+            return False, body
+        return True, body
+    return False, body

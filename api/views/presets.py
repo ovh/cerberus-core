@@ -32,9 +32,9 @@ preset_views = Blueprint('preset_views', __name__)
 
 
 @preset_views.route('/api/presets', methods=['GET'])
+@catch_500
 @jsonify
 @token_required
-@catch_500
 def get_all_presets():
     """
         Get all `abuse.models.TicketWorkflowPreset` available

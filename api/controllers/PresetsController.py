@@ -82,10 +82,13 @@ def index(user, **kwargs):
             ))
             if with_template:
                 for res in result:
-                    res['templates'] = TicketWorkflowPreset.objects.get(
+                    res['templates'] = list(TicketWorkflowPreset.objects.get(
                         id=res['id'],
                         roles=user.operator.role,
-                    ).templates.all().values_list('id', flat=True).distinct()
+                    ).templates.all().values_list(
+                        'id',
+                        flat=True
+                    ).distinct())
             presets.append({
                 'groupId': group,
                 'presets': result,

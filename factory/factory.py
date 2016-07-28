@@ -27,6 +27,7 @@ import inspect
 
 from django.conf import settings
 
+from api.controllers.scheduling.abstract import TicketSchedulingAlgorithmBase
 from worker.hooks.abstract import WorkflowHookBase
 
 
@@ -48,6 +49,16 @@ class WrongHookException(Exception):
     """
     def __init__(self, message):
         super(WrongHookException, self).__init__(message)
+
+
+class WrongAlgoException(Exception):
+    """
+        Exception raised when provided ticket scheduling alogrithm implementation does not inherit of our interface.
+
+        .. py:class:: WrongAlgoException
+    """
+    def __init__(self, message):
+        super(WrongAlgoException, self).__init__(message)
 
 
 class ImplementationNotFoundException(Exception):
@@ -153,7 +164,7 @@ class ReportWorkflowHookFactory(object):
 
     def read_hooks_available(self):
         """
-            Read custom implementation from hook direct
+            Read custom hooks implementation from settings
         """
         for hook in settings.CUSTOM_WORKFLOW_HOOKS:
             class_object = self.get_impl_adapter_from_string(hook)
@@ -173,9 +184,71 @@ class ReportWorkflowHookFactory(object):
         self.registered_hook_instances.add(class_obj())
 
 
+class TicketSchedulingAlgorithmFactory(object):
+    """
+        This handy magical class provides an easy way to let users inject their own ticket scheduling algorithms
+        for API (see `api.controllers.TicketsController.get_todo_tickets`)
+    """
+    def __init__(self):
+
+        self._registered_instances = {}
+        self.read_algorithms_available()
+
+    def get_instance_of(self, string, *args):
+        """
+            Spawn a new instance of a class, passing to the constructor provided args.
+
+            :param str string: Whished class instance identifier
+            :param array args: Arguments to passed to the class constructor
+            :return: A new instance of the requested class
+            :raises ImplementationNotFoundException: No implementation match passed identifier
+        """
+        if string not in self._registered_instances:
+            raise ImplementationNotFoundException(string)
+
+        return self._registered_instances[string](*args)
+
+    def get_singleton_of(self, string):
+        """
+            Still return the same instance of a given class.
+
+            :param str string: Wished class instance identifier
+            :return: The only instance of the requested class
+            :raises ImplementationNotFoundException: No implementation match passed identifier
+        """
+        if string not in self._registered_instances:
+            self._registered_instances[string] = self.get_instance_of(string)
+
+        return self._registered_instances[string]
+
+    def read_algorithms_available(self):
+        """
+            Read custom algorithms implementation from settings
+        """
+        for algo in settings.CUSTOM_SCHEDULING_ALGORITHMS:
+            class_object, class_name = self.get_impl_adapter_from_string(algo)
+
+            # Ensure the implementation really implements provided interface
+            if not issubclass(class_object, TicketSchedulingAlgorithmBase):
+                raise WrongAlgoException(algo)
+
+            self.__register_impl(class_name, class_object)
+
+    @staticmethod
+    def get_impl_adapter_from_string(string):
+        module_name, cls_name = string.rsplit('.', 1)
+        return getattr(importlib.import_module(module_name), cls_name), cls_name
+
+    def __register_impl(self, name, class_obj):
+        self._registered_instances[name] = class_obj()
+
+
 # Before instantiate the singleton, check it has not already been done.
 if not hasattr(ImplementationFactory, 'instance'):
     ImplementationFactory.instance = ImplementationFactory()
 
 if not hasattr(ReportWorkflowHookFactory, 'instance'):
     ReportWorkflowHookFactory.instance = ReportWorkflowHookFactory()
+
+if not hasattr(TicketSchedulingAlgorithmFactory, 'instance'):
+    TicketSchedulingAlgorithmFactory.instance = TicketSchedulingAlgorithmFactory()

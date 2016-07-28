@@ -89,6 +89,11 @@ CUSTOM_WORKFLOW_HOOKS = (
     'worker.hooks.acns.AcnsWorkflowHook',
 )
 
+CUSTOM_SCHEDULING_ALGORITHMS = (
+    'api.controllers.scheduling.global.GlobalSchedulingAlgorithm',
+    'api.controllers.scheduling.limitedOpen.LimitedOpenSchedulingAlgorithm',
+)
+
 # Cerberus use a lot of 'tags',required are here with their mapping to default provided data
 #
 TAGS = {

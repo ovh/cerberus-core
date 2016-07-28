@@ -49,7 +49,7 @@ from abuse.models import (AbusePermission, Category, History, Profile,
                           Report, MassContact, MassContactResult, ReportItem,
                           Resolution, Tag, Ticket)
 from adapters.services.kpi.abstract import KPIServiceException
-from factory.factory import ImplementationFactory
+from factory.factory import ImplementationFactory, TicketSchedulingAlgorithmFactory
 from utils import logger, utils
 
 Logger = logger.get_logger(__name__)
@@ -526,9 +526,17 @@ def toolbar(**kwargs):
     resp['myTicketsAnsweredCount'] = reduce(operator.add, [t['count'] if t['status'] == 'Answered' else 0 for t in res]) if res else 0
     resp['myTicketsTodoCount'] = reduce(operator.add, [t['count'] if t['status'] in TOOLBAR_TODO_STATUS else 0 for t in res]) if res else 0
     resp['myTicketsSleepingCount'] = reduce(operator.add, [t['count'] if t['status'] in TOOLBAR_SLEEPING_STATUS else 0 for t in res]) if res else 0
-    resp['todoCount'] = Ticket.objects.filter(where, status__in=TOOLBAR_TODO_COUNT_STATUS).order_by('id').distinct().count()
     resp['escalatedCount'] = Ticket.objects.filter(where, escalated=True).order_by('id').distinct().count()
     resp['toValidateCount'] = Report.objects.filter(status='ToValidate').count()
+
+    # Get count of scheduling algorithm
+    try:
+        scheduling_algorithm = user.operator.role.modelsAuthorizations['ticket']['schedulingAlgorithm']
+        todo_count = TicketSchedulingAlgorithmFactory.instance.get_singleton_of(scheduling_algorithm).count(where=where)
+    except (ObjectDoesNotExist, KeyError):
+        todo_count = 0
+
+    resp['todoCount'] = todo_count
     return 200, resp
 
 

@@ -48,7 +48,7 @@ from abuse.models import (AbusePermission, ServiceAction, ServiceActionJob,
 from adapters.services.action.abstract import ActionServiceException
 from adapters.services.mailer.abstract import MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
-from factory.factory import ImplementationFactory
+from factory.factory import ImplementationFactory, TicketSchedulingAlgorithmFactory
 from utils import utils
 
 IP_CIDR_RE = re.compile(r"(?<!\d\.)(?<!\d)(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}(?!\d|(?:\.\d))")
@@ -69,11 +69,6 @@ FILTER_MAPPING = (
     ('itemIpReverse', 'reportTicket__reportItemRelatedReport__ipReverse'),
     ('itemFqdnResolved', 'reportTicket__reportItemRelatedReport__fqdnResolved'),
 )
-
-FLAT_TODO_TICKET_STATUS_FILTERS = ('ActionError', 'Answered', 'Alarm', 'Reopened', 'Open')
-TODO_TICKET_STATUS_FILTERS = (['ActionError'], ['Answered'], ['Alarm', 'Reopened'], ['Open'])
-TODO_TICKET_DEFAULT_STATUS = ('ActionError', 'Answered', 'Alarm', 'Reopened', 'Open')
-TODO_TICKET_PRIORITY_FILTERS = ('High', 'Normal', 'Low')
 
 UPDATE_VALID_FIELDS = (
     'defendant',
@@ -121,7 +116,6 @@ MODIFICATION_INVALID_FIELDS = (
     'modificationDate'
 )
 
-USER_FILTERS_BEGINNER_PRIORITY = ('Low', 'Normal')
 TICKET_FIELDS = [fld.name for fld in Ticket._meta.fields]
 
 
@@ -409,7 +403,7 @@ def create(report, user):
     """
     from worker import database
 
-    if not all(k in report.keys() for k in ('id', 'status')) or report['status'] not in ['New', 'Attached']:
+    if not all(k in report.keys() for k in ('id', 'status')) or report['status'].lower() not in ('new', 'attached'):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Can not create a ticket with this status'}
 
     try:
@@ -765,6 +759,9 @@ def update_status(ticket, status, body, user):
     """
         Update ticket status
     """
+    if not _precheck_user_status_update_authorizations(user, status):
+        return 403, {'status': 'Forbidden', 'code': 403, 'message': 'You are not allowed to edit any fields'}
+
     try:
         status = status.lower()
     except AttributeError:
@@ -1375,143 +1372,16 @@ def get_todo_tickets(**kwargs):
         except (ValueError, SyntaxError, TypeError) as ex:
             return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
 
-    tickets, nb_record = __get_filtered_todo_tickets(filters, kwargs['user'])
-    __format_ticket_response(tickets)
-    return 200, {'tickets': list(tickets), 'ticketsCount': nb_record}
-
-
-def __get_filtered_todo_tickets(filters, user):
-    """
-        Get tickets TODO with specific ordering
-
-        Tickets selections:
-
-        By priority of ticket status  (see TODO_TICKET_STATUS_FILTERS)
-            By priority of ticket priorities (see TODO_TICKET_PRIORITY_FILTERS)
-                By user, others then treatedBy nobody
-
-        Special case for 'Critical', it comes before all
-    """
+    user = kwargs['user']
     try:
-        limit = int(filters['paginate']['resultsPerPage'])
-        offset = int(filters['paginate']['currentPage'])
-    except KeyError:
-        limit = 10
-        offset = 1
+        scheduling_algorithm = user.operator.role.modelsAuthorizations['ticket']['schedulingAlgorithm']
+        tickets, nb_record = TicketSchedulingAlgorithmFactory.instance.get_singleton_of(scheduling_algorithm).get_tickets(user=user, filters=filters)
+        __format_ticket_response(tickets)
+    except (ObjectDoesNotExist, KeyError):
+        tickets = []
+        nb_record = 0
 
-    where = __get_user_filters(user)
-    order_by = ['modificationDate']
-
-    if filters.get('onlyUnassigned'):
-        where.append(Q(treatedBy=None))
-        treated_by_filters = [{'treatedBy': None}]
-    else:
-        treated_by_filters = __get_treated_by_filters(user)
-
-    # Aggregate all filters
-    where = reduce(operator.and_, where)
-
-    # Count
-    nb_record = Ticket.objects.filter(
-        where,
-        status__in=TODO_TICKET_DEFAULT_STATUS
-    ).distinct().count()
-
-    res = []
-    ids = set()
-
-    for ticket_status in TODO_TICKET_STATUS_FILTERS:
-        if ticket_status == ['Open']:
-            order_by.append('-reportTicket__tags__level')
-
-        for filters in treated_by_filters:  # Only for Critical
-            tickets = __get_specific_filtered_todo_tickets(where, ids, 'Critical', ticket_status, filters, order_by, limit, offset)
-            ids.update([t['id'] for t in tickets])
-            res.extend(tickets)
-            if len(res) > limit * offset:
-                return res[(offset - 1) * limit:limit * offset], nb_record
-
-        if Ticket.objects.filter(where, ~Q(id__in=ids), status__in=FLAT_TODO_TICKET_STATUS_FILTERS, priority='Critical').count():
-            continue
-
-        for priority in TODO_TICKET_PRIORITY_FILTERS:
-            for filters in treated_by_filters:
-
-                tickets = __get_specific_filtered_todo_tickets(where, ids, priority, ticket_status, filters, order_by, limit, offset)
-                ids.update([t['id'] for t in tickets])
-                res.extend(tickets)
-                if len(res) > limit * offset:
-                    return res[(offset - 1) * limit:limit * offset], nb_record
-
-    return res[(offset - 1) * limit:limit * offset], nb_record
-
-
-def __get_treated_by_filters(user):
-
-    users = list(set(User.objects.all().values_list('username', flat=True)))
-    others_users = [username for username in users if username != user.username]
-
-    treated_by_filters = [
-        {
-            'treatedBy__username': user.username,
-        },
-        {
-            'treatedBy__username__in': others_users,
-        },
-        {
-            'treatedBy': None,
-        },
-    ]
-    return treated_by_filters
-
-
-def __get_specific_filtered_todo_tickets(where, ids, priority, status, treated_by, order_by, limit, offset):
-
-    return Ticket.objects.filter(
-        where,
-        ~Q(id__in=ids),
-        priority=priority,
-        status__in=status,
-        **treated_by
-    ).values(
-        *TICKET_FIELDS
-    ).order_by(
-        *order_by
-    ).annotate(
-        attachedReportsCount=Count('reportTicket')
-    ).distinct()[:limit * offset]
-
-
-def __get_user_filters(user):
-    """
-        Filter allowed category for this user
-    """
-    where = [Q()]
-    user_specific_where = []
-    abuse_permissions = AbusePermission.objects.filter(user=user.id)
-
-    for perm in abuse_permissions:
-        if perm.profile.name == 'Expert':
-            user_specific_where.append(Q(category=perm.category))
-        elif perm.profile.name == 'Advanced':
-            user_specific_where.append(Q(category=perm.category, confidential=False))
-        elif perm.profile.name == 'Beginner':
-            user_specific_where.append(Q(
-                priority__in=USER_FILTERS_BEGINNER_PRIORITY,
-                category=perm.category,
-                confidential=False,
-                escalated=False,
-                moderation=False
-            ))
-
-    if len(user_specific_where):
-        user_specific_where = reduce(operator.or_, user_specific_where)
-        where.append(user_specific_where)
-    else:
-        # If no category allowed
-        where.append(Q(category=None))
-
-    return where
+    return 200, {'tickets': list(tickets), 'ticketsCount': nb_record}
 
 
 def get_emails(ticket_id):
@@ -1561,13 +1431,12 @@ def _precheck_user_fields_update_authorizations(user, body):
     return False, body
 
 
-def precheck_user_status_update_authorizations(user, request):
+def _precheck_user_status_update_authorizations(user, status):
     """
        Check if user's update paramaters are allowed
     """
-    # PUT /api/tickets/870/status/unpaused
     authorizations = user.operator.role.modelsAuthorizations
     if authorizations.get('ticket') and authorizations['ticket'].get('status'):
-        return request.path in authorizations['ticket']['status']
+        return status in authorizations['ticket']['status']
     else:
         return False
