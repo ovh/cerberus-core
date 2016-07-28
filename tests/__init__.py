@@ -149,7 +149,7 @@ class GlobalTestCase(TestCase):
         role.save()
         Operator.objects.create(role=role, user=user)
 
-	endpoints = [
+        endpoints = [
             'reputation_views.get_url_external_reputation',
             'email_templates_views.get_recipients_type',
             'email_templates_views.get_supported_languages',
