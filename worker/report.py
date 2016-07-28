@@ -33,7 +33,7 @@ import common
 import database
 
 from abuse.models import (AttachedDocument, Report, ReportItem, Service,
-                          ReportThreshold, Ticket, Defendant)
+                          ReportThreshold, Ticket, Defendant, User)
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.mailer.abstract import MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
@@ -139,7 +139,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
 
 
 @transaction.atomic
-def __create_without_services(abuse_report, filename, create_if_trusted=True):
+def __create_without_services(abuse_report, filename):
     """
         Create report in Cerberus
 
@@ -148,14 +148,18 @@ def __create_without_services(abuse_report, filename, create_if_trusted=True):
         :rtype: `abuse.models.Report`
         :returns: The Cerberus `abuse.models.Report`
     """
+    provider = database.get_or_create_provider(abuse_report.provider)
+    trusted = True if provider.trusted or abuse_report.trusted else False
+    status = 'ToValidate' if trusted else 'New'
+
     report = Report.objects.create(**{
-        'provider': database.get_or_create_provider(abuse_report.provider),
+        'provider': provider,
         'receivedDate': datetime.fromtimestamp(abuse_report.date),
         'subject': abuse_report.subject,
         'body': abuse_report.body,
         'category': database.get_category(abuse_report.category),
         'filename': filename,
-        'status': 'New',
+        'status': status,
     })
 
     __add_report_tags(report, abuse_report.recipients)
@@ -163,21 +167,15 @@ def __create_without_services(abuse_report, filename, create_if_trusted=True):
     database.log_new_report(report)
 
     # If report is not attached within 30 days -> archived
-    utils.scheduler.enqueue_in(
-        timedelta(days=settings.GENERAL_CONFIG['report_timeout']),
-        'report.archive_if_timeout',
-        report_id=report.id
-    )
+    if report.status == 'New':
+        utils.scheduler.enqueue_in(
+            timedelta(days=settings.GENERAL_CONFIG['report_timeout']),
+            'report.archive_if_timeout',
+            report_id=report.id
+        )
 
     if autoarchive:
         report.status = 'Archived'
-    else:
-        if abuse_report.trusted and create_if_trusted:
-            ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
-            action = 'create this ticket with report %d from %s (%s ...)'
-            database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
-            report.ticket = ticket
-            report.status = 'Attached'
 
     report.save()
     return report
@@ -198,7 +196,7 @@ def __create_with_services(abuse_report, filename, services):
 
     for data in services:  # For identified (service, defendant, items) tuple
 
-        report = __create_without_services(abuse_report, filename, create_if_trusted=False)
+        report = __create_without_services(abuse_report, filename)
         created_reports.append(report)
         report.defendant = database.get_or_create_defendant(data['defendant'])
         report.service = database.get_or_create_service(data['service'])
@@ -573,3 +571,52 @@ def __create_threshold_ticket(data, thres):
         'create this ticket with threshold (more than %s reports received in %s days)' % (thres.threshold, thres.interval)
     )
     return ticket
+
+
+@transaction.atomic
+def reparse_validated(report_id=None, user_id=None):
+    """
+        Reparse now validated `abuse.models.Report`
+
+        :param int report_id: A Cerberus `abuse.models.Report` id
+        :param int user_id: A Cerberus `abuse.models.User` id
+    """
+    try:
+        report = Report.objects.get(id=report_id)
+        user = User.objects.get(id=user_id)
+    except (ObjectDoesNotExist, ValueError):
+        Logger.error(unicode('Report %d cannot be found in DB. Skipping...' % (report_id)))
+        return
+
+    trusted = True
+    ticket = None
+    if all((report.defendant, report.category, report.service)):
+        msg = 'Looking for opened ticket for (%s, %s, %s)'
+        Logger.debug(unicode(msg % (report.defendant.customerId, report.category.name, report.service.name)))
+        ticket = database.search_ticket(report.defendant, report.category, report.service)
+
+    # Checking specific processing workflow
+    for hook in ReportWorkflowHookFactory.instance.registered_hook_instances:
+        if hook.identify(report, ticket, is_trusted=trusted):
+            if hook.apply(report, ticket, trusted, False):
+                Logger.debug(unicode('Specific workflow %s applied' % (str(hook.__class__.__name__))))
+                return
+
+    # Create ticket if trusted
+    action = None
+    if not ticket and trusted:
+        ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
+        action = 'create this ticket with report %d from %s (%s ...)'
+
+    if ticket:
+        report.ticket = Ticket.objects.get(id=ticket.id)
+        report.status = 'Attached'
+        report.save()
+        database.set_ticket_higher_priority(report.ticket)
+        action = action if action else 'attach report %d from %s (%s ...) to this ticket'
+        database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]), user=user)
+
+        try:
+            __send_ack(report, lang='EN')
+        except MailerServiceException as ex:
+            raise MailerServiceException(ex)

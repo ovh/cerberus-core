@@ -326,7 +326,7 @@ def _update_status(body, report, user):
             ticket.save()
         body['ticket'] = None
     elif report.status.lower() == 'tovalidate' and body['status'].lower() == 'attached':
-        if not all((report.defendant, report.service)) or ((body.get['defendant'], body.get['service'])):
+        if not all((report.defendant, report.service)):
             return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing defendant and/or service'}
         report.status = 'New'
         report.save()
@@ -336,7 +336,7 @@ def _update_status(body, report, user):
             user_id=user.id,
             timeout=3600
         )
-        return 200, {'status': 'OK', 'code': 200, 'message': 'Report successfully updated'}
+        return 201, {'status': 'OK', 'code': 201, 'message': 'Report successfully updated'}
     elif body['status'].lower() == 'attached' and not report.ticket and all((report.category, report.defendant, report.service)):
         return TicketsController.create(body, user)
 

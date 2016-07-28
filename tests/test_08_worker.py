@@ -242,3 +242,33 @@ class TestWorkers(GlobalTestCase):
         content = sample.read()
         report.create_from_email(email_content=content, send_ack=True)
         self.assertEqual(0, Report.objects.count())
+
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_report_new(self, mock_rq):
+        """
+            Check that report's status is 'New' when no services identified
+        """
+        from worker import report
+
+        mock_rq.return_value = None
+
+        sample = self._samples['sample22']
+        content = sample.read()
+        report.create_from_email(email_content=content, send_ack=True)
+        cerberus_report = Report.objects.last()
+        self.assertEqual('New', cerberus_report.status)
+
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_report_tovalidate(self, mock_rq):
+        """
+            Check that report's status is 'New' when no services identified
+        """
+        from worker import report
+
+        mock_rq.return_value = None
+
+        sample = self._samples['sample21']  # Low
+        content = sample.read()
+        report.create_from_email(email_content=content, send_ack=True)
+        cerberus_report = Report.objects.last()
+        self.assertEqual('ToValidate', cerberus_report.status)
