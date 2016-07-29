@@ -121,6 +121,8 @@ CODENAMES = {
     'phishing_blocked': 'phishing_blocked',
     'service_blocked': 'phishing_service_blocked',
     'ticket_closed': 'ticket_closed',
+    'not_managed_ip': 'not_ovh_ip',
+    'invalid': 'invalid',
 }
 
 # Above all, Cerberus is basically an abuse's email fetcher

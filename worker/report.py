@@ -648,7 +648,7 @@ def _create_closed_ticket(report):
     try:
         validate_email(report.provider.email.strip())
         Logger.info(unicode('Sending email to provider'))
-        common.send_email(report.ticket, [report.provider.email], settings.CODENAMES['no_managed_ip'])
+        common.send_email(report.ticket, [report.provider.email], settings.CODENAMES['not_managed_ip'])
         report.ticket.save()
         Logger.info(unicode('Mail sent to provider'))
         ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(report.ticket)
@@ -659,5 +659,5 @@ def _create_closed_ticket(report):
     except (AttributeError, TypeError, ValueError, ValidationError):
         pass
 
-    common.close_ticket(report, resolution_codename=settings.CODENAMES['not_managed_ip'])
+    common.close_ticket(report, resolution_codename=settings.CODENAMES['invalid'])
     Logger.info(unicode('Ticket %d and report %d closed' % (report.ticket.id, report.id)))

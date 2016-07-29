@@ -71,6 +71,8 @@ CODENAMES = {
     'phishing_blocked': 'phishing_blocked',
     'service_blocked': 'service_blocked',
     'ticket_closed': 'ticket_closed',
+    'not_managed_ip': 'not_managed_ip',
+    'invalid': 'invalid',
 }
 
 GENERAL_CONFIG = {
