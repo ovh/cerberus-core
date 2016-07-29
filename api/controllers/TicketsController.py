@@ -760,7 +760,7 @@ def update_status(ticket, status, body, user):
         Update ticket status
     """
     if not _precheck_user_status_update_authorizations(user, status):
-        return 403, {'status': 'Forbidden', 'code': 403, 'message': 'You are not allowed to edit any fields'}
+        return 403, {'status': 'Forbidden', 'code': 403, 'message': 'You are not allowed to set this status'}
 
     try:
         status = status.lower()
@@ -933,10 +933,11 @@ def bulk_update(body, user, method):
     # Update general fields
     properties = {k: v for k, v in body['properties'].iteritems() if k in BULK_VALID_FIELDS}
 
-    for ticket in tickets:
-        code, resp = update(ticket, properties, user, bulk=True)
-        if code != 200:
-            return code, resp
+    if properties:
+        for ticket in tickets:
+            code, resp = update(ticket, properties, user, bulk=True)
+            if code != 200:
+                return code, resp
 
     return 200, {'status': 'OK', 'code': 200, 'message': 'Ticket(s) successfully updated'}
 
@@ -1424,7 +1425,7 @@ def _precheck_user_fields_update_authorizations(user, body):
     """
     authorizations = user.operator.role.modelsAuthorizations
     if authorizations.get('ticket') and authorizations['ticket'].get('fields'):
-        body = {k: v for k, v in body.iteritems() if k in authorizations['ticket']['fields']}
+        body = {k: v for k, v in body.iteritems() if k.lower() in authorizations['ticket']['fields']}
         if not body:
             return False, body
         return True, body
@@ -1437,6 +1438,6 @@ def _precheck_user_status_update_authorizations(user, status):
     """
     authorizations = user.operator.role.modelsAuthorizations
     if authorizations.get('ticket') and authorizations['ticket'].get('status'):
-        return status in authorizations['ticket']['status']
+        return status.lower() in authorizations['ticket']['status']
     else:
         return False
