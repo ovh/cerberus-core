@@ -32,10 +32,9 @@ from django.db.models import ObjectDoesNotExist
 import common
 import database
 
-from abuse.models import Proof, Report, Resolution, Tag, Ticket, User
+from abuse.models import Proof, Report, Tag, Ticket, User
 from adapters.services.phishing.abstract import PhishingServiceException
 from factory.factory import ImplementationFactory
-from utils import utils
 from worker import Logger
 
 BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
@@ -120,13 +119,13 @@ def close_because_all_down(report=None, denied_by=None):
             return
 
     if not report.ticket:
-        report.ticket = __create_ticket(report, denied_by)
+        report.ticket = common.create_ticket(report, denied_by)
         report.save()
 
     # Add temp proof(s) for mail content
     temp_proofs = []
     if not report.ticket.proof.count():
-        temp_proofs = __get_temp_proofs(report.ticket)
+        temp_proofs = common.get_temp_proofs(report.ticket)
 
     # Send email to Provider
     try:
@@ -143,66 +142,11 @@ def close_because_all_down(report=None, denied_by=None):
     except (AttributeError, TypeError, ValueError, ValidationError):
         pass
 
-    # Closing ticket and archiving report
-    resolution = Resolution.objects.get(codename=settings.CODENAMES['no_more_content'])
-    report.ticket.resolution = resolution
-    report.ticket.previousStatus = report.ticket.status
-    report.ticket.status = 'Closed'
-    report.status = 'Archived'
+    # Closing ticket and add tags
+    common.close_ticket(report, resolution_codename=settings.CODENAMES['no_more_content'])
     report.ticket.tags.remove(Tag.objects.get(name=settings.TAGS['phishing_autoreopen']))
     report.ticket.tags.add(Tag.objects.get(name=settings.TAGS['phishing_autoclosed']))
-
-    msg = 'change status from %s to %s, reason : %s'
-    database.log_action_on_ticket(
-        report.ticket,
-        msg % (report.ticket.previousStatus, report.ticket.status, report.ticket.resolution.codename)
-    )
-
-    report.ticket.save()
-    report.save()
     Logger.info(unicode('Ticket %d and report %d closed' % (report.ticket.id, report.id)))
-
-
-def __create_ticket(report, denied_by):
-    """
-        Create ticket
-    """
-    ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority, attach_new=False)
-    action = 'create this ticket with report %d from %s (%s ...)'
-    database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
-
-    if denied_by:
-        try:
-            user = User.objects.get(id=denied_by)
-        except (ObjectDoesNotExist, ValueError):
-            Logger.error(unicode('User %d cannot be found in DB. Skipping...' % (denied_by)))
-            return
-        action = 'deny PhishToCheck report %d' % (report.id)
-        database.log_action_on_ticket(ticket, action, user=user)
-
-    Logger.info(unicode('Ticket %d created with report %d' % (ticket.id, report.id)))
-    return ticket
-
-
-def __get_temp_proofs(ticket):
-    """
-        Get report's ticket content
-    """
-    temp_proofs = []
-    for report in ticket.reportTicket.all():
-        content = 'From: %s\nDate: %s\nSubject: %s\n\n%s\n'
-        temp_proofs.append(
-            Proof.objects.create(
-                content=content % (
-                    report.provider.email,
-                    report.receivedDate.strftime("%d/%m/%y %H:%M"),
-                    report.subject,
-                    utils.dehtmlify(report.body)
-                ),
-                ticket=report.ticket,
-            )
-        )
-    return temp_proofs
 
 
 def __send_email(ticket, email, codename, lang='EN'):

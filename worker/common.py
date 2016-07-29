@@ -27,7 +27,9 @@ from django.core.validators import validate_email
 
 import database
 
+from abuse.models import User, Resolution, Proof
 from factory.factory import ImplementationFactory
+from utils import utils
 
 
 def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report_id=None):
@@ -54,3 +56,60 @@ def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report
             prefetched_email.body
         )
         database.log_action_on_ticket(ticket, 'send an email to %s' % (email))
+
+
+def create_ticket(report, denied_by=None, attach_new=False):
+    """
+        Create a `abuse.models.Ticket`
+    """
+    ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority, attach_new=attach_new)
+    action = 'create this ticket with report %d from %s (%s ...)'
+    database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
+
+    if denied_by:
+        user = User.objects.get(id=denied_by)
+        action = 'deny PhishToCheck report %d' % (report.id)
+        database.log_action_on_ticket(ticket, action, user=user)
+
+    return ticket
+
+
+def close_ticket(report, resolution_codename=None):
+    """
+        Close a `abuse.models.Ticket`
+    """
+    resolution = Resolution.objects.get(codename=resolution_codename)
+    report.ticket.resolution = resolution
+    report.ticket.previousStatus = report.ticket.status
+    report.ticket.status = 'Closed'
+    report.status = 'Archived'
+
+    msg = 'change status from %s to %s, reason : %s'
+    database.log_action_on_ticket(
+        report.ticket,
+        msg % (report.ticket.previousStatus, report.ticket.status, report.ticket.resolution.codename)
+    )
+
+    report.ticket.save()
+    report.save()
+
+
+def get_temp_proofs(ticket):
+    """
+        Get report's ticket content
+    """
+    temp_proofs = []
+    for report in ticket.reportTicket.all():
+        content = 'From: %s\nDate: %s\nSubject: %s\n\n%s\n'
+        temp_proofs.append(
+            Proof.objects.create(
+                content=content % (
+                    report.provider.email,
+                    report.receivedDate.strftime("%d/%m/%y %H:%M"),
+                    report.subject,
+                    utils.dehtmlify(report.body)
+                ),
+                ticket=report.ticket,
+            )
+        )
+    return temp_proofs

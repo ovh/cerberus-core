@@ -326,8 +326,6 @@ def _update_status(body, report, user):
             ticket.save()
         body['ticket'] = None
     elif report.status.lower() == 'tovalidate' and body['status'].lower() == 'attached':
-        if not all((report.defendant, report.service)):
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing defendant and/or service'}
         report.status = 'New'
         report.save()
         utils.queue.enqueue(

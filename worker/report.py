@@ -25,6 +25,8 @@ import hashlib
 from collections import Counter
 from datetime import datetime, timedelta
 
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.conf import settings
 from django.db import transaction
 from django.db.models import ObjectDoesNotExist, Q
@@ -33,7 +35,7 @@ import common
 import database
 
 from abuse.models import (AttachedDocument, Report, ReportItem, Service,
-                          ReportThreshold, Ticket, Defendant, User)
+                          ReportThreshold, Ticket, Defendant, User, Proof)
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.mailer.abstract import MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
@@ -588,6 +590,16 @@ def reparse_validated(report_id=None, user_id=None):
         Logger.error(unicode('Report %d cannot be found in DB. Skipping...' % (report_id)))
         return
 
+    if not report.defendant or not report.service:
+        _create_closed_ticket(report)
+    else:
+        _reinject_validated(report)
+
+    Logger.error(unicode('Report %d successfully processed' % (report_id)))
+
+
+def _reinject_validated(report):
+
     trusted = True
     ticket = None
     if all((report.defendant, report.category, report.service)):
@@ -620,3 +632,32 @@ def reparse_validated(report_id=None, user_id=None):
             __send_ack(report, lang='EN')
         except MailerServiceException as ex:
             raise MailerServiceException(ex)
+
+
+def _create_closed_ticket(report):
+
+    report.ticket = common.create_ticket(report, attach_new=False)
+    report.save()
+
+    # Add temp proof(s) for mail content
+    temp_proofs = []
+    if not report.ticket.proof.count():
+        temp_proofs = common.get_temp_proofs(report.ticket)
+
+    # Send email to Provider
+    try:
+        validate_email(report.provider.email.strip())
+        Logger.info(unicode('Sending email to provider'))
+        common.send_email(report.ticket, [report.provider.email], settings.CODENAMES['no_managed_ip'])
+        report.ticket.save()
+        Logger.info(unicode('Mail sent to provider'))
+        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(report.ticket)
+
+        # Delete temp proof(s)
+        for proof in temp_proofs:
+            Proof.objects.filter(id=proof.id).delete()
+    except (AttributeError, TypeError, ValueError, ValidationError):
+        pass
+
+    common.close_ticket(report, resolution_codename=settings.CODENAMES['not_managed_ip'])
+    Logger.info(unicode('Ticket %d and report %d closed' % (report.ticket.id, report.id)))
