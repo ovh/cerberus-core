@@ -1419,7 +1419,7 @@ def _precheck_user_fields_update_authorizations(user, body):
     """
     authorizations = user.operator.role.modelsAuthorizations
     if authorizations.get('ticket') and authorizations['ticket'].get('fields'):
-        body = {k: v for k, v in body.iteritems() if k.lower() in authorizations['ticket']['fields']}
+        body = {k: v for k, v in body.iteritems() if k in authorizations['ticket']['fields']}
         if not body:
             return False, body
         return True, body
