@@ -591,14 +591,14 @@ def reparse_validated(report_id=None, user_id=None):
         return
 
     if not report.defendant or not report.service:
-        _create_closed_ticket(report)
+        _create_closed_ticket(report, user)
     else:
-        _reinject_validated(report)
+        _reinject_validated(report, user)
 
     Logger.error(unicode('Report %d successfully processed' % (report_id)))
 
 
-def _reinject_validated(report):
+def _reinject_validated(report, user):
 
     trusted = True
     ticket = None
@@ -634,7 +634,7 @@ def _reinject_validated(report):
             raise MailerServiceException(ex)
 
 
-def _create_closed_ticket(report):
+def _create_closed_ticket(report, user):
 
     report.ticket = common.create_ticket(report, attach_new=False)
     report.save()
@@ -659,5 +659,5 @@ def _create_closed_ticket(report):
     except (AttributeError, TypeError, ValueError, ValidationError):
         pass
 
-    common.close_ticket(report, resolution_codename=settings.CODENAMES['invalid'])
+    common.close_ticket(report, resolution_codename=settings.CODENAMES['invalid'], user=user)
     Logger.info(unicode('Ticket %d and report %d closed' % (report.ticket.id, report.id)))

@@ -74,7 +74,7 @@ def create_ticket(report, denied_by=None, attach_new=False):
     return ticket
 
 
-def close_ticket(report, resolution_codename=None):
+def close_ticket(report, resolution_codename=None, user=None):
     """
         Close a `abuse.models.Ticket`
     """
@@ -87,7 +87,8 @@ def close_ticket(report, resolution_codename=None):
     msg = 'change status from %s to %s, reason : %s'
     database.log_action_on_ticket(
         report.ticket,
-        msg % (report.ticket.previousStatus, report.ticket.status, report.ticket.resolution.codename)
+        msg % (report.ticket.previousStatus, report.ticket.status, report.ticket.resolution.codename),
+        user=user,
     )
 
     report.ticket.save()
