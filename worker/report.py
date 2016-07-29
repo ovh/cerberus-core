@@ -458,6 +458,12 @@ def __update_ticket_if_answer(ticket, abuse_report, filename):
     )
     actions = ['received an email from %s' % (abuse_report.provider)]
 
+    try:
+        if ticket.treatedBy.operator.role.modelsAuthorizations['ticket'].get('unassignedOnAnswer'):
+            ticket.treatedBy = None
+    except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
+        pass
+
     if not abuse_report.ack:
 
         ticket.previousStatus = ticket.status
