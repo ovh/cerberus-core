@@ -155,6 +155,8 @@ def get_specific_filtered_todo_tickets(where, ids, priority, status, treated_by,
             ).count()
             if count == 0:
                 res.append(ticket)
+        else:
+            res.append(ticket)
     return res
 
 
