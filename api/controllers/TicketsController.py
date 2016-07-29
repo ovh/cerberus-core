@@ -1407,16 +1407,10 @@ def _precheck_user_interact_authorizations(user, body):
     """
        Check if user's interact parameters are allowed
     """
-    allowed_actions = TicketWorkflowPreset.objects.filter(
-        roles=user.operator.role
-    ).values_list(
-        'config__action__codename',
-        flat=True
-    )
-    try:
-        return body['action']['codename'] in allowed_actions
-    except KeyError:
-        return False
+    authorizations = user.operator.role.modelsAuthorizations
+    if authorizations.get('ticket') and authorizations['ticket'].get('interact'):
+        return body['action']['codename'] in authorizations['ticket']['interact']
+    return False
 
 
 def _precheck_user_fields_update_authorizations(user, body):
