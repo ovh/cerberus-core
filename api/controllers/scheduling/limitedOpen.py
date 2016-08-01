@@ -149,11 +149,9 @@ def get_specific_filtered_todo_tickets(where, ids, priority, status, treated_by,
     res = []
     for ticket in tickets:
         if ticket.get('defendant'):
-            count = Defendant.objects.filter(
-                id=ticket['defendant'],
-                ticketDefendant__creationDate__lte=(datetime.now() - timedelta(days=90))
-            ).count()
-            if count == 0:
+            defendant = Defendant.objects.get(id=ticket['defendant'])
+            count = defendant.ticketDefendant.filter(creationDate__lte=(datetime.now() - timedelta(days=90))).count()
+            if count == 0 and defendant.details.creationDate < (datetime.now() - timedelta(days=15)):
                 res.append(ticket)
         else:
             res.append(ticket)
