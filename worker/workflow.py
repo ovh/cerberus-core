@@ -28,7 +28,7 @@ from time import mktime, time
 
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.db.models import Q
+from django.db.models import ObjectDoesNotExist, Q
 
 import database
 
@@ -82,16 +82,33 @@ def update_waiting():
                         'ticket': ticket.id,
                     }
                 )
+                _check_auto_unassignation(ticket)
                 ticket.status = ALARM
                 ticket.snoozeStart = None
                 ticket.snoozeDuration = None
                 ticket.previousStatus = WAITING
                 ticket.reportTicket.all().update(status='Attached')
                 ticket.save()
-                database.log_action_on_ticket(ticket, 'change status from %s to %s' % (ticket.previousStatus, ticket.status))
+                database.log_action_on_ticket(
+                    ticket=ticket,
+                    action='change_status',
+                    previous_value=ticket.previousStatus,
+                    new_value=ticket.status
+                )
 
         except (AttributeError, ValueError) as ex:
             Logger.debug(unicode('Error while updating ticket %d : %s' % (ticket.id, ex)))
+
+
+def _check_auto_unassignation(ticket):
+
+    history = ticket.ticketHistory.filter(actionType='ChangeStatus').order_by('-date').values_list('ticketStatus', flat=True)[:3]
+    try:
+        unassigned_on_multiple_alarm = ticket.treatedBy.operator.role.modelsAuthorizations['ticket']['unassignedOnMultipleAlarm']
+        if unassigned_on_multiple_alarm and history == [WAITING, ALARM, WAITING]:
+            ticket.treatedBy = None
+    except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
+        pass
 
 
 def update_paused():
@@ -116,8 +133,12 @@ def update_paused():
                 ticket.pauseDuration = None
                 ticket.previousStatus = PAUSED
                 ticket.save()
-                database.log_action_on_ticket(ticket, 'change status from %s to %s' % (ticket.previousStatus, ticket.status))
-                ticket.save()
+                database.log_action_on_ticket(
+                    ticket=ticket,
+                    action='change_status',
+                    previous_value=ticket.previousStatus,
+                    new_value=ticket.status
+                )
 
         except (AttributeError, ValueError) as ex:
             Logger.debug(unicode('Error while updating ticket %d : %s' % (ticket.id, ex)))

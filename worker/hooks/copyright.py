@@ -65,7 +65,7 @@ class CopyrightWorkflowHook(WorkflowHookBase):
         """
         from worker import common, database
 
-        action = 'attach report %d from %s (%s ...) to this ticket'
+        new_ticket = False
         if not ticket:  # Create ticket
             ticket = database.create_ticket(
                 report.defendant,
@@ -73,7 +73,7 @@ class CopyrightWorkflowHook(WorkflowHookBase):
                 report.service,
                 attach_new=True
             )
-            action = 'create this ticket with report %d from %s (%s ...)'
+            new_ticket = True
             utils.scheduler.enqueue_in(
                 timedelta(seconds=settings.GENERAL_CONFIG['copyright']['wait']),
                 'ticket.timeout',
@@ -86,7 +86,12 @@ class CopyrightWorkflowHook(WorkflowHookBase):
             ticket.snoozeStart = datetime.now()
             ticket.save()
 
-        database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='attach_report',
+            report=report,
+            new_ticket=new_ticket,
+        )
 
         # Send emails to provider/defendant (template, email, lang)
 

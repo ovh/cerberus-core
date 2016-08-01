@@ -75,15 +75,22 @@ def apply_if_no_reply(ticket_id=None, action_id=None, ip_addr=None, resolution_i
     ticket.snoozeDuration = None
     ticket.snoozeStart = None
 
+    close_reason = None
     if close and resolution_id:
         __close_ticket(ticket, resolution_id)
-        msg = 'change status from %s to %s, reason : %s' % (ticket.previousStatus, ticket.status, ticket.resolution.codename)
+        close_reason = ticket.resolution.codename
     else:
         ticket.status = 'Alarm'
-        msg = 'change status from %s to %s' % (ticket.previousStatus, ticket.status)
 
-    database.log_action_on_ticket(ticket, msg, user=user)
     ticket.save()
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='change_status',
+        user=user,
+        previous_value=ticket.previousStatus,
+        new_value=ticket.status,
+        close_reason=close_reason
+    )
     Logger.info(unicode('Ticket %d processed. Next !' % (ticket_id)))
 
 
@@ -112,9 +119,14 @@ def apply_then_close(ticket_id=None, action_id=None, ip_addr=None, resolution_id
     ticket = Ticket.objects.get(id=ticket_id)
     user = User.objects.get(id=user_id)
     __close_ticket(ticket, resolution_id)
-    msg = 'change status from %s to %s, reason : %s' % (ticket.previousStatus, ticket.status, ticket.resolution.codename)
-    database.log_action_on_ticket(ticket, msg, user=user)
-    ticket.save()
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='change_status',
+        user=user,
+        previous_value=ticket.previousStatus,
+        new_value=ticket.status,
+        close_reason=ticket.resolution.codename
+    )
     ticket.resolution_id = resolution_id
     ticket.save()
 
@@ -153,7 +165,13 @@ def apply_action(ticket_id=None, action_id=None, ip_addr=None, user_id=None):
         ticket.previousStatus = ticket.status
         ticket.status = 'ActionError'
         ticket.save()
-        database.log_action_on_ticket(ticket, 'change status from %s to %s' % (ticket.previousStatus, ticket.status))
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='change_status',
+            user=user,
+            previous_value=ticket.previousStatus,
+            new_value=ticket.status,
+        )
         return False
 
     # Call action service
@@ -174,7 +192,13 @@ def apply_action(ticket_id=None, action_id=None, ip_addr=None, user_id=None):
         ticket.previousStatus = ticket.status
         ticket.status = 'ActionError'
         ticket.save()
-        database.log_action_on_ticket(ticket, 'change status from %s to %s' % (ticket.previousStatus, ticket.status))
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='change_status',
+            user=user,
+            previous_value=ticket.previousStatus,
+            new_value=ticket.status,
+        )
         return False
 
 

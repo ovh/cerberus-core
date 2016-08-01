@@ -25,17 +25,16 @@ import hashlib
 from collections import Counter
 from datetime import datetime, timedelta
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.conf import settings
 from django.db import transaction
 from django.db.models import ObjectDoesNotExist, Q
 
 import common
 import database
-
-from abuse.models import (AttachedDocument, Report, ReportItem, Service,
-                          ReportThreshold, Ticket, Defendant, User, Proof)
+from abuse.models import (AttachedDocument, Defendant, Proof, Report,
+                          ReportItem, ReportThreshold, Service, Ticket, User)
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.mailer.abstract import MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
@@ -239,18 +238,22 @@ def __create_with_services(abuse_report, filename, services):
             continue
 
         # Create ticket if trusted
-        action = None
+        new_ticket = False
         if not ticket and trusted:
             ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
-            action = 'create this ticket with report %d from %s (%s ...)'
+            new_ticket = True
 
         if ticket:
             report.ticket = Ticket.objects.get(id=ticket.id)
             report.status = 'Attached'
             report.save()
             database.set_ticket_higher_priority(report.ticket)
-            action = action if action else 'attach report %d from %s (%s ...) to this ticket'
-            database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
+            database.log_action_on_ticket(
+                ticket=ticket,
+                action='attach_report',
+                report=report,
+                new_ticket=new_ticket
+            )
 
     return created_reports
 
@@ -456,7 +459,7 @@ def __update_ticket_if_answer(ticket, abuse_report, filename):
             'ticket': ticket.id,
         }
     )
-    actions = ['received an email from %s' % (abuse_report.provider)]
+    actions = [{'ticket': ticket, 'action': 'receive_email', 'email': abuse_report.provider}]
 
     try:
         if ticket.treatedBy.operator.role.modelsAuthorizations['ticket'].get('unassignedOnAnswer'):
@@ -472,11 +475,11 @@ def __update_ticket_if_answer(ticket, abuse_report, filename):
         ticket.snoozeDuration = None
         ticket.reportTicket.all().update(status='Attached')
         ticket.save()
-        actions.append('change status from %s to %s' % (ticket.previousStatus, ticket.status))
+        actions.append({'ticket': ticket, 'action': 'change_status', 'previous_value': ticket.previousStatus, 'new_value': ticket.status})
         _cancel_ticket_jobs(ticket)
 
     for action in actions:
-        database.log_action_on_ticket(ticket, action)
+        database.log_action_on_ticket(**action)
 
     ImplementationFactory.instance.get_singleton_of('MailerServiceBase').attach_external_answer(
         ticket,
@@ -575,8 +578,10 @@ def __create_threshold_ticket(data, thres):
     defendant = Defendant.objects.filter(customerId=data[0]).last()
     ticket = database.create_ticket(defendant, thres.category, service)
     database.log_action_on_ticket(
-        ticket,
-        'create this ticket with threshold (more than %s reports received in %s days)' % (thres.threshold, thres.interval)
+        ticket=ticket,
+        action='create_threshold',
+        threshold_count=thres.threshold,
+        threshold_interval=thres.interval,
     )
     return ticket
 
@@ -621,18 +626,22 @@ def _reinject_validated(report, user):
                 return
 
     # Create ticket if trusted
-    action = None
+    new_ticket = False
     if not ticket and trusted:
         ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
-        action = 'create this ticket with report %d from %s (%s ...)'
+        new_ticket = True
 
     if ticket:
         report.ticket = Ticket.objects.get(id=ticket.id)
         report.status = 'Attached'
         report.save()
         database.set_ticket_higher_priority(report.ticket)
-        action = action if action else 'attach report %d from %s (%s ...) to this ticket'
-        database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]), user=user)
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='attach_report',
+            report=report,
+            new_ticket=new_ticket
+        )
 
         try:
             __send_ack(report, lang='EN')

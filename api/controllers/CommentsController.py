@@ -28,8 +28,8 @@ from time import mktime
 from django.db.models import ObjectDoesNotExist
 from django.forms.models import model_to_dict
 
-import GeneralController
 from abuse.models import Comment, DefendantComment, Ticket, TicketComment, User
+from worker import database
 
 
 def check_comment(func):
@@ -87,7 +87,11 @@ def create(body, ticket_id=None, defendant_id=None, user_id=None):
         TicketComment.objects.create(ticket_id=ticket_id, comment_id=comment.id)
         user = User.objects.get(id=user_id)
         ticket = Ticket.objects.get(id=ticket_id)
-        GeneralController.log_action(ticket, user, 'add comment')
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='add_comment',
+            user=user
+        )
     elif defendant_id:
         DefendantComment.objects.create(defendant_id=defendant_id, comment_id=comment.id)
 
@@ -107,7 +111,11 @@ def update(body, comment_id=None, ticket_id=None, user_id=None):
         if ticket_id:
             user = User.objects.get(id=user_id)
             ticket = Ticket.objects.get(id=ticket_id)
-            GeneralController.log_action(ticket, user, 'update comment')
+            database.log_action_on_ticket(
+                ticket=ticket,
+                action='update_comment',
+                user=user
+            )
 
     except KeyError:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing comment field in body'}
@@ -124,7 +132,11 @@ def delete(comment_id=None, ticket_id=None, defendant_id=None, user_id=None):
         Comment.objects.filter(id=comment_id).delete()
         user = User.objects.get(id=user_id)
         ticket = Ticket.objects.get(id=ticket_id)
-        GeneralController.log_action(ticket, user, 'delete comment')
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='delete_comment',
+            user=user
+        )
     elif defendant_id:
         DefendantComment.objects.filter(defendant=defendant_id, comment=comment_id).delete()
         Comment.objects.filter(id=comment_id).delete()

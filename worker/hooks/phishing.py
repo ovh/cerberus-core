@@ -80,14 +80,14 @@ class PhishingWorkflowHook(WorkflowHookBase):
             return True
 
         # All items are clearly phishing ?
-        action = None
+        new_ticket = False
         if all((is_trusted, is_there_some_urls, are_all_items_phishing(report))):
             if not ticket:
                 ticket = _create_ticket(report)
-                action = 'create this ticket with report %d from %s (%s ...)'
+                new_ticket = True
 
             phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
-            _attach_ticket_to_report(report, ticket, action)
+            _attach_report_to_ticket(report, ticket, new_ticket)
             Logger.debug(unicode('Clearly phishing workflow applied'))
             return True
 
@@ -105,13 +105,13 @@ class PhishingWorkflowHook(WorkflowHookBase):
         else:
             if not ticket and is_trusted:  # Create ticket
                 ticket = _create_ticket(report)
-                action = 'create this ticket with report %d from %s (%s ...)'
+                new_ticket = True
 
             if is_there_some_urls:  # Block urls
                 phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
 
             if ticket:
-                _attach_ticket_to_report(report, ticket, action)
+                _attach_report_to_ticket(report, ticket, new_ticket)
 
             Logger.debug(unicode('Trusted phishing provider workflow applied'))
             return True
@@ -158,13 +158,17 @@ def _create_ticket(report):
     return ticket
 
 
-def _attach_ticket_to_report(report, ticket, action):
+def _attach_report_to_ticket(report, ticket, new_ticket):
 
     from worker import database
 
     report.ticket = Ticket.objects.get(id=ticket.id)
     report.status = 'Attached'
     report.save()
-    action = action if action else 'attach report %d from %s (%s ...) to this ticket'
-    database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='attach_report',
+        report=report,
+        new_ticket=new_ticket
+    )
     database.set_ticket_higher_priority(report.ticket)

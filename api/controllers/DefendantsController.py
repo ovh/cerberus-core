@@ -27,15 +27,16 @@ from time import mktime, time
 
 from django.core.exceptions import FieldError
 from django.db import IntegrityError
-from django.db.models import Q, ObjectDoesNotExist
+from django.db.models import ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
 
-import GeneralController
-from abuse.models import (Category, Defendant, DefendantComment, Stat, Tag,
-                          Report, Ticket, DefendantRevision, DefendantHistory)
+from abuse.models import (Category, Defendant, DefendantComment,
+                          DefendantHistory, DefendantRevision, Report, Stat,
+                          Tag, Ticket)
 from adapters.dao.customer.abstract import CustomerDaoException
 from factory.factory import ImplementationFactory
 from utils import schema
+from worker import database
 
 DEFENDANT_FIELDS = [fld.name for fld in Defendant._meta.fields]
 
@@ -106,7 +107,12 @@ def add_tag(defendant_id, body, user):
             defendt.tags.add(tag)
             defendt.save()
             for ticket in defendt.ticketDefendant.all():
-                GeneralController.log_action(ticket, user, 'add tag %s' % (tag.name))
+                database.log_action_on_ticket(
+                    ticket=ticket,
+                    action='add_tag',
+                    user=user,
+                    tag_name=tag.name
+                )
 
     except (KeyError, FieldError, IntegrityError, ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404}
@@ -127,7 +133,12 @@ def remove_tag(defendant_id, tag_id, user):
             defendt.save()
 
             for ticket in defendt.ticketDefendant.all():
-                GeneralController.log_action(ticket, user, 'remove tag %s' % (tag.name))
+                database.log_action_on_ticket(
+                    ticket=ticket,
+                    action='remove_tag',
+                    user=user,
+                    tag_name=tag.name
+                )
 
     except (ObjectDoesNotExist, FieldError, IntegrityError, ValueError):
         return 404, {'status': 'Not Found', 'code': 404}

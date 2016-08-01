@@ -40,17 +40,15 @@ from django.core.exceptions import (FieldError, ObjectDoesNotExist,
                                     ValidationError)
 from django.core.validators import validate_ipv46_address
 from django.db import IntegrityError
-from django.db.models import Q, Count
+from django.db.models import Count, Q
 from django.forms.models import model_to_dict
 
-import ReportsController
-import TicketsController
-from abuse.models import (AbusePermission, Category, History, Profile,
-                          Report, MassContact, MassContactResult, ReportItem,
+from abuse.models import (AbusePermission, Category, MassContact,
+                          MassContactResult, Profile, Report, ReportItem,
                           Resolution, Tag, Ticket)
-from adapters.services.kpi.abstract import KPIServiceException
-from factory.factory import ImplementationFactory, TicketSchedulingAlgorithmFactory
+from factory.factory import TicketSchedulingAlgorithmFactory
 from utils import logger, utils
+from worker import database
 
 Logger = logger.get_logger(__name__)
 CRYPTO = utils.Crypto()
@@ -298,8 +296,11 @@ def update_user(user_id, body):
         cats = AbusePermission.objects.filter(user=user).values_list('category', flat=True).distinct()
         for ticket in Ticket.objects.filter(treatedBy=user):
             if ticket.category_id not in cats:
-                abuse_user = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
-                log_action(ticket, abuse_user, 'change treatedBy from %s to nobody' % (user.username))
+                database.log_action_on_ticket(
+                    ticket=ticket,
+                    action='change_treatedby',
+                    new_value=user.username
+                )
                 ticket.treatedBy = None
                 ticket.save()
         body.pop('profiles', None)
@@ -484,6 +485,7 @@ def search(**kwargs):
                         new_where[key].remove(field)
             values['filters']['where'] = new_where
 
+    from api.controllers import ReportsController, TicketsController
     code1, reps, nb_reps = ReportsController.index(filters=json.dumps(custom_filters['report']['filters']), user=user)
     code2, ticks, nb_ticks = TicketsController.index(filters=json.dumps(custom_filters['ticket']['filters']), user=user)
 
@@ -589,79 +591,6 @@ def status(**kwargs):
         if str(model).lower() == 'report':
             return [{'label': v} for _, v in Report.REPORT_STATUS]
     return [{'label': v} for _, v in Ticket.TICKET_STATUS] + [{'label': v} for _, v in Report.REPORT_STATUS]
-
-
-def log_action(ticket, user, action):
-    """ Log all abuse updates
-    """
-    History.objects.create(
-        date=datetime.now(),
-        ticket=ticket,
-        user=user,
-        action=action
-    )
-
-    Logger.debug(
-        unicode(action),
-        extra={
-            'ticket': ticket.id,
-            'public_id': ticket.publicId,
-            'user': user.username,
-            'action': action,
-        }
-    )
-    if ImplementationFactory.instance.is_implemented('KPIServiceBase'):
-        _generates_kpi_infos(ticket, action)
-
-
-def _generates_kpi_infos(ticket, action):
-    """
-        Generates KPI infos
-    """
-    search_assign = re.search('change treatedby from nobody to', action.lower())
-    if search_assign:
-        _generates_onassign_kpi(ticket)
-        return
-
-    search_closed = re.search('change status from .* to closed', action.lower())
-    if search_closed:
-        _generates_onclose_kpi(ticket)
-        return
-
-    search_create = re.search('create this ticket with report', action.lower())
-    if search_create:
-        _genereates_oncreate_kpi(ticket)
-        return
-
-
-def _generates_onassign_kpi(ticket):
-    """
-        Kpi on ticket assignation
-    """
-    try:
-        ImplementationFactory.instance.get_singleton_of('KPIServiceBase').new_ticket_assign(ticket)
-    except KPIServiceException as ex:
-        Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
-
-
-def _generates_onclose_kpi(ticket):
-    """
-        Kpi on ticket close
-    """
-    try:
-        ImplementationFactory.instance.get_singleton_of('KPIServiceBase').close_ticket(ticket)
-    except KPIServiceException as ex:
-        Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
-
-
-def _genereates_oncreate_kpi(ticket):
-    """
-        Kpi on ticket creation
-    """
-    try:
-        ImplementationFactory.instance.get_singleton_of('KPIServiceBase').new_ticket(ticket)
-    except KPIServiceException as ex:
-        Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
 
 
 def get_mass_contact(filters=None):

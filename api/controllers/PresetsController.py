@@ -27,13 +27,13 @@ from urllib import unquote
 
 from django.core.exceptions import FieldError
 from django.db import transaction
-from django.db.models import Q, ObjectDoesNotExist
+from django.db.models import ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
 
-import TemplatesController
 from abuse.models import (MailTemplate, Ticket, TicketAction,
                           TicketActionParams, TicketWorkflowPreset,
                           TicketWorkflowPresetConfig)
+from api.controllers import TemplatesController
 
 LANGUAGES = [language[0] for language in MailTemplate.LANG]
 

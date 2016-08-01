@@ -36,21 +36,20 @@ import html2text
 from django.conf import settings
 from django.core.exceptions import FieldError, MultipleObjectsReturned
 from django.db import IntegrityError, transaction
-from django.db.models import Q, FieldDoesNotExist, ObjectDoesNotExist
+from django.db.models import FieldDoesNotExist, ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
 from netaddr import AddrConversionError, AddrFormatError, IPNetwork
 
-import DefendantsController
-import GeneralController
-import ProvidersController
-import ReportItemsController
-import TicketsController
-from abuse.models import (AbusePermission, AttachedDocument, Plaintiff, Report,
-                          ReportItem, Service, Tag, Ticket, Defendant)
+from abuse.models import (AbusePermission, AttachedDocument, Defendant,
+                          Plaintiff, Report, ReportItem, Service, Tag, Ticket)
 from adapters.services.search.abstract import SearchServiceException
 from adapters.services.storage.abstract import StorageServiceException
+from api.controllers import (DefendantsController, GeneralController,
+                             ProvidersController, ReportItemsController,
+                             TicketsController)
 from factory.factory import ImplementationFactory
 from utils import utils
+from worker import database
 
 IP_CIDR_RE = re.compile(r"(?<!\d\.)(?<!\d)(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}(?!\d|(?:\.\d))")
 STATUS = [status[0].lower() for status in Report.REPORT_STATUS]
@@ -260,8 +259,6 @@ def show(report_id):
 def update(report_id, body, user):
     """ Update a report
     """
-    from worker import database
-
     allowed, body = _precheck_user_fields_update_authorizations(user, body)
     if not allowed:
         return 403, {'status': 'Forbidden', 'code': 403, 'message': 'You are not allowed to edit any fields'}

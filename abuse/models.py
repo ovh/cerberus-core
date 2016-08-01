@@ -370,9 +370,37 @@ class History(models.Model):
     """
         Ticket change history
     """
+    ACTION_TYPE = (
+        ('AddTag', 'AddTag'),
+        ('RemoveTag', 'RemoveTag'),
+        ('AddItem', 'AddItem'),
+        ('UpdateItem', 'UpdateItem'),
+        ('DeleteItem', 'DeleteItem'),
+        ('AddProof', 'AddProof'),
+        ('UpdateProof', 'UpdateProof'),
+        ('DeleteProof', 'DeleteProof'),
+        ('AddComment', 'AddComment'),
+        ('UpdateComment', 'UpdateComment'),
+        ('DeleteComment', 'DeleteComment'),
+        ('ValidatePhishtocheck', 'ValidatePhishtocheck'),
+        ('DenyPhishtocheck', 'DenyPhishtocheck'),
+        ('ChangeStatus', 'ChangeStatus'),
+        ('ChangeTreatedby', 'ChangeTreatedby'),
+        ('SendEmail', 'SendEmail'),
+        ('ReceiveEmail', 'ReceiveEmail'),
+        ('AttachReport', 'AttachReport'),
+        ('SetAction', 'SetAction'),
+        ('CancelAction', 'CancelAction'),
+        ('UpdateProperty', 'UpdateProperty'),
+        ('CreateThreshold', 'CreateThreshold'),
+        ('CreateMasscontact', 'CreateMasscontact'),
+    )
+
     ticket = models.ForeignKey(Ticket, null=False, related_name='ticketHistory')
     user = models.ForeignKey(User, null=False)
     action = TruncatedCharField(null=False, max_length=255)
+    actionType = TruncatedCharField(max_length=32, null=True, choices=ACTION_TYPE, default='UpdateProperty')
+    ticketStatus = TruncatedCharField(null=True, max_length=32)
     date = models.DateTimeField(auto_now=True, null=False)
 
 

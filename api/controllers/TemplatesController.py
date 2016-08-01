@@ -28,7 +28,7 @@ from urllib import unquote
 
 from django.core.exceptions import FieldError
 from django.db import IntegrityError
-from django.db.models import Q, ObjectDoesNotExist, ProtectedError
+from django.db.models import ObjectDoesNotExist, ProtectedError, Q
 from django.forms.models import model_to_dict
 
 from abuse.models import MailTemplate, Ticket

@@ -71,8 +71,12 @@ class AcnsWorkflowHook(WorkflowHookBase):
             report.service,
             attach_new=False
         )
-        action = 'create this ticket with report %d from %s (%s ...)'
-        database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='attach_report',
+            report=report,
+            new_ticket=True
+        )
 
         # Add proof
         content = regexp.ACNS_PROOF.search(report.body).group()
@@ -104,8 +108,11 @@ class AcnsWorkflowHook(WorkflowHookBase):
         ticket.update = False
         ticket.save()
         database.log_action_on_ticket(
-            ticket,
-            'change status from %s to %s, reason : %s' % (ticket.previousStatus, ticket.status, resolution.codename)
+            ticket=ticket,
+            action='change_status',
+            previous_value=ticket.previousStatus,
+            new_value=ticket.status,
+            close_reason=resolution.codename
         )
         report.ticket = Ticket.objects.get(id=ticket.id)
         report.status = 'Archived'

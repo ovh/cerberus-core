@@ -26,8 +26,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
 import database
-
-from abuse.models import User, Resolution, Proof
+from abuse.models import Proof, Resolution, User
 from factory.factory import ImplementationFactory
 from utils import utils
 
@@ -55,7 +54,11 @@ def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report
             prefetched_email.subject,
             prefetched_email.body
         )
-        database.log_action_on_ticket(ticket, 'send an email to %s' % (email))
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='send_email',
+            email=email
+        )
 
 
 def create_ticket(report, denied_by=None, attach_new=False):
@@ -63,13 +66,21 @@ def create_ticket(report, denied_by=None, attach_new=False):
         Create a `abuse.models.Ticket`
     """
     ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority, attach_new=attach_new)
-    action = 'create this ticket with report %d from %s (%s ...)'
-    database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='attach_report',
+        new_ticket=True,
+        report=report
+    )
 
     if denied_by:
         user = User.objects.get(id=denied_by)
-        action = 'deny PhishToCheck report %d' % (report.id)
-        database.log_action_on_ticket(ticket, action, user=user)
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='deny_phishtocheck',
+            user=user,
+            report=report
+        )
 
     return ticket
 
@@ -84,11 +95,13 @@ def close_ticket(report, resolution_codename=None, user=None):
     report.ticket.status = 'Closed'
     report.status = 'Archived'
 
-    msg = 'change status from %s to %s, reason : %s'
     database.log_action_on_ticket(
-        report.ticket,
-        msg % (report.ticket.previousStatus, report.ticket.status, report.ticket.resolution.codename),
+        ticket=report.ticket,
+        action='change_status',
         user=user,
+        previous_value=report.ticket.previousStatus,
+        new_value=report.ticket.status,
+        close_reason=report.ticket.resolution.codename
     )
 
     report.ticket.save()

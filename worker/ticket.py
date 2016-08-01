@@ -116,10 +116,18 @@ def timeout(ticket_id=None):
         Logger.error(unicode('Error while getting IP for action, exiting'))
         ticket.status = ticket.previousStatus
         ticket.status = 'ActionError'
-        database.log_action_on_ticket(ticket, 'change status from %s to %s' % (ticket.previousStatus, ticket.status), BOT_USER)
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='change status',
+            previous_value=ticket.previousStatus,
+            new_value=ticket.status
+        )
         comment = Comment.objects.create(user=BOT_USER, comment='None or multiple ip addresses for this ticket')
         TicketComment.objects.create(ticket=ticket, comment=comment)
-        database.log_action_on_ticket(ticket, 'add comment', BOT_USER)
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='add_comment'
+        )
         ticket.save()
         return
 
@@ -165,7 +173,11 @@ def _apply_timeout_action(ticket, ip_addr, action):
 
     Logger.info(unicode('Executing action %s for ticket %d' % (action.name, ticket.id)))
     ticket.action = action
-    database.log_action_on_ticket(ticket, 'set action: %s, execution now' % (action.name), BOT_USER)
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='set_action',
+        action_name=action.name
+    )
     ticket.save()
     async_job = utils.scheduler.schedule(
         scheduled_time=datetime.utcnow() + timedelta(seconds=3),
@@ -218,7 +230,6 @@ def close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_bl
     if ticket.mailerId:
         ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
 
-    actions = []
     resolution = Resolution.objects.get(codename=reason)
     ticket.resolution = resolution
     ticket.previousStatus = ticket.status
@@ -229,12 +240,18 @@ def close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_bl
     ticket.tags.add(Tag.objects.get(name=tag_name))
     ticket.save()
 
-    msg = 'change status from %s to %s, reason : %s'
-    actions.append(msg % (ticket.previousStatus, ticket.status, ticket.resolution.codename))
-    actions.append('add tag %s ' % (tag_name))
-
-    for action in actions:
-        database.log_action_on_ticket(ticket, action)
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='change_status',
+        previous_value=ticket.previousStatus,
+        new_value=ticket.status,
+        close_reason=ticket.resolution.codename
+    )
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='add_tag',
+        tag_name=tag_name
+    )
 
 
 def _get_ip_for_action(ticket):
@@ -361,8 +378,8 @@ def __create_contact_tickets(services, campaign_name, ip_address, category, emai
             attach_new=False,
         )
         database.add_mass_contact_tag(ticket, campaign_name)
-        actions.append('create this ticket with mass contact campaign %s' % (campaign_name))
-        actions.append('change treatedBy from nobody to %s' % (user.username))
+        actions.append({'ticket': ticket, 'action': 'create_masscontact', 'campaign_name': campaign_name})
+        actions.append({'ticket': ticket, 'action': 'change_treatedby', 'new_value': user.username})
         report.ticket = ticket
         report.save()
         Logger.debug(unicode(
@@ -371,17 +388,23 @@ def __create_contact_tickets(services, campaign_name, ip_address, category, emai
 
         # Send email to defendant
         __send_mass_contact_email(ticket, email_subject, email_body)
-        actions.append('send an email to %s' % (report.defendant.details.email))
+        actions.append({'ticket': ticket, 'action': 'send_email', 'email': report.defendant.details.email})
 
         # Close ticket/report
         ticket.resolution = Resolution.objects.get(codename=settings.CODENAMES['fixed_customer'])
         ticket.previousStatus = ticket.status
         ticket.status = 'Closed'
         ticket.save()
-        actions.append('change status from %s to %s, reason : %s' % (ticket.previousStatus, ticket.status, ticket.resolution.codename))
+        actions.append({
+            'ticket': ticket,
+            'action': 'change_status',
+            'previous_value': ticket.previousStatus,
+            'new_value': ticket.status,
+            'close_reason': ticket.resolution.codename
+        })
 
         for action in actions:
-            database.log_action_on_ticket(ticket, action, user=user)
+            database.log_action_on_ticket(**action)
 
 
 def __send_mass_contact_email(ticket, email_subject, email_body):
@@ -483,11 +506,11 @@ def create_ticket_from_phishtocheck(report=None, user=None):
 
     # Create/attach to ticket
     ticket = database.search_ticket(report.defendant, report.category, report.service)
-    action = 'attach report %d from %s (%s ...) to this ticket'
+    new_ticket = False
 
     if not ticket:
         ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
-        action = 'create this ticket with report %d from %s (%s ...)'
+        new_ticket = True
         utils.scheduler.enqueue_in(
             timedelta(seconds=settings.GENERAL_CONFIG['phishing']['wait']),
             'ticket.timeout',
@@ -497,8 +520,18 @@ def create_ticket_from_phishtocheck(report=None, user=None):
     report.ticket = ticket
     report.status = 'Attached'
     report.save()
-    database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
-    database.log_action_on_ticket(ticket, 'validate PhishToCheck report %d' % (report.id), user=user)
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='attach_report',
+        report=report,
+        new_ticket=new_ticket
+    )
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='validate_phishtocheck',
+        user=user,
+        report=report
+    )
 
     # Sending email to provider
     if settings.TAGS['no_autoack'] not in report.provider.tags.all().values_list('name', flat=True):

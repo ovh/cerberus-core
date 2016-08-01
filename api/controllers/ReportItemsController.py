@@ -34,17 +34,16 @@ from urlparse import urlparse
 from django.core.exceptions import FieldError, ValidationError
 from django.core.validators import URLValidator, validate_ipv46_address
 from django.db import IntegrityError, close_old_connections
-from django.db.models import Q, ObjectDoesNotExist
+from django.db.models import ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
 
-import DefendantsController
-import GeneralController
-import TicketsController
 from abuse.models import ItemScreenshotFeedback, Report, ReportItem, Service
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.phishing.abstract import PhishingServiceException
+from api.controllers import DefendantsController, TicketsController
 from factory.factory import ImplementationFactory
 from utils import schema, utils
+from worker import database
 
 socket.setdefaulttimeout(5)
 ITEM_FIELDS = [f.name for f in ReportItem._meta.fields]
@@ -268,7 +267,11 @@ def create(body, user):
             return code, resp
         item, created = ReportItem.objects.get_or_create(**resp)
         if resp['report'].ticket:
-            GeneralController.log_action(resp['report'].ticket, user, 'add item')
+            database.log_action_on_ticket(
+                ticket=resp['report'].ticket,
+                action='add_item',
+                user=user
+            )
     except (AttributeError, FieldError, IntegrityError, KeyError, ObjectDoesNotExist) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
     if not created:
@@ -292,7 +295,11 @@ def update(item_id, body, user):
         ReportItem.objects.filter(pk=item.pk).update(**resp)
         item = ReportItem.objects.get(pk=item.pk)
         if resp['report'].ticket:
-            GeneralController.log_action(resp['report'].ticket, user, 'update item')
+            database.log_action_on_ticket(
+                ticket=resp['report'].ticket,
+                action='update_item',
+                user=user
+            )
     except (AttributeError, FieldError, IntegrityError, KeyError, ObjectDoesNotExist):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
     return show(item_id)
@@ -328,7 +335,11 @@ def delete_from_report(item_id, rep, user):
         ReportItem.objects.filter(report=rep, rawItem=item.rawItem).delete()
         report = Report.objects.get(id=rep)
         if report.ticket:
-            GeneralController.log_action(report.ticket, user, 'delete item')
+            database.log_action_on_ticket(
+                ticket=report.ticket,
+                action='delete_item',
+                user=user
+            )
         return 200, {'status': 'OK', 'code': 200, 'message': 'Item successfully removed'}
     except (ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404, 'message': 'Item not found'}
