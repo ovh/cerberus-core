@@ -42,7 +42,7 @@ from rq import Queue
 from utils.logger import get_logger
 
 
-Logger = get_logger('stat')
+Logger = get_logger('threshold')
 Worker = Queue(connection=Redis())
 
 

@@ -18,16 +18,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-    Parsing template for no-reply@dtecnet.com
+    Parsing template for info@entura.co.uk
 """
 
 from worker.parsing import regexp
 
 TEMPLATE = {
-    'email': 'no-reply@dtecnet.com',
+    'email': 'info@entura.co.uk',
+    'fallback': False,
     'regexp': {
+        'ips': {
+            'pattern': r'(?:operating\s*from\s*OVH\s*IP\s*Address\s*)' + regexp.IPV4,
+        },
         'urls': {
-            'pattern': r'INFRINGING LINKS\s*:\s*' + regexp.URL,
+            'pattern': r'(?:Infringing\s*URLs/Identifiers\s*:\s*\n*)' + regexp.URL,
         },
         'category': {
             'value': 'Copyright',

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 # Copyright (C) 2015-2016, OVH SAS
 #
@@ -27,13 +28,13 @@ from datetime import datetime, timedelta
 
 from django.db.models import Count, Q
 
-from abuse.models import AbusePermission, Defendant, Ticket, User
+from abuse.models import Defendant, Ticket
+from api.controllers.scheduling import common
 from api.controllers.scheduling.abstract import TicketSchedulingAlgorithmBase
 
 TODO_TICKET_STATUS_FILTERS = (['Open'],)
 TODO_TICKET_PRIORITY_FILTERS = ('Normal', 'Low')
 TICKET_FIELDS = [fld.name for fld in Ticket._meta.fields]
-USER_FILTERS_BEGINNER_PRIORITY = ('Low', 'Normal')
 
 
 class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
@@ -78,14 +79,14 @@ class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
             limit = 10
             offset = 1
 
-        where = get_user_filters(user)
+        where = common.get_user_filters(user)
         order_by = ['modificationDate', '-reportTicket__tags__level']
 
         if filters.get('onlyUnassigned'):
             where.append(Q(treatedBy=None))
             treated_by_filters = [{'treatedBy': None}]
         else:
-            treated_by_filters = get_treated_by_filters(user)
+            treated_by_filters = common.get_treated_by_filters(user)
 
         # Aggregate all filters
         where = reduce(operator.and_, where)
@@ -111,27 +112,10 @@ class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
         return res[(offset - 1) * limit:limit * offset], nb_record
 
 
-def get_treated_by_filters(user):
-
-    users = list(set(User.objects.all().values_list('username', flat=True)))
-    others_users = [username for username in users if username != user.username]
-
-    treated_by_filters = [
-        {
-            'treatedBy__username': user.username,
-        },
-        {
-            'treatedBy__username__in': others_users,
-        },
-        {
-            'treatedBy': None,
-        },
-    ]
-    return treated_by_filters
-
-
 def get_specific_filtered_todo_tickets(where, ids, priority, status, treated_by, order_by, limit, offset):
-
+    """
+        Returns a list of `abuse.models.Ticket` dict-mapping based on multiple filters
+    """
     tickets = Ticket.objects.filter(
         where,
         ~Q(id__in=ids),
@@ -156,35 +140,3 @@ def get_specific_filtered_todo_tickets(where, ids, priority, status, treated_by,
         else:
             res.append(ticket)
     return res
-
-
-def get_user_filters(user):
-    """
-        Filter allowed category for this user
-    """
-    where = [Q()]
-    user_specific_where = []
-    abuse_permissions = AbusePermission.objects.filter(user=user.id)
-
-    for perm in abuse_permissions:
-        if perm.profile.name == 'Expert':
-            user_specific_where.append(Q(category=perm.category))
-        elif perm.profile.name == 'Advanced':
-            user_specific_where.append(Q(category=perm.category, confidential=False))
-        elif perm.profile.name == 'Beginner':
-            user_specific_where.append(Q(
-                priority__in=USER_FILTERS_BEGINNER_PRIORITY,
-                category=perm.category,
-                confidential=False,
-                escalated=False,
-                moderation=False
-            ))
-
-    if len(user_specific_where):
-        user_specific_where = reduce(operator.or_, user_specific_where)
-        where.append(user_specific_where)
-    else:
-        # If no category allowed
-        where.append(Q(category=None))
-
-    return where
