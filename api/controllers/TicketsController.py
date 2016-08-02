@@ -882,7 +882,7 @@ def update_status(ticket, status, body, user):
             else:
                 ticket.status = 'WaitingAnswer'
             ticket.reportTicket.all().update(status='Attached')
-            new_value = '%s (for %s hour(s))' % (ticket.status, str(int(body['pauseDuration'] / 3600)))
+            new_value = '%s (for %s hour(s))' % (ticket.status, str(int(body['snoozeDuration'] / 3600)))
             action = {
                 'ticket': ticket,
                 'action': 'change_status',

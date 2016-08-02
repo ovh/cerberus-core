@@ -384,3 +384,15 @@ def post_mass_contact():
     user = GeneralController.get_user(request)
     code, resp = GeneralController.post_mass_contact(body, user)
     return code, resp
+
+
+@misc_views.route('/api/roles', methods=['GET'])
+@jsonify
+@token_required
+@catch_500
+def get_cerberus_roles():
+    """
+        List all Cerberus `abuse.models.Role`
+    """
+    code, resp = GeneralController.get_roles()
+    return code, resp

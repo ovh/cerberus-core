@@ -93,23 +93,21 @@ class GlobalSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
         res = []
         ids = set()
 
+        # Special case for Critical
         for ticket_status in TODO_TICKET_STATUS_FILTERS:
-            if ticket_status == ['Open']:
-                order_by.append('-reportTicket__tags__level')
-
-            for filters in treated_by_filters:  # Only for Critical
+            for filters in treated_by_filters:
                 tickets = get_specific_filtered_todo_tickets(where, ids, 'Critical', ticket_status, filters, order_by, limit, offset)
                 ids.update([t['id'] for t in tickets])
                 res.extend(tickets)
                 if len(res) > limit * offset:
                     return res[(offset - 1) * limit:limit * offset], nb_record
 
-            if Ticket.objects.filter(where, ~Q(id__in=ids), status__in=FLAT_TODO_TICKET_STATUS_FILTERS, priority='Critical').count():
-                continue
+        for ticket_status in TODO_TICKET_STATUS_FILTERS:
+            if ticket_status == ['Open']:
+                order_by.append('-reportTicket__tags__level')
 
             for priority in TODO_TICKET_PRIORITY_FILTERS:
                 for filters in treated_by_filters:
-
                     tickets = get_specific_filtered_todo_tickets(where, ids, priority, ticket_status, filters, order_by, limit, offset)
                     ids.update([t['id'] for t in tickets])
                     res.extend(tickets)

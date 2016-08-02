@@ -40,12 +40,12 @@ from django.core.exceptions import (FieldError, ObjectDoesNotExist,
                                     ValidationError)
 from django.core.validators import validate_ipv46_address
 from django.db import IntegrityError
-from django.db.models import Count, Q
+from django.db.models import Count, FieldDoesNotExist, Q
 from django.forms.models import model_to_dict
 
 from abuse.models import (AbusePermission, Category, MassContact,
                           MassContactResult, Profile, Report, ReportItem,
-                          Resolution, Tag, Ticket)
+                          Resolution, Tag, Ticket, Operator, Role)
 from factory.factory import TicketSchedulingAlgorithmFactory
 from utils import logger, utils
 from worker import database
@@ -241,7 +241,7 @@ def get_users_infos(**kwargs):
 
     where = reduce(operator.and_, where)
     try:
-        users = User.objects.filter(where).values('id', 'username', 'email', 'is_staff', 'is_superuser')
+        users = User.objects.filter(where).values('id', 'username', 'email', 'operator')
     except (TypeError, ValueError):
         return 400, {'status': 'Bad request', 'code': 400, 'message': 'Bad request'}
 
@@ -269,8 +269,11 @@ def get_users_infos(**kwargs):
                 }
             )
         user['profiles'] = profiles
-        user['isStaff'] = user.pop('is_staff')
-        user['isSuperuser'] = user.pop('is_superuser')
+        role = None
+        if Operator.objects.filter(id=user['operator']).exists():
+            role = Operator.objects.get(id=user['operator']).role.codename
+        user.pop('operator', None)
+        user['role'] = role
 
     if 'user' in kwargs:
         return 200, dict(users[0])
@@ -288,7 +291,7 @@ def update_user(user_id, body):
 
     if 'profiles' in body:
         try:
-            update_permissions(user, body['profiles'])
+            _update_permissions(user, body['profiles'])
         except ObjectDoesNotExist:
             return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid category or profile'}
 
@@ -307,19 +310,20 @@ def update_user(user_id, body):
 
     try:
         body.pop('id', None)
-        if 'isStaff' in body:
-            body['is_staff'] = body.pop('isStaff')
-        if 'isSuperuser' in body:
-            body['is_superuser'] = body.pop('isSuperuser')
+        if 'role' in body:
+            if body['role'] != user.operator.role.codename:
+                user.operator.role = Role.objects.get(codename=body['role'])
+                user.operator.save()
+            body.pop('role')
         User.objects.filter(pk=user.pk).update(**body)
-    except (KeyError, ValueError, FieldError, IntegrityError):
+    except (KeyError, ValueError, FieldError, FieldDoesNotExist, IntegrityError, ObjectDoesNotExist):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
 
     code, resp = get_users_infos(user=user_id)
     return code, resp
 
 
-def update_permissions(user, permissions):
+def _update_permissions(user, permissions):
     """ Update user permissions
     """
 
@@ -714,6 +718,13 @@ def get_notifications(user):
     """
     response = utils.get_user_notifications(user.username)
     return 200, response
+
+
+def get_roles():
+    """
+        Get Cerberus `abuse.models.Role`
+    """
+    return 200, list(Role.objects.all().values('id', 'codename', 'name'))
 
 
 def monitor():

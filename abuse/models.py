@@ -96,6 +96,7 @@ class Role(models.Model):
     """
         A `abuse.models.Role` defines a set of allowed `abuse.models.ApiRoute`
     """
+    codename = TruncatedCharField(null=False, max_length=256)
     name = TruncatedCharField(null=False, max_length=256)
     allowedRoutes = models.ManyToManyField(ApiRoute, db_column='endpoints')
     modelsAuthorizations = JSONField()

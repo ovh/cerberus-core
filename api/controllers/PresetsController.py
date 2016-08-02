@@ -32,10 +32,11 @@ from django.forms.models import model_to_dict
 
 from abuse.models import (MailTemplate, Ticket, TicketAction,
                           TicketActionParams, TicketWorkflowPreset,
-                          TicketWorkflowPresetConfig)
+                          TicketWorkflowPresetConfig, Role)
 from api.controllers import TemplatesController
 
 LANGUAGES = [language[0] for language in MailTemplate.TEMPLATE_LANG]
+PRESET_FIELDS = [fld.name for fld in TicketWorkflowPreset._meta.fields]
 
 
 def index(user, **kwargs):
@@ -59,7 +60,17 @@ def index(user, **kwargs):
         if 'templates' in fields:
             fields.remove('templates')
     except KeyError:
-        fields = [fld.name for fld in TicketWorkflowPreset._meta.fields]
+        fields = PRESET_FIELDS
+
+    try:
+        presets = _get_ordered_presets(user, fields, with_template)
+    except (KeyError, FieldError, ValueError) as ex:
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+
+    return 200, presets
+
+
+def _get_ordered_presets(user, fields, with_template):
 
     presets = []
     preset_groups = TicketWorkflowPreset.objects.filter(
@@ -69,34 +80,31 @@ def index(user, **kwargs):
         flat=True
     ).distinct()
 
-    try:
-        for group in preset_groups:
-            result = list(TicketWorkflowPreset.objects.filter(
-                roles=user.operator.role,
-                groupId=group
-            ).values(
-                *fields
-            ).order_by(
-                'orderId',
-                'name'
-            ))
-            if with_template:
-                for res in result:
-                    res['templates'] = list(TicketWorkflowPreset.objects.get(
-                        id=res['id'],
-                        roles=user.operator.role,
-                    ).templates.all().values_list(
-                        'id',
-                        flat=True
-                    ).distinct())
-            presets.append({
-                'groupId': group,
-                'presets': result,
-            })
-    except (KeyError, FieldError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+    for group in preset_groups:
+        result = list(TicketWorkflowPreset.objects.filter(
+            roles=user.operator.role,
+            groupId=group
+        ).values(
+            *fields
+        ).order_by(
+            'orderId',
+            'name'
+        ))
+        if with_template:
+            for res in result:
+                res['templates'] = list(TicketWorkflowPreset.objects.get(
+                    id=res['id'],
+                    roles=user.operator.role,
+                ).templates.all().values_list(
+                    'id',
+                    flat=True
+                ).distinct())
+        presets.append({
+            'groupId': group,
+            'presets': result,
+        })
 
-    return 200, presets
+    return presets
 
 
 def get_prefetch_preset(user, ticket_id, preset_id, lang=None):
@@ -154,6 +162,13 @@ def show(user, preset_id):
     if action and params:
         preset['action']['params'] = params
 
+    preset['roles'] = list(TicketWorkflowPreset.objects.get(
+        id=preset['id']
+    ).roles.all().values_list(
+        'codename',
+        flat=True
+    ).distinct())
+
     return 200, preset
 
 
@@ -191,6 +206,17 @@ def create(user, body):
             except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
                 transaction.rollback()
                 return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid template id'}
+
+    if body.get('roles'):
+        preset.roles.clear()
+        for role_codename in body['roles']:
+            try:
+                role = Role.objects.get(codename=role_codename)
+                preset.roles.add(role)
+            except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
+                transaction.rollback()
+                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid role codename'}
+
     preset.save()
     code, resp = show(user, preset.id)
     transaction.commit()
@@ -232,6 +258,16 @@ def update(user, preset_id, body):
             except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
                 transaction.rollback()
                 return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid template id'}
+
+    if body.get('roles') is not None:
+        preset.roles.clear()
+        for role_codename in body['roles']:
+            try:
+                role = Role.objects.get(codename=role_codename)
+                preset.roles.add(role)
+            except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
+                transaction.rollback()
+                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid role codename'}
 
     preset.name = body['name']
     preset.save()
