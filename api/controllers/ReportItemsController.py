@@ -371,7 +371,7 @@ def get_defendant_from_item(item):
     except ValidationError:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid item'}
 
-    for param in ({'urls': [url]}, {'ips': [ip_addr], 'fqdn': [hostname]}):
+    for param in {'urls': [url]}, {'ips': [ip_addr], 'fqdn': [hostname]}:
         try:
             services = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_services_from_items(**param)
             schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)

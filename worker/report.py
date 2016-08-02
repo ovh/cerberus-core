@@ -620,10 +620,9 @@ def _reinject_validated(report, user):
 
     # Checking specific processing workflow
     for hook in ReportWorkflowHookFactory.instance.registered_hook_instances:
-        if hook.identify(report, ticket, is_trusted=trusted):
-            if hook.apply(report, ticket, trusted, False):
-                Logger.debug(unicode('Specific workflow %s applied' % (str(hook.__class__.__name__))))
-                return
+        if hook.identify(report, ticket, is_trusted=trusted) and hook.apply(report, ticket, trusted, False):
+            Logger.debug(unicode('Specific workflow %s applied' % (str(hook.__class__.__name__))))
+            return
 
     # Create ticket if trusted
     new_ticket = False

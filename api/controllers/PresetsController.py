@@ -35,7 +35,7 @@ from abuse.models import (MailTemplate, Ticket, TicketAction,
                           TicketWorkflowPresetConfig)
 from api.controllers import TemplatesController
 
-LANGUAGES = [language[0] for language in MailTemplate.LANG]
+LANGUAGES = [language[0] for language in MailTemplate.TEMPLATE_LANG]
 
 
 def index(user, **kwargs):

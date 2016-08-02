@@ -81,14 +81,14 @@ class ApiRoute(models.Model):
     """
         List all available API routes
     """
-    METHOD = (
+    HTTP_METHOD = (
         ('GET', 'GET'),
         ('POST', 'POST'),
         ('PUT', 'PUT'),
         ('PATCH', 'PATCH'),
         ('DELETE', 'DELETE'),
     )
-    method = TruncatedCharField(max_length=32, null=False, choices=METHOD)
+    method = TruncatedCharField(max_length=32, null=False, choices=HTTP_METHOD)
     endpoint = TruncatedCharField(null=False, max_length=512)
 
 
@@ -482,7 +482,7 @@ class MailTemplate(models.Model):
     """
         Cerebrus `abuse.models.Ticket` emails are based on template
     """
-    LANG = (
+    TEMPLATE_LANG = (
         ('FR', 'FR'),
         ('EN', 'EN'),
         ('CA', 'CA'),
@@ -497,7 +497,7 @@ class MailTemplate(models.Model):
 
     codename = TruncatedCharField(max_length=32)
     name = TruncatedCharField(null=False, max_length=255)
-    lang = TruncatedCharField(max_length=2, null=False, choices=LANG, default='EN')
+    lang = TruncatedCharField(max_length=2, null=False, choices=TEMPLATE_LANG, default='EN')
     subject = TruncatedCharField(null=False, max_length=1023)
     body = TruncatedCharField(null=False, max_length=65535)
     recipientType = TruncatedCharField(max_length=32, null=False, choices=RECIPIENT_TYPE, default='Defendant')
@@ -612,13 +612,13 @@ class MassContactResult(models.Model):
     """
         Store result of a "mass contact" campaign.
     """
-    STATE = (
+    MASSCONTACT_STATE = (
         ('Done', 'Done'),
         ('Pending', 'Pending'),
     )
 
     campaign = models.ForeignKey(MassContact, null=False)
-    state = TruncatedCharField(max_length=32, null=False, choices=STATE, default='Pending')
+    state = TruncatedCharField(max_length=32, null=False, choices=MASSCONTACT_STATE, default='Pending')
     matchingCount = models.IntegerField(null=False, default=0)  # Defendant found, report created
     notMatchingCount = models.IntegerField(null=False, default=0)  # No defendant found
     failedCount = models.IntegerField(null=False, default=0)  # Rq job failed

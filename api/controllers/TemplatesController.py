@@ -35,7 +35,7 @@ from abuse.models import MailTemplate, Ticket
 from adapters.services.mailer.abstract import MailerServiceException
 from factory.factory import ImplementationFactory
 
-LANGUAGES = [language[0] for language in MailTemplate.LANG]
+LANGUAGES = [language[0] for language in MailTemplate.TEMPLATE_LANG]
 RECIPIENTS_TYPE = [r[0] for r in MailTemplate.RECIPIENT_TYPE]
 
 

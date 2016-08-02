@@ -276,7 +276,7 @@ class GlobalTestCase(TestCase):
             'tag_views.delete_tag'
         ]
 
-        for method in ('GET', 'POST', 'PUT', 'PATCH', 'DELETE'):
+        for method in 'GET', 'POST', 'PUT', 'PATCH', 'DELETE':
             for route in endpoints:
                 route = ApiRoute.objects.create(method=method, endpoint=route)
                 role.allowedRoutes.add(route)
