@@ -26,14 +26,14 @@ install-dev-deps:
 test: 
 	$(COVERAGE) > /dev/null 2>&1 && \
 	$(COVERAGE) run --source='.' manage.py test && \
-	$(COVERAGE) report --omit="virtualenv/*" --omit="ovh/*" --omit="*ovh*" \
+	$(COVERAGE) report --omit="virtualenv/*,*ovh*,tests/*,manage.py" \
 		|| \
 	$(PYTHON) manage.py test
 
 coveralls:
 	$(COVERAGE) erase && \
 	$(COVERAGE) > /dev/null 2>&1 && \
-	$(COVERAGE) run --source='.' --omit="*/test*" --omit="virtualenv/" --omit="ovh/*" --omit="*ovh*" manage.py test && \
+	$(COVERAGE) run --source='.' --omit="virtualenv/*,*ovh*,tests/*,manage.py" manage.py test && \
 	$(COVERALLS)
 
 lint:

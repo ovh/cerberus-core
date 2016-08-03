@@ -25,13 +25,14 @@
 from flask import Blueprint, request
 
 from api.controllers import TemplatesController
-from decorators import admin_required, jsonify
+from decorators import admin_required, Cached, InvalidateCache, jsonify
 
 email_templates_views = Blueprint('email_templates_views', __name__)
 
 
 @email_templates_views.route('/api/emailTemplates', methods=['GET'])
 @jsonify
+@Cached(timeout=43200)
 def get_all_templates():
     """ Get all Abuse mail temapltes
     """
@@ -44,6 +45,7 @@ def get_all_templates():
 
 @email_templates_views.route('/api/emailTemplates/<template>', methods=['GET'])
 @jsonify
+@Cached(timeout=43200)
 def get_template(template=None):
     """ Get a given email template
     """
@@ -54,6 +56,7 @@ def get_template(template=None):
 @email_templates_views.route('/api/emailTemplates', methods=['POST'])
 @jsonify
 @admin_required
+@InvalidateCache(path='/api/emailTemplates')
 def create_templates():
     """ Add an email template
     """
@@ -65,6 +68,7 @@ def create_templates():
 @email_templates_views.route('/api/emailTemplates/<template>', methods=['PUT', 'DELETE'])
 @jsonify
 @admin_required
+@InvalidateCache(path='/api/emailTemplates')
 def update_template(template=None):
     """ Update an email template
     """
@@ -78,6 +82,7 @@ def update_template(template=None):
 
 @email_templates_views.route('/api/emailTemplates/languages', methods=['GET'])
 @jsonify
+@Cached(timeout=43200)
 def get_supported_languages():
     """ Get application supported languages
     """
@@ -87,6 +92,7 @@ def get_supported_languages():
 
 @email_templates_views.route('/api/emailTemplates/recipientsType', methods=['GET'])
 @jsonify
+@Cached(timeout=43200)
 def get_recipients_type():
     """ Get application supported languages
     """

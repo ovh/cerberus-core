@@ -25,13 +25,14 @@
 from flask import Blueprint, g, request
 
 from api.controllers import CategoriesController
-from decorators import admin_required, jsonify
+from decorators import admin_required, Cached, InvalidateCache, jsonify
 
 category_views = Blueprint('category_views', __name__)
 
 
 @category_views.route('/api/categories', methods=['GET'])
 @jsonify
+@Cached(timeout=43200)
 def get_all_categories():
     """
     Returns all Cerberus categories
@@ -96,6 +97,7 @@ def get_category(category=None):
 @category_views.route('/api/categories', methods=['POST'])
 @jsonify
 @admin_required
+@InvalidateCache(path='/api/categories')
 def create_category():
     """
     Create a new category
@@ -115,6 +117,7 @@ def create_category():
 @category_views.route('/api/categories/<category>', methods=['PUT'])
 @jsonify
 @admin_required
+@InvalidateCache(path='/api/categories')
 def update_category(category=None):
     """
     Update given `category`
@@ -148,6 +151,7 @@ def update_category(category=None):
 @category_views.route('/api/categories/<category>', methods=['DELETE'])
 @jsonify
 @admin_required
+@InvalidateCache(path='/api/categories')
 def delete_category(category=None):
     """
     Delete given `category`

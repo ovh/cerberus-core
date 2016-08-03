@@ -25,33 +25,63 @@
 from functools import wraps
 from json import dumps
 
+from django.conf import settings
 from flask import g, Response, request
 from voluptuous import Invalid, MultipleInvalid, Schema
-from werkzeug.contrib.cache import SimpleCache
+from werkzeug.contrib.cache import RedisCache
 
 from api.controllers import GeneralController
 from utils import logger
 
 Logger = logger.get_logger(__name__)
 
-CACHE_TIMEOUT = 300
-cache = SimpleCache()
+DEFAULT_CACHE_TIMEOUT = 300
+cache = RedisCache(
+    host=settings.REDIS['host'],
+    port=settings.REDIS['port']
+)
 
 Schemas = {}
 
 
 class Cached(object):
-    """ Return cached response, update if timeout
+    """
+        Return cached response, update if timeout
     """
     def __init__(self, timeout=None):
-        self.timeout = timeout or CACHE_TIMEOUT
+        self.timeout = timeout or DEFAULT_CACHE_TIMEOUT
+        self.__name__ = 'cache'
 
-    def __call__(self, f):
+    def __call__(self, func):
+        @wraps(func)
         def decorator(*args, **kwargs):
-            response = cache.get(unicode(request.path) + unicode(request.environ['HTTP_X_API_TOKEN']))
+            route = '%s,%s' % (request.path, dumps(request.args))
+            response = cache.get(unicode(route))
             if response is None:
-                response = f(*args, **kwargs)
-                cache.set(unicode(request.path) + unicode(request.environ['HTTP_X_API_TOKEN']), response, self.timeout)
+                response = func(*args, **kwargs)
+                cache.set(route, response, self.timeout)
+            else:
+                Logger.debug(unicode('get %s from cache, timeout %d' % (route, self.timeout)))
+            return response
+        return decorator
+
+
+class InvalidateCache(object):
+    """
+        Return cached response, update if timeout
+    """
+    def __init__(self, path=None, args=None):
+        self.path = path
+        self.args = args if args else {}
+        self.__name__ = 'cache'
+
+    def __call__(self, func):
+        @wraps(func)
+        def decorator(*args, **kwargs):
+            route = '%s,%s' % (self.path, dumps(self.args))
+            response = cache.delete(unicode(route))
+            Logger.debug(unicode('clear %s from cache' % (route)))
+            response = func(*args, **kwargs)
             return response
         return decorator
 

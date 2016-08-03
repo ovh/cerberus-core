@@ -25,7 +25,7 @@
 from flask import Blueprint, request
 
 from api.controllers import ThresholdController
-from decorators import admin_required, jsonify
+from decorators import admin_required, Cached, InvalidateCache, jsonify
 
 threshold_views = Blueprint('threshold_views', __name__)
 
@@ -33,6 +33,7 @@ threshold_views = Blueprint('threshold_views', __name__)
 @threshold_views.route('/api/admin/threshold', methods=['GET'])
 @jsonify
 @admin_required
+@Cached(timeout=43200)
 def get_all_threshold():
     """ Get all report's threshold
     """
@@ -53,6 +54,7 @@ def get_threshold(threshold=None):
 @threshold_views.route('/api/admin/threshold', methods=['POST'])
 @jsonify
 @admin_required
+@InvalidateCache(path='/api/admin/threshold')
 def create_threshold():
     """ Post a new threshold
     """
@@ -64,6 +66,7 @@ def create_threshold():
 @threshold_views.route('/api/admin/threshold/<threshold>', methods=['PUT'])
 @jsonify
 @admin_required
+@InvalidateCache(path='/api/admin/threshold')
 def update_threshold(threshold=None):
     """ Update given threshold
     """
@@ -75,6 +78,7 @@ def update_threshold(threshold=None):
 @threshold_views.route('/api/admin/threshold/<threshold>', methods=['DELETE'])
 @jsonify
 @admin_required
+@InvalidateCache(path='/api/admin/threshold')
 def delete_threshold(threshold=None):
     """ Delete given threshold
     """

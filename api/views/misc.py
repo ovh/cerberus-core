@@ -27,7 +27,8 @@ from flask import Blueprint, g, request
 
 from api.controllers import (GeneralController, ProvidersController,
                              ReportItemsController, TicketsController)
-from decorators import admin_required, jsonify, validate_body
+from decorators import (admin_required, Cached, InvalidateCache,
+                        jsonify, validate_body)
 
 misc_views = Blueprint('misc_views', __name__)
 
@@ -113,6 +114,7 @@ def monitor():
 
 @misc_views.route('/api/profiles', methods=['GET'])
 @jsonify
+@Cached(timeout=43200)
 def get_profiles():
     """ Get Abuse profiles
     """
@@ -177,6 +179,7 @@ def update_user(user=None):
 
 @misc_views.route('/api/status', methods=['GET'])
 @jsonify
+@Cached(timeout=43200)
 def get_all_status():
     """ Get all abuse status
     """
@@ -185,6 +188,7 @@ def get_all_status():
 
 @misc_views.route('/api/resolutions', methods=['GET'])
 @jsonify
+@Cached(timeout=43200)
 def get_all_ticket_resolutions():
     """ Get all abuse status
     """
@@ -194,6 +198,7 @@ def get_all_ticket_resolutions():
 @misc_views.route('/api/resolutions', methods=['POST'])
 @jsonify
 @admin_required
+@InvalidateCache(path='/api/resolutions')
 def add_ticket_resolution():
     """ Get all abuse status
     """
@@ -205,6 +210,7 @@ def add_ticket_resolution():
 @misc_views.route('/api/resolutions/<resolution>', methods=['PUT'])
 @jsonify
 @admin_required
+@InvalidateCache(path='/api/resolutions')
 def update_ticket_resolution(resolution=None):
     """ Get all abuse status
     """
@@ -216,6 +222,7 @@ def update_ticket_resolution(resolution=None):
 @misc_views.route('/api/resolutions/<resolution>', methods=['DELETE'])
 @jsonify
 @admin_required
+@InvalidateCache(path='/api/resolutions')
 def delete_ticket_resolution(resolution=None):
     """ Get all abuse status
     """
@@ -225,6 +232,7 @@ def delete_ticket_resolution(resolution=None):
 
 @misc_views.route('/api/status/<model>', methods=['GET'])
 @jsonify
+@Cached(timeout=43200)
 def get_status(model=None):
     """ Get status list for ticket or report
     """
@@ -251,6 +259,7 @@ def get_dashboard():
 
 @misc_views.route('/api/priorities/ticket', methods=['GET'])
 @jsonify
+@Cached(timeout=43200)
 def get_ticket_priorities():
     """ Get list of ticket priorities
     """
@@ -259,6 +268,7 @@ def get_ticket_priorities():
 
 @misc_views.route('/api/priorities/provider', methods=['GET'])
 @jsonify
+@Cached(timeout=43200)
 def get_providers_priorities():
     """ Get list of providers priorities
     """
@@ -323,6 +333,7 @@ def post_mass_contact():
 
 @misc_views.route('/api/roles', methods=['GET'])
 @jsonify
+@Cached(timeout=43200)
 def get_cerberus_roles():
     """
         List all Cerberus `abuse.models.Role`
