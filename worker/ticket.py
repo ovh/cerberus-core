@@ -118,7 +118,7 @@ def timeout(ticket_id=None):
         ticket.status = 'ActionError'
         database.log_action_on_ticket(
             ticket=ticket,
-            action='change status',
+            action='change_status',
             previous_value=ticket.previousStatus,
             new_value=ticket.status
         )
