@@ -186,51 +186,6 @@ def check_perms(**kwargs):
     return code, response
 
 
-def check_token(request):
-    """
-        Check token and return associated user
-    """
-    try:
-        token = request.environ['HTTP_X_API_TOKEN']
-    except (KeyError, IndexError, TypeError):
-        return False, 'Missing HTTP X-Api-Token header'
-
-    try:
-        data = jwt.decode(token, settings.SECRET_KEY)
-        data = json.loads(CRYPTO.decrypt(str(data['data'])))
-        user = User.objects.get(id=data['id'])
-
-        if user.last_login == datetime.fromtimestamp(0):
-            return False, 'You need to login first'
-
-        if user is not None and user.is_active:
-            user.last_login = datetime.now()
-            user.save()
-            return True, None
-    except (utils.CryptoException, jwt.ExpiredSignature, jwt.DecodeError, User.DoesNotExist, KeyError):
-        return False, 'Unable to authenticate'
-
-
-def get_user(request):
-    """ Get user from token infos
-    """
-    try:
-        token = request.environ['HTTP_X_API_TOKEN']
-    except (KeyError, IndexError, TypeError):
-        return None
-
-    try:
-        data = jwt.decode(token, settings.SECRET_KEY)
-        data = json.loads(CRYPTO.decrypt(str(data['data'])))
-        if 'id' not in data:
-            return None
-        user = User.objects.get(id=data['id'])
-        if user is not None and user.is_active and user.is_authenticated():
-            return user
-    except (utils.CryptoException, jwt.DecodeError, User.DoesNotExist):
-        return None
-
-
 def get_users_infos(**kwargs):
     """ Get user(s) infos
     """
@@ -311,7 +266,10 @@ def update_user(user_id, body):
     try:
         body.pop('id', None)
         if 'role' in body:
-            if body['role'] != user.operator.role.codename:
+            if not Operator.objects.filter(user=user).exists():
+                role = Role.objects.get(codename=body['role'])
+                Operator.objects.create(user=user, role=role)
+            elif body['role'] != user.operator.role.codename:
                 user.operator.role = Role.objects.get(codename=body['role'])
                 user.operator.save()
             body.pop('role')

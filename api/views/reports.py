@@ -24,38 +24,31 @@
 
 from io import BytesIO
 
-from flask import Blueprint, json, make_response, request, send_file
+from flask import Blueprint, json, g, make_response, request, send_file
 
-from api.controllers import (GeneralController, ReportItemsController,
-                             ReportsController)
-from decorators import (catch_500, json_required, jsonify, perm_required,
-                        token_required)
+from api.controllers import ReportItemsController, ReportsController
+from decorators import jsonify, perm_required
 
 report_views = Blueprint('report_views', __name__)
 
 
 @report_views.route('/api/reports', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_all_reports():
     """ Get abuse reports
 
         Filtering is possible through "filters" query string, JSON double encoded format
     """
-    user = GeneralController.get_user(request)
     if 'filters' in request.args:
-        code, resp, nb_reps = ReportsController.index(filters=request.args['filters'], user=user)
+        code, resp, nb_reps = ReportsController.index(filters=request.args['filters'], user=g.user)
     else:
-        code, resp, nb_reps = ReportsController.index(user=user)
+        code, resp, nb_reps = ReportsController.index(user=g.user)
     return code, resp
 
 
 @report_views.route('/api/reports/<report>', methods=['GET'])
 @jsonify
-@token_required
 @perm_required
-@catch_500
 def get_report(report=None):
     """ Get a given report
     """
@@ -65,16 +58,13 @@ def get_report(report=None):
 
 @report_views.route('/api/reports/<report>', methods=['PUT', 'DELETE'])
 @jsonify
-@token_required
 @perm_required
-@catch_500
 def update_report(report=None):
     """ Update a given report
     """
     if request.method == 'PUT':
-        user = GeneralController.get_user(request)
         body = request.get_json()
-        code, resp = ReportsController.update(report, body, user)
+        code, resp = ReportsController.update(report, body, g.user)
     else:
         code, resp = ReportsController.destroy(report)
     return code, resp
@@ -82,9 +72,7 @@ def update_report(report=None):
 
 @report_views.route('/api/reports/<report>/items', methods=['GET'])
 @jsonify
-@token_required
 @perm_required
-@catch_500
 def get_report_items(report=None):
     """ Get all items for a given report
 
@@ -99,43 +87,34 @@ def get_report_items(report=None):
 
 @report_views.route('/api/reports/<report>/items', methods=['POST'])
 @jsonify
-@token_required
 @perm_required
-@json_required
-@catch_500
 def create_report_item(report=None):
     """ Add item to report
     """
-    user = GeneralController.get_user(request)
     body = request.get_json()
     body['report'] = report
-    code, resp = ReportItemsController.create(body, user)
+    code, resp = ReportItemsController.create(body, g.user)
     return code, resp
 
 
 @report_views.route('/api/reports/<report>/items/<item>', methods=['PUT', 'DELETE'])
 @jsonify
-@token_required
 @perm_required
-@catch_500
 def update_report_item(report=None, item=None):
     """ Update an item
     """
-    user = GeneralController.get_user(request)
     if request.method == 'PUT':
         body = request.get_json()
         body['report'] = report
-        code, resp = ReportItemsController.update(item, body, user)
+        code, resp = ReportItemsController.update(item, body, g.user)
     else:
-        code, resp = ReportItemsController.delete_from_report(item, report, user)
+        code, resp = ReportItemsController.delete_from_report(item, report, g.user)
     return code, resp
 
 
 @report_views.route('/api/reports/<report>/items/<item>/screenshots', methods=['GET'])
 @jsonify
-@token_required
 @perm_required
-@catch_500
 def get_item_screenshot(report=None, item=None):
     """ Get available screenshots for given item
     """
@@ -145,9 +124,7 @@ def get_item_screenshot(report=None, item=None):
 
 @report_views.route('/api/reports/<report>/items/screenshots', methods=['GET'])
 @jsonify
-@token_required
 @perm_required
-@catch_500
 def get_all_items_screenshot(report=None):
     """ Get all available screenshots for given report
     """
@@ -160,9 +137,7 @@ def get_all_items_screenshot(report=None):
 
 @report_views.route('/api/reports/<report>/raw', methods=['GET'])
 @jsonify
-@token_required
 @perm_required
-@catch_500
 def get_raw_report(report=None):
     """ Get raw email for a report
     """
@@ -172,9 +147,7 @@ def get_raw_report(report=None):
 
 @report_views.route('/api/reports/<report>/dehtmlify', methods=['GET'])
 @jsonify
-@token_required
 @perm_required
-@catch_500
 def get_dehtmlified_report(report=None):
     """ Get raw email for a report
     """
@@ -184,9 +157,7 @@ def get_dehtmlified_report(report=None):
 
 @report_views.route('/api/reports/<report>/attachments', methods=['GET'])
 @jsonify
-@token_required
 @perm_required
-@catch_500
 def get_all_report_attachments(report=None):
     """ Get attached documents for a report
     """
@@ -198,9 +169,7 @@ def get_all_report_attachments(report=None):
 
 
 @report_views.route('/api/reports/<report>/attachments/<attachment>', methods=['GET'])
-@token_required
 @perm_required
-@catch_500
 def get_report_attachment(report=None, attachment=None):
     """ Get attached documents for a report
     """
@@ -214,10 +183,7 @@ def get_report_attachment(report=None, attachment=None):
 
 @report_views.route('/api/reports/<report>/tags', methods=['POST'])
 @jsonify
-@token_required
 @perm_required
-@json_required
-@catch_500
 def add_report_tag(report=None):
     """ Add tag to report
     """
@@ -228,9 +194,7 @@ def add_report_tag(report=None):
 
 @report_views.route('/api/reports/<report>/tags/<tag>', methods=['DELETE'])
 @jsonify
-@token_required
 @perm_required
-@catch_500
 def delete_report_tag(report=None, tag=None):
     """ Delete report tag
     """
@@ -240,31 +204,24 @@ def delete_report_tag(report=None, tag=None):
 
 @report_views.route('/api/reports/bulk', methods=['PUT', 'DELETE'])
 @jsonify
-@token_required
 @perm_required
-@catch_500
 def bulk_add_reports():
     """ Bulk add on reports
     """
-    user = GeneralController.get_user(request)
     body = request.get_json()
     if request.method == 'PUT':
-        code, resp = ReportsController.bulk_add(body, user, request.method)
+        code, resp = ReportsController.bulk_add(body, g.user, request.method)
     else:
-        code, resp = ReportsController.bulk_delete(body, user, request.method)
+        code, resp = ReportsController.bulk_delete(body, g.user, request.method)
     return code, resp
 
 
 @report_views.route('/api/reports/<report>/feedback', methods=['POST'])
 @jsonify
-@token_required
 @perm_required
-@json_required
-@catch_500
 def post_feedback(report=None):
     """ Post feeback
     """
-    user = GeneralController.get_user(request)
     body = request.get_json()
-    code, resp = ReportsController.parse_screenshot_feedback(report, body, user)
+    code, resp = ReportsController.parse_screenshot_feedback(report, body, g.user)
     return code, resp

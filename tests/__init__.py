@@ -144,7 +144,7 @@ class GlobalTestCase(TestCase):
         Provider.objects.create(email='critical@provider.com', priority='Critical')
         Provider.objects.create(email='trusted.phishing@provider.com', priority='Critical', apiKey='token')
 
-        role = Role.objects.create(name='RUN level 3')
+        role = Role.objects.create(codename='admin', name='Admin')
         role.modelsAuthorizations = {'ticket': {'schedulingAlgorithm': 'GlobalSchedulingAlgorithm'}}
         role.save()
         Operator.objects.create(role=role, user=user)

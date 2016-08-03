@@ -25,17 +25,14 @@
 from flask import Blueprint, request
 
 from api.controllers import ThresholdController
-from decorators import (admin_required, catch_500, json_required, jsonify,
-                        token_required)
+from decorators import admin_required, jsonify
 
 threshold_views = Blueprint('threshold_views', __name__)
 
 
 @threshold_views.route('/api/admin/threshold', methods=['GET'])
 @jsonify
-@token_required
 @admin_required
-@catch_500
 def get_all_threshold():
     """ Get all report's threshold
     """
@@ -45,9 +42,7 @@ def get_all_threshold():
 
 @threshold_views.route('/api/admin/threshold/<threshold>', methods=['GET'])
 @jsonify
-@token_required
 @admin_required
-@catch_500
 def get_threshold(threshold=None):
     """ Get given threshold
     """
@@ -57,10 +52,7 @@ def get_threshold(threshold=None):
 
 @threshold_views.route('/api/admin/threshold', methods=['POST'])
 @jsonify
-@token_required
-@json_required
 @admin_required
-@catch_500
 def create_threshold():
     """ Post a new threshold
     """
@@ -71,10 +63,7 @@ def create_threshold():
 
 @threshold_views.route('/api/admin/threshold/<threshold>', methods=['PUT'])
 @jsonify
-@token_required
-@json_required
 @admin_required
-@catch_500
 def update_threshold(threshold=None):
     """ Update given threshold
     """
@@ -85,9 +74,7 @@ def update_threshold(threshold=None):
 
 @threshold_views.route('/api/admin/threshold/<threshold>', methods=['DELETE'])
 @jsonify
-@token_required
 @admin_required
-@catch_500
 def delete_threshold(threshold=None):
     """ Delete given threshold
     """

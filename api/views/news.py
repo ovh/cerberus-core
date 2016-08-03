@@ -22,19 +22,16 @@
     News views for Cerberus protected API.
 """
 
-from flask import Blueprint, request
+from flask import Blueprint, g, request
 
-from api.controllers import GeneralController, NewsController
-from decorators import (admin_required, catch_500, json_required, jsonify,
-                        token_required)
+from api.controllers import NewsController
+from decorators import admin_required, jsonify
 
 news_views = Blueprint('news_views', __name__)
 
 
 @news_views.route('/api/news', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_all_news():
     """ Get abuse news
 
@@ -49,8 +46,6 @@ def get_all_news():
 
 @news_views.route('/api/news/<news>', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_news(news=None):
     """ Get given news
     """
@@ -60,37 +55,27 @@ def get_news(news=None):
 
 @news_views.route('/api/news', methods=['POST'])
 @jsonify
-@token_required
-@json_required
-@catch_500
 def create_news():
     """ Post a news
     """
-    user = GeneralController.get_user(request)
     body = request.get_json()
-    code, resp = NewsController.create(body, user)
+    code, resp = NewsController.create(body, g.user)
     return code, resp
 
 
 @news_views.route('/api/news/<news>', methods=['PUT'])
 @jsonify
-@token_required
-@json_required
-@catch_500
 def update_news(news=None):
     """ Update given news
     """
-    user = GeneralController.get_user(request)
     body = request.get_json()
-    code, resp = NewsController.update(news, body, user)
+    code, resp = NewsController.update(news, body, g.user)
     return code, resp
 
 
 @news_views.route('/api/news/<news>', methods=['DELETE'])
 @jsonify
-@token_required
 @admin_required
-@catch_500
 def delete_news(news=None):
     """ Delete given news
     """
