@@ -147,7 +147,8 @@ def _create_ticket(report):
     utils.scheduler.enqueue_in(
         timedelta(seconds=settings.GENERAL_CONFIG['phishing']['wait']),
         'ticket.timeout',
-        ticket_id=ticket.id
+        ticket_id=ticket.id,
+        timeout=3600,
     )
     ticket_snooze = settings.GENERAL_CONFIG['phishing']['wait']
     ticket.previousStatus = ticket.status

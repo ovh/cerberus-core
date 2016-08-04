@@ -514,7 +514,8 @@ def create_ticket_from_phishtocheck(report=None, user=None):
         utils.scheduler.enqueue_in(
             timedelta(seconds=settings.GENERAL_CONFIG['phishing']['wait']),
             'ticket.timeout',
-            ticket_id=ticket.id
+            ticket_id=ticket.id,
+            timeout=3600,
         )
 
     report.ticket = ticket

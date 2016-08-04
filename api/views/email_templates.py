@@ -34,7 +34,7 @@ email_templates_views = Blueprint('email_templates_views', __name__)
 @jsonify
 @Cached(timeout=43200)
 def get_all_templates():
-    """ Get all Abuse mail temapltes
+    """ Get all Abuse mail templates
     """
     filters = None
     if 'filters' in request.args:

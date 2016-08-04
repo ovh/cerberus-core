@@ -1400,6 +1400,7 @@ def schedule_asynchronous_job(ticket_id, action_id, ip_addr, user, seconds=1, me
 
     if not params:
         params = {}
+    params['timeout'] = 3600
 
     if not __check_action_rights(ticket, action.id, user):
         return 403, {'status': 'Forbidden', 'code': 403, 'message': 'Invalid permission for this action'}
