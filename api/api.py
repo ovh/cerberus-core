@@ -168,6 +168,7 @@ def create_app():
         Logger.debug(
             unicode(log_msg % (method, path, length, diff, http_code)),
             extra={
+                'http_endpoint': g.endpoint,
                 'http_path': path,
                 'http_length': length,
                 'http_time_int': diff,

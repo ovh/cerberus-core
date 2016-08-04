@@ -137,6 +137,7 @@ def search():
 
 @misc_views.route('/api/users', methods=['GET'])
 @jsonify
+@Cached(timeout=43200)
 def get_users_infos():
     """ Get users infos
     """
@@ -146,6 +147,7 @@ def get_users_infos():
 
 @misc_views.route('/api/users/me', methods=['GET'])
 @jsonify
+@Cached(timeout=43200, current_user=True)
 def get_logged_user():
     """ Get infos for logged user
     """
@@ -169,6 +171,7 @@ def get_user(user=None):
 @misc_views.route('/api/users/<user>', methods=['PUT'])
 @jsonify
 @admin_required
+@InvalidateCache(routes=['/api/users', '/api/users/me'], clear_for_user=True)
 def update_user(user=None):
     """ Update user infos
     """
@@ -198,7 +201,7 @@ def get_all_ticket_resolutions():
 @misc_views.route('/api/resolutions', methods=['POST'])
 @jsonify
 @admin_required
-@InvalidateCache(path='/api/resolutions')
+@InvalidateCache(routes=['/api/resolutions'])
 def add_ticket_resolution():
     """ Get all abuse status
     """
@@ -210,7 +213,7 @@ def add_ticket_resolution():
 @misc_views.route('/api/resolutions/<resolution>', methods=['PUT'])
 @jsonify
 @admin_required
-@InvalidateCache(path='/api/resolutions')
+@InvalidateCache(routes=['/api/resolutions'])
 def update_ticket_resolution(resolution=None):
     """ Get all abuse status
     """
@@ -222,7 +225,7 @@ def update_ticket_resolution(resolution=None):
 @misc_views.route('/api/resolutions/<resolution>', methods=['DELETE'])
 @jsonify
 @admin_required
-@InvalidateCache(path='/api/resolutions')
+@InvalidateCache(routes=['/api/resolutions'])
 def delete_ticket_resolution(resolution=None):
     """ Get all abuse status
     """
@@ -241,6 +244,7 @@ def get_status(model=None):
 
 @misc_views.route('/api/toolbar', methods=['GET'])
 @jsonify
+@Cached(timeout=180, current_user=True)
 def get_toolbar():
     """ Get Abuse toolbar
     """

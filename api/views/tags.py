@@ -64,7 +64,7 @@ def get_tag(tag=None):
 @tag_views.route('/api/tags', methods=['POST'])
 @jsonify
 @admin_required
-@InvalidateCache(path='/api/tags')
+@InvalidateCache(routes=['/api/tags'])
 def create_tag():
     """ Create a new tags
     """
@@ -76,7 +76,7 @@ def create_tag():
 @tag_views.route('/api/tags/<tag>', methods=['PUT'])
 @jsonify
 @admin_required
-@InvalidateCache(path='/api/tags')
+@InvalidateCache(routes=['/api/tags'])
 def update_tag(tag=None):
     """ Update an existing tag
     """
@@ -88,7 +88,7 @@ def update_tag(tag=None):
 @tag_views.route('/api/tags/<tag>', methods=['DELETE'])
 @jsonify
 @admin_required
-@InvalidateCache(path='/api/tags')
+@InvalidateCache(routes=['/api/tags'])
 def delete_tag(tag=None):
     """ Delete a given tag
     """

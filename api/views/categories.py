@@ -97,7 +97,7 @@ def get_category(category=None):
 @category_views.route('/api/categories', methods=['POST'])
 @jsonify
 @admin_required
-@InvalidateCache(path='/api/categories')
+@InvalidateCache(routes=['/api/categories'])
 def create_category():
     """
     Create a new category
@@ -117,7 +117,7 @@ def create_category():
 @category_views.route('/api/categories/<category>', methods=['PUT'])
 @jsonify
 @admin_required
-@InvalidateCache(path='/api/categories')
+@InvalidateCache(routes=['/api/categories'])
 def update_category(category=None):
     """
     Update given `category`
@@ -151,7 +151,7 @@ def update_category(category=None):
 @category_views.route('/api/categories/<category>', methods=['DELETE'])
 @jsonify
 @admin_required
-@InvalidateCache(path='/api/categories')
+@InvalidateCache(routes=['/api/categories'])
 def delete_category(category=None):
     """
     Delete given `category`

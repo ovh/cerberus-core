@@ -56,7 +56,7 @@ def get_template(template=None):
 @email_templates_views.route('/api/emailTemplates', methods=['POST'])
 @jsonify
 @admin_required
-@InvalidateCache(path='/api/emailTemplates')
+@InvalidateCache(routes=['/api/emailTemplates'])
 def create_templates():
     """ Add an email template
     """
@@ -68,7 +68,7 @@ def create_templates():
 @email_templates_views.route('/api/emailTemplates/<template>', methods=['PUT', 'DELETE'])
 @jsonify
 @admin_required
-@InvalidateCache(path='/api/emailTemplates')
+@InvalidateCache(routes=['/api/emailTemplates'])
 def update_template(template=None):
     """ Update an email template
     """

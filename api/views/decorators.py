@@ -48,14 +48,16 @@ class Cached(object):
     """
         Return cached response, update if timeout
     """
-    def __init__(self, timeout=None):
+    def __init__(self, timeout=None, current_user=False):
         self.timeout = timeout or DEFAULT_CACHE_TIMEOUT
+        self.current_user = current_user
         self.__name__ = 'cache'
 
     def __call__(self, func):
         @wraps(func)
         def decorator(*args, **kwargs):
-            route = '%s,%s' % (request.path, dumps(request.args))
+            user = g.user.id if self.current_user else None
+            route = '%s,%s,%s' % (request.path, dumps(request.args), user)
             response = cache.get(unicode(route))
             if response is None:
                 response = func(*args, **kwargs)
@@ -70,18 +72,27 @@ class InvalidateCache(object):
     """
         Return cached response, update if timeout
     """
-    def __init__(self, path=None, args=None):
-        self.path = path
+    def __init__(self, routes, args=None, clear_for_user=False):
+        self.routes = routes
         self.args = args if args else {}
+        self.clear_for_user = clear_for_user
         self.__name__ = 'cache'
 
     def __call__(self, func):
+
         @wraps(func)
         def decorator(*args, **kwargs):
-            route = '%s,%s' % (self.path, dumps(self.args))
-            response = cache.delete(unicode(route))
-            Logger.debug(unicode('clear %s from cache' % (route)))
             response = func(*args, **kwargs)
+            if response[0] == 200:
+                for path in self.routes:
+                    route = '%s,%s,%s' % (path, dumps(self.args), None)
+                    cache.delete(unicode(route))
+                    user = kwargs.get('user', None) if self.clear_for_user else None
+                    Logger.debug(unicode('clear %s from cache' % (route)))
+                    if user:
+                        route = '%s,%s,%s' % (path, dumps(self.args), user)
+                        cache.delete(unicode(route))
+                        Logger.debug(unicode('clear %s from cache' % (route)))
             return response
         return decorator
 
