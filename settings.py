@@ -24,7 +24,6 @@
 
 import os
 
-
 # ################################ Cerberus Settings ##################################
 
 # Main Cerberus Configuration
@@ -172,6 +171,7 @@ REDIS = {
     'host': os.getenv('REDIS_HOST', '127.0.0.1'),
     'port': os.getenv('REDIS_PORT', 6379),
     'name': os.getenv('REDIS_NAME'),
+    'as_cache': True,
 }
 
 # You can use 'stderr' or 'gelf' or both

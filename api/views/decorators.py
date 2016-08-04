@@ -28,7 +28,7 @@ from json import dumps
 from django.conf import settings
 from flask import g, Response, request
 from voluptuous import Invalid, MultipleInvalid, Schema
-from werkzeug.contrib.cache import RedisCache
+from werkzeug.contrib.cache import RedisCache, SimpleCache
 
 from api.controllers import GeneralController
 from utils import logger
@@ -36,10 +36,14 @@ from utils import logger
 Logger = logger.get_logger(__name__)
 
 DEFAULT_CACHE_TIMEOUT = 300
-cache = RedisCache(
-    host=settings.REDIS['host'],
-    port=settings.REDIS['port']
-)
+
+if settings.REDIS.get('as_cache'):
+    cache = RedisCache(
+        host=settings.REDIS['host'],
+        port=settings.REDIS['port']
+    )
+else:
+    cache = SimpleCache()
 
 Schemas = {}
 
