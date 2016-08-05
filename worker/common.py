@@ -108,21 +108,25 @@ def close_ticket(report, resolution_codename=None, user=None):
     report.save()
 
 
-def get_temp_proofs(ticket):
+def get_temp_proofs(ticket, only_urls=False):
     """
         Get report's ticket content
     """
     temp_proofs = []
     for report in ticket.reportTicket.all():
-        content = 'From: %s\nDate: %s\nSubject: %s\n\n%s\n'
+        if only_urls:
+            content = '\n'.join([item.rawItem for item in report.reportItemRelatedReport.filter(itemType='URL')])
+        else:
+            content = 'From: %s\nDate: %s\nSubject: %s\n\n%s\n'
+            content = content % (
+                report.provider.email,
+                report.receivedDate.strftime("%d/%m/%y %H:%M"),
+                report.subject,
+                utils.dehtmlify(report.body)
+            )
         temp_proofs.append(
             Proof.objects.create(
-                content=content % (
-                    report.provider.email,
-                    report.receivedDate.strftime("%d/%m/%y %H:%M"),
-                    report.subject,
-                    utils.dehtmlify(report.body)
-                ),
+                content=content,
                 ticket=report.ticket,
             )
         )

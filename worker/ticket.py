@@ -518,6 +518,8 @@ def create_ticket_from_phishtocheck(report=None, user=None):
             timeout=3600,
         )
 
+    common.get_temp_proofs(ticket, only_urls=True)
+
     report.ticket = ticket
     report.status = 'Attached'
     report.save()
