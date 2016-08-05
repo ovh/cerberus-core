@@ -33,6 +33,16 @@ from tests import GlobalTestCase
 SAMPLES_DIRECTORY = 'tests/samples'
 
 
+class FakeJob(object):
+    """
+        Fake rq job for mock
+    """
+    def __init__(self):
+        self.id = 42
+        self.is_finished = True
+        self.result = True
+
+
 class ApiTestCase(GlobalTestCase):
     """
         Test case for API
@@ -228,10 +238,12 @@ class ApiTestCase(GlobalTestCase):
         response = json.loads(response.get_data())
         self.assertEqual(0, response['ticketsCount'])
 
+    @patch('rq.queue.Queue.enqueue')
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
-    def test_ticket(self, mock_rq):
+    def test_ticket(self, mock_rq, mock_rq_enqueue):
 
         mock_rq.return_value = None
+        mock_rq_enqueue.return_value = FakeJob()
 
         from worker import report
 
