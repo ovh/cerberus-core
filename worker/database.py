@@ -36,9 +36,12 @@ from django.db.models import Q, ObjectDoesNotExist
 from abuse.models import (Category, DefendantRevision, Defendant, EmailFilterTag, History,
                           DefendantHistory, Provider, Report, Service, Tag, Ticket, UrlStatus,
                           User)
+
+from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.kpi.abstract import KPIServiceException
 from factory.factory import ImplementationFactory
 from parsing import regexp
+from utils import schema
 from worker import Logger
 
 DEFENDANT_REVISION_FIELDS = [f.name for f in DefendantRevision._meta.fields]
@@ -455,6 +458,32 @@ def add_mass_contact_tag(ticket, campaign_name):
         ticket.tags.add(tag)
         ticket.save()
     except ObjectDoesNotExist:
+        pass
+
+
+def refresh_defendant_infos(defendant_id=None):
+    """
+        Try to update `abuse.models.Defendant`'s revision
+    """
+    try:
+        defendant = Defendant.objects.get(id=defendant_id)
+    except (AttributeError, ObjectDoesNotExist, ValueError):
+        pass
+
+    fresh_defendant_infos = None
+
+    try:
+        fresh_defendant_infos = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_customer_infos(defendant.customerId)
+        schema.valid_adapter_response('CustomerDaoBase', 'get_customer_infos', fresh_defendant_infos)
+        fresh_defendant_infos.pop('customerId', None)
+        if DefendantRevision.objects.filter(**fresh_defendant_infos).count():
+            revision = DefendantRevision.objects.filter(**fresh_defendant_infos).last()
+        else:
+            revision = DefendantRevision.objects.create(**fresh_defendant_infos)
+            DefendantHistory.objects.create(defendant=defendant, revision=revision)
+        defendant.details = revision
+        defendant.save()
+    except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
         pass
 
 

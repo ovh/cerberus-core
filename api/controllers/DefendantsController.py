@@ -35,7 +35,7 @@ from abuse.models import (Category, Defendant, DefendantComment,
                           Tag, Ticket)
 from adapters.dao.customer.abstract import CustomerDaoException
 from factory.factory import ImplementationFactory
-from utils import schema
+from utils import schema, utils
 from worker import database
 
 DEFENDANT_FIELDS = [fld.name for fld in Defendant._meta.fields]
@@ -50,23 +50,8 @@ def show(defendant_id):
     except (ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404}
 
-    fresh_defendant_infos = None
-
     # BTW, refresh defendant infos
-    try:
-        fresh_defendant_infos = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_customer_infos(defendant.customerId)
-        schema.valid_adapter_response('CustomerDaoBase', 'get_customer_infos', fresh_defendant_infos)
-        fresh_defendant_infos.pop('customerId', None)
-        if DefendantRevision.objects.filter(**fresh_defendant_infos).count():
-            revision = DefendantRevision.objects.filter(**fresh_defendant_infos).last()
-        else:
-            revision = DefendantRevision.objects.create(**fresh_defendant_infos)
-            DefendantHistory.objects.create(defendant=defendant, revision=revision)
-        defendant.details = revision
-        defendant.save()
-        defendant = Defendant.objects.get(id=defendant_id)
-    except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
-        pass
+    utils.queue.enqueue('database.refresh_defendant_infos', defendant_id=defendant.id)
 
     # Flat details
     defendant_dict = model_to_dict(defendant)
