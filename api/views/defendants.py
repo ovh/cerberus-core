@@ -25,7 +25,7 @@
 from flask import Blueprint, g, request
 
 from api.controllers import CommentsController, DefendantsController
-from decorators import jsonify, perm_required
+from decorators import Cached, jsonify, perm_required
 
 
 defendant_views = Blueprint('defendant_views', __name__)
@@ -33,6 +33,7 @@ defendant_views = Blueprint('defendant_views', __name__)
 
 @defendant_views.route('/api/defendants/top20', methods=['GET'])
 @jsonify
+@Cached(timeout=3600)
 def get_defendant_top20():
     """ Get Abuse defendants top20
     """

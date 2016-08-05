@@ -28,11 +28,8 @@ from django.conf import settings
 from mock import patch
 
 from abuse.models import Category
-from api.api import APP
 from tests import GlobalTestCase
 
-APP.config['DEBUG'] = True
-APP.config['TESTING'] = True
 SAMPLES_DIRECTORY = 'tests/samples'
 
 
@@ -40,11 +37,21 @@ class ApiTestCase(GlobalTestCase):
     """
         Test case for API
     """
+    def setUp(self):
+        """
+        """
+        super(ApiTestCase, self).setUp()
+
+        from api.api import APP
+        APP.config['DEBUG'] = True
+        APP.config['TESTING'] = True
+
+        self.tester = APP.test_client(self)
+
     def test_failed_logout(self):
         """
         """
-        tester = APP.test_client(self)
-        response = tester.post('/api/logout')
+        response = self.tester.post('/api/logout')
         self.assertEqual(response.status_code, 401)
 
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
@@ -58,15 +65,14 @@ class ApiTestCase(GlobalTestCase):
             content = file_d.read()
             report.create_from_email(email_content=content, send_ack=False)
 
-        tester = APP.test_client(self)
-        response = tester.post(
+        response = self.tester.post(
             '/api/auth',
             data=json.dumps({'name': settings.GENERAL_CONFIG['bot_user'], 'password': 'test'}),
             headers={'content-type': 'application/json'},
         )
         token = json.loads(response.get_data())['token']
 
-        response = tester.get(
+        response = self.tester.get(
             '/api/dashboard',
             headers={'X-API-TOKEN': token},
         )
@@ -77,7 +83,7 @@ class ApiTestCase(GlobalTestCase):
         self.assertEqual(1, response['reportsByStatus']['Attached'])
         self.assertEqual(1, response['ticketsByStatus']['Open'])
 
-        response = tester.get(
+        response = self.tester.get(
             '/api/toolbar',
             headers={'X-API-TOKEN': token},
         )
@@ -90,7 +96,7 @@ class ApiTestCase(GlobalTestCase):
             else:
                 self.assertEqual(1, v)
 
-        response = tester.get(
+        response = self.tester.get(
             '/api/defendants/top20',
             headers={'X-API-TOKEN': token},
         )
@@ -110,15 +116,14 @@ class ApiTestCase(GlobalTestCase):
             content = file_d.read()
             report.create_from_email(email_content=content, send_ack=False)
 
-        tester = APP.test_client(self)
-        response = tester.post(
+        response = self.tester.post(
             '/api/auth',
             data=json.dumps({'name': settings.GENERAL_CONFIG['bot_user'], 'password': 'test'}),
             headers={'content-type': 'application/json'},
         )
         token = json.loads(response.get_data())['token']
 
-        response = tester.get(
+        response = self.tester.get(
             '/api/users',
             headers={'X-API-TOKEN': token},
         )
@@ -130,7 +135,7 @@ class ApiTestCase(GlobalTestCase):
         for profile in response[0]['profiles']:
             self.assertEqual('Expert', profile['profile'])
 
-        response = tester.get(
+        response = self.tester.get(
             '/api/categories',
             headers={'X-API-TOKEN': token},
         )
@@ -150,9 +155,8 @@ class ApiTestCase(GlobalTestCase):
         with open('tests/samples/sample3', 'r') as file_d:
             content = file_d.read()
             report.create_from_email(email_content=content, send_ack=False)
-        tester = APP.test_client(self)
 
-        response = tester.post(
+        response = self.tester.post(
             '/api/auth',
             data=json.dumps({'name': settings.GENERAL_CONFIG['bot_user'], 'password': 'test'}),
             headers={'content-type': 'application/json'},
@@ -186,7 +190,7 @@ class ApiTestCase(GlobalTestCase):
             }
         }
 
-        response = tester.get(
+        response = self.tester.get(
             '/api/search',
             query_string={'filters': json.dumps(params)},
             headers={'X-API-TOKEN': token},
@@ -203,7 +207,7 @@ class ApiTestCase(GlobalTestCase):
         # Filter with publicId
         params['where']['like'] = [{'publicId': [publicId]}]
 
-        response = tester.get(
+        response = self.tester.get(
             '/api/search',
             query_string={'filters': json.dumps(params)},
             headers={'X-API-TOKEN': token},
@@ -215,7 +219,7 @@ class ApiTestCase(GlobalTestCase):
         # Invalid publicId
         params['where']['like'] = [{'publicId': 'AAAAAAAAAA'}]
 
-        response = tester.get(
+        response = self.tester.get(
             '/api/search',
             query_string={'filters': json.dumps(params)},
             headers={'X-API-TOKEN': token},
@@ -235,21 +239,20 @@ class ApiTestCase(GlobalTestCase):
             content = file_d.read()
             report.create_from_email(email_content=content, send_ack=False)
 
-        tester = APP.test_client(self)
-        response = tester.post(
+        response = self.tester.post(
             '/api/auth',
             data=json.dumps({'name': settings.GENERAL_CONFIG['bot_user'], 'password': 'test'}),
             headers={'content-type': 'application/json'},
         )
         token = json.loads(response.get_data())['token']
 
-        response = tester.get(
+        response = self.tester.get(
             '/api/tickets/1',
             headers={'X-API-TOKEN': token},
         )
         self.assertEqual(response.status_code, 200)
 
-        response = tester.get(
+        response = self.tester.get(
             'api/tickets/1/actions/list',
             headers={'X-API-TOKEN': token},
         )
@@ -257,7 +260,7 @@ class ApiTestCase(GlobalTestCase):
         self.assertEqual(1, len(response))
         self.assertEqual('default_action', response[0]['name'])
 
-        response = tester.get(
+        response = self.tester.get(
             'api/tickets/1/items',
             headers={'X-API-TOKEN': token},
         )
@@ -265,34 +268,33 @@ class ApiTestCase(GlobalTestCase):
 
     def test_admin_threshold(self):
 
-        tester = APP.test_client(self)
-        response = tester.post(
+        response = self.tester.post(
             '/api/auth',
             data=json.dumps({'name': settings.GENERAL_CONFIG['bot_user'], 'password': 'test'}),
             headers={'content-type': 'application/json'},
         )
         token = json.loads(response.get_data())['token']
 
-        response = tester.get(
+        response = self.tester.get(
             '/api/admin/threshold',
             headers={'X-API-TOKEN': token},
         )
         response = json.loads(response.get_data())
         self.assertEqual(len(response), 1)
 
-        response = tester.get(
+        response = self.tester.get(
             '/api/admin/threshold/1',
             headers={'X-API-TOKEN': token},
         )
         self.assertEqual(response.status_code, 200)
 
-        response = tester.get(
+        response = self.tester.get(
             '/api/admin/threshold/1337',
             headers={'X-API-TOKEN': token},
         )
         self.assertEqual(response.status_code, 404)
 
-        response = tester.put(
+        response = self.tester.put(
             '/api/admin/threshold/1',
             data=json.dumps({'category': 'Spam', 'interval': 15, 'threshold': 15}),
             headers={
@@ -304,7 +306,7 @@ class ApiTestCase(GlobalTestCase):
         response = json.loads(response.get_data())
         self.assertEqual(15, response['interval'])
 
-        response = tester.post(
+        response = self.tester.post(
             '/api/admin/threshold',
             data=json.dumps({'category': 'Spam', 'interval': 15, 'threshold': 15}),
             headers={

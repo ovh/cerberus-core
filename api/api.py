@@ -51,6 +51,7 @@ from utils import logger, utils
 
 
 CRYPTO = utils.Crypto()
+RoleCache = utils.RoleCache()
 
 
 def create_app():
@@ -123,6 +124,10 @@ def create_app():
         if not valid:
             return jsonify({'status': 'Unauthorized', 'code': 401, 'message': message}), 401
 
+        valid, message = _check_allowed_routes()
+        if not valid:
+            return jsonify({'status': 'Forbidden', 'code': 403, 'message': message}), 403
+
     def _check_headers():
 
         try:
@@ -142,15 +147,20 @@ def create_app():
             if user is not None and user.is_active:
                 user.last_login = datetime.now()
                 user.save()
+                return True, None
         except (utils.CryptoException, jwt.ExpiredSignature, jwt.DecodeError, User.DoesNotExist, KeyError):
             return False, 'Unable to authenticate'
 
+    def _check_allowed_routes():
+
         try:
-            return g.user.operator.role.allowedRoutes.filter(method=request.method, endpoint=request.endpoint).exists(), None
+            role_codename = g.user.operator.role.codename
+            is_valid = RoleCache.is_valid(role_codename, request.method, request.endpoint)
+            if is_valid:
+                return True, None
+            return False, 'You are not allowed to %s %s' % (request.method, request.path)
         except ObjectDoesNotExist:
             return False, 'You are not allowed to %s %s' % (request.method, request.path)
-
-        return True, None
 
     @app.after_request
     def after_request(response):

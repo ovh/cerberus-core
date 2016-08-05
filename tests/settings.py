@@ -47,6 +47,8 @@ API = {
     'host': '127.0.0.1',
     'port': 6060,
     'forwarded_host': None,
+    'use_cache': False,
+    'cache_engine': None,  # 'redis' or 'memory'
 }
 
 TAGS = {
@@ -144,7 +146,6 @@ REDIS = {
     'host': '127.0.0.1',
     'port': '6379',
     'name': '',
-    'as_cache': False,
 }
 
 LOG = {

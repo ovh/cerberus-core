@@ -63,6 +63,8 @@ API = {
     'host': os.getenv('API_HOST', '127.0.0.1'),
     'port': os.getenv('API_PORT', 6060),
     'forwarded_host': os.getenv('FORWARDED_HOST'),
+    'use_cache': True,
+    'cache_engine': 'redis',  # 'redis' or 'memory'
 }
 
 # Defined here your customer adapters implementations. For testing you cans use provided default impl
@@ -171,7 +173,6 @@ REDIS = {
     'host': os.getenv('REDIS_HOST', '127.0.0.1'),
     'port': os.getenv('REDIS_PORT', 6379),
     'name': os.getenv('REDIS_NAME'),
-    'as_cache': True,
 }
 
 # You can use 'stderr' or 'gelf' or both

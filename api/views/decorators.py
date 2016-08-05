@@ -37,13 +37,20 @@ Logger = logger.get_logger(__name__)
 
 DEFAULT_CACHE_TIMEOUT = 300
 
-if settings.REDIS.get('as_cache'):
-    cache = RedisCache(
-        host=settings.REDIS['host'],
-        port=settings.REDIS['port']
-    )
-else:
-    cache = SimpleCache()
+Cache = None
+USE_CACHE = False
+
+if settings.API['use_cache']:
+    USE_CACHE = True
+    if settings.API['cache_engine'] == 'redis':
+        Cache = RedisCache(
+            host=settings.REDIS['host'],
+            port=settings.REDIS['port']
+        )
+    elif settings.API['cache_engine'] == 'memory':
+        Cache = SimpleCache()
+    else:
+        raise Exception('Unsupported cache engine %s' % settings.API['cache_engine'])
 
 Schemas = {}
 
@@ -62,10 +69,12 @@ class Cached(object):
         def decorator(*args, **kwargs):
             user = g.user.id if self.current_user else None
             route = '%s,%s,%s' % (request.path, dumps(request.args), user)
-            response = cache.get(unicode(route))
+            if not USE_CACHE:
+                return func(*args, **kwargs)
+            response = Cache.get(unicode(route))
             if response is None:
                 response = func(*args, **kwargs)
-                cache.set(route, response, self.timeout)
+                Cache.set(route, response, self.timeout)
             else:
                 Logger.debug(unicode('get %s from cache, timeout %d' % (route, self.timeout)))
             return response
@@ -87,15 +96,17 @@ class InvalidateCache(object):
         @wraps(func)
         def decorator(*args, **kwargs):
             response = func(*args, **kwargs)
+            if not USE_CACHE:
+                return response
             if response[0] == 200:
                 for path in self.routes:
                     route = '%s,%s,%s' % (path, dumps(self.args), None)
-                    cache.delete(unicode(route))
+                    Cache.delete(unicode(route))
                     user = kwargs.get('user', None) if self.clear_for_user else None
                     Logger.debug(unicode('clear %s from cache' % (route)))
                     if user:
                         route = '%s,%s,%s' % (path, dumps(self.args), user)
-                        cache.delete(unicode(route))
+                        Cache.delete(unicode(route))
                         Logger.debug(unicode('clear %s from cache' % (route)))
             return response
         return decorator

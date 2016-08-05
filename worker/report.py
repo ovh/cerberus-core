@@ -38,7 +38,6 @@ from abuse.models import (AttachedDocument, Defendant, Proof, Report,
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.mailer.abstract import MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
-from adapters.services.storage.abstract import StorageServiceException
 from factory.factory import ImplementationFactory, ReportWorkflowHookFactory
 from parsing import regexp
 from parsing.parser import EmailParser
@@ -69,8 +68,10 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
     # Huge blocks of code are under transaction because it's important to
     # rollback if ANYTHING goes wrong in the report creation workflow.
     #
-    # But concurrent transactions (with multiple workers), on defendant/service creation
-    # for example, can result in unconsistent data. So a pg_lock is used.
+    # Concurrent transactions (with multiple workers), on defendant/service creation
+    # can result in unconsistent data, So a pg_lock is used.
+    #
+    # `abuse.models.Defendant` and `abuse.models.Service` HAVE to be unique.
 
     if not email_content:
         Logger.error(unicode('Missing email content'))
@@ -110,15 +111,12 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         raise CustomerDaoException(ex)
 
     # Create report(s) with identified services
-    try:
-        if not services:
-            created_reports = [__create_without_services(abuse_report, filename)]
-        else:
-            with pglocks.advisory_lock('cerberus_lock'):
-                created_reports = __create_with_services(abuse_report, filename, services)
-    except StorageServiceException as ex:
-        Logger.error(unicode('Exception while creating report(s) for mail %s -> %s' % (filename, str(ex))))
-        raise StorageServiceException(ex)
+    if not services:
+        created_reports = [__create_without_services(abuse_report, filename)]
+    else:
+        with pglocks.advisory_lock('cerberus_lock'):
+            __create_defendants_and_services(services)
+        created_reports = __create_with_services(abuse_report, filename, services)
 
     # Upload attachments
     if abuse_report.attachments:
@@ -182,6 +180,14 @@ def __create_without_services(abuse_report, filename):
     return report
 
 
+def __create_defendants_and_services(services):
+
+    for data in services:  # For identified (service, defendant, items) tuple
+
+        data['defendant'] = database.get_or_create_defendant(data['defendant'])
+        data['service'] = database.get_or_create_service(data['service'])
+
+
 @transaction.atomic
 def __create_with_services(abuse_report, filename, services):
     """
@@ -199,8 +205,8 @@ def __create_with_services(abuse_report, filename, services):
 
         report = __create_without_services(abuse_report, filename)
         created_reports.append(report)
-        report.defendant = database.get_or_create_defendant(data['defendant'])
-        report.service = database.get_or_create_service(data['service'])
+        report.defendant = data['defendant']
+        report.service = data['service']
         report.save()
 
         if report.status == 'Archived':  # because autoarchive tag

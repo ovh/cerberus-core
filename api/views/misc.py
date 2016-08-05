@@ -254,6 +254,7 @@ def get_toolbar():
 
 @misc_views.route('/api/dashboard', methods=['GET'])
 @jsonify
+@Cached(timeout=3600, current_user=True)
 def get_dashboard():
     """ Get Abuse dashboard
     """

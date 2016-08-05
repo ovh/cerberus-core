@@ -49,7 +49,7 @@ from rq import Queue
 from rq_scheduler import Scheduler
 from simplejson import JSONDecodeError
 
-from abuse.models import User
+from abuse.models import Role, User
 from logger import get_logger
 
 Logger = get_logger(os.path.basename(__file__))
@@ -119,6 +119,45 @@ class Crypto(object):
             return encrypted
         except (InvalidSignature, InvalidToken):
             raise CryptoException('unable to decrypt data')
+
+
+class RoleCache(object):
+    """
+        Class caching allowed API routes for each `abuse.models.Role`
+    """
+    def __init__(self):
+        self.routes = {}
+        self._populate()
+
+    def reset(self):
+        """
+            Reset the cache
+        """
+        self._clear()
+        self._populate()
+
+    def is_valid(self, role, method, endpoint):
+        """
+            Check if tuple (method, endpoint) for given role exists
+
+            :param str role: The `abuse.models.Role` codename
+            :param str method: The HTTP method
+            :param str endpoint: The API endpoint
+            :rtype: bool
+            :returns: if allowed or not
+        """
+        return (method, endpoint) in self.routes[role]
+
+    def _clear(self):
+
+        self.routes = {}
+
+    def _populate(self):
+
+        for role in Role.objects.all():
+            self.routes[role.codename] = []
+            for method, endpoint in role.allowedRoutes.all().values_list('method', 'endpoint'):
+                self.routes[role.codename].append((method, endpoint))
 
 
 class RequestException(Exception):
