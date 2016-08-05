@@ -198,6 +198,9 @@ class DefaultMailerService(MailerServiceBase):
         except (ObjectDoesNotExist, ValueError):
             raise MailerServiceException('Email template %s can not be found in DB. Skipping...' % (template_codename))
 
+        reps = ticket.reportTicket.all().order_by('-receivedDate')[:10]
+        phishing_urls = list(set([itm.rawItem for rep in reps for itm in rep.reportItemRelatedReport.filter(itemType='URL')]))
+
         try:
             template = loader.get_template_from_string(mail_template.subject)
             context = Context({
@@ -207,6 +210,7 @@ class DefaultMailerService(MailerServiceBase):
             template = loader.get_template_from_string(mail_template.body)
             context = Context({
                 'publicId': ticket.publicId,
+                'phishingUrls': phishing_urls,
             })
             body = template.render(context)
         except (TemplateEncodingError, TemplateSyntaxError):

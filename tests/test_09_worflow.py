@@ -471,3 +471,6 @@ class TestWorkers(GlobalTestCase):
         self.assertTrue(cerberus_report.ticket)
         self.assertEqual('WaitingAnswer', cerberus_report.ticket.status)
         self.assertEqual('Attached', cerberus_report.status)
+        emails = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').get_emails(cerberus_report.ticket)
+        email = emails[0]
+        self.assertIn('http://www.example.com/phishing.html', email.body)

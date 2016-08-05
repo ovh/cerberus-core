@@ -86,8 +86,8 @@ class PhishingWorkflowHook(WorkflowHookBase):
                 ticket = _create_ticket(report)
                 new_ticket = True
 
-            phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
             _attach_report_to_ticket(report, ticket, new_ticket)
+            phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
             Logger.debug(unicode('Clearly phishing workflow applied'))
             return True
 
@@ -107,11 +107,10 @@ class PhishingWorkflowHook(WorkflowHookBase):
                 ticket = _create_ticket(report)
                 new_ticket = True
 
-            if is_there_some_urls:  # Block urls
-                phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
-
             if ticket:
                 _attach_report_to_ticket(report, ticket, new_ticket)
+                if is_there_some_urls:  # Block urls
+                    phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
 
             Logger.debug(unicode('Trusted phishing provider workflow applied'))
             return True

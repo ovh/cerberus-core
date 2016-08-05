@@ -114,7 +114,12 @@ class GlobalTestCase(TestCase):
             codename='phishing_blocked',
             name='phishing blocked',
             subject='phishing blocked',
-            body='phishing blocked',
+            body="""{% if phishingUrls|length > 0 %}
+                  Below is the list of URLs pointing to the phishing webpage you're hosting :\n
+                  {% for url in phishingUrls %}
+                  \n* {{ url }}
+                  {% endfor %}
+                  {% endif %}""",
         )
 
         for tag in ['copyright:autoclosed', 'phishing:autoblocked', 'phishing:autoclosed', 'phishing:autoreopened']:
