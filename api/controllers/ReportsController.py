@@ -457,8 +457,8 @@ def get_all_attachments(**kwargs):
         return 404, {'status': 'Not Found', 'code': 404, 'message': 'Report not found'}, 0
 
     try:
-        nb_record_filtered = AttachedDocument.objects.filter(report=report.id).count()
-        attached = AttachedDocument.objects.filter(report=report.id).values(*ATTACHMENT_FIELDS)
+        nb_record_filtered = report.attachments.count()
+        attached = report.attachments.all().values(*ATTACHMENT_FIELDS)
         attached = attached[(offset - 1) * limit:limit * offset]
         len(attached)  # Force django to evaluate query now
     except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
@@ -471,8 +471,8 @@ def get_attachment(report_id, attachment_id):
     """ Get attachment
     """
     try:
-        Report.objects.get(id=report_id)
-        attachment = AttachedDocument.objects.get(id=attachment_id)
+        report = Report.objects.get(id=report_id)
+        attachment = report.attachments.get(id=attachment_id)
     except (ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404, 'message': 'Report or attachment not found'}
 

@@ -79,7 +79,7 @@ class TestWorkers(GlobalTestCase):
         report = Report.objects.last()
         self.assertFalse(report.defendant)
         self.assertFalse(report.service)
-        self.assertFalse(report.attachedDocumentRelatedReport.count())
+        self.assertFalse(report.attachments.count())
         self.assertFalse(report.reportItemRelatedReport.count())
         self.assertEqual('simon.vasseur@ovh.net', report.provider.email)
 
@@ -101,7 +101,7 @@ class TestWorkers(GlobalTestCase):
         self.assertEqual('Doe', report.defendant.details.name)
         self.assertTrue(report.service)
         self.assertFalse(report.ticket)
-        self.assertFalse(report.attachedDocumentRelatedReport.count())
+        self.assertFalse(report.attachments.count())
         self.assertTrue(report.reportItemRelatedReport.count())
         self.assertIn('213.251.151.160', report.reportItemRelatedReport.all().values_list('rawItem', flat=True))
 
@@ -138,6 +138,21 @@ class TestWorkers(GlobalTestCase):
         stat = Stat.objects.get(defendant=report.defendant, category='Copyright')
         self.assertEqual(1, stat.reports)
         self.assertEqual(1, stat.tickets)
+
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_report_with_attachments(self, mock_rq):
+        """
+            Sample4 contains attachments
+        """
+        from worker import report
+
+        mock_rq.return_value = None
+        sample = self._samples['sample4']
+        content = sample.read()
+        report.create_from_email(email_content=content)
+        self.assertEqual(1, Report.objects.count())
+        cerberus_report = Report.objects.last()
+        self.assertEqual(2, cerberus_report.attachments.count())
 
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
     def test_defendant_details_change(self, mock_rq):

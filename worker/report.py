@@ -61,7 +61,6 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         :raises CustomerDaoException: if exception while identifying defendants from items
         :raises MailerServiceException: if exception while updating ticket's emails
         :raises StorageServiceException: if exception while accessing storage
-
     """
     # This function use a lock/commit_on_succes on db when creating reports
     #
@@ -332,13 +331,14 @@ def __save_attachments(reports, filename, attachments):
         with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
             cnx.write(storage_filename, attachment['data'])
 
+        attachment_obj = AttachedDocument.objects.create(
+            name=attachment['filename'],
+            filename=storage_filename,
+            filetype=attachment['type'],
+        )
+
         for report in reports:
-            AttachedDocument.objects.create(
-                report=report,
-                name=attachment['filename'],
-                filename=storage_filename,
-                filetype=attachment['type'],
-            )
+            report.attachments.add(attachment_obj)
 
 
 def __save_email(filename, email):
@@ -420,7 +420,6 @@ def __get_ticket_if_answer(abuse_report, filename):
 def __identify_ticket_from_meta(provider, recipients, subject):
     """
         Try to identify an answer to a Cerberus ticket with email meta
-
     """
     if not all((provider, recipients, subject)):
         return None
@@ -645,7 +644,8 @@ def _reinject_validated(report, user):
             ticket=ticket,
             action='attach_report',
             report=report,
-            new_ticket=new_ticket
+            new_ticket=new_ticket,
+            user=user
         )
 
         try:

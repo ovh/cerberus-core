@@ -289,6 +289,15 @@ class Ticket(models.Model):
     jobs = models.ManyToManyField(ServiceActionJob, null=True)
 
 
+class AttachedDocument(models.Model):
+    """
+        Attached document for a `abuse.models.Report`
+    """
+    name = TruncatedCharField(null=True, max_length=255)
+    filename = TruncatedCharField(null=False, max_length=1023)
+    filetype = TruncatedCharField(null=False, max_length=1023)
+
+
 class Provider(models.Model):
     """
         A source of reports
@@ -342,6 +351,7 @@ class Report(models.Model):
     status = TruncatedCharField(max_length=32, null=False, choices=REPORT_STATUS, default='New')
     filename = TruncatedCharField(max_length=1023, null=False)
     tags = models.ManyToManyField(Tag, null=True)
+    attachments = models.ManyToManyField(AttachedDocument, null=True)
 
 
 class ReportItem(models.Model):
@@ -428,16 +438,6 @@ class DefendantComment(models.Model):
     """
     defendant = models.ForeignKey(Defendant, null=False, related_name='comments')
     comment = models.ForeignKey(Comment, null=False)
-
-
-class AttachedDocument(models.Model):
-    """
-        Attached document for a `abuse.models.Report`
-    """
-    report = models.ForeignKey(Report, null=False, related_name='attachedDocumentRelatedReport')
-    name = TruncatedCharField(null=True, max_length=255)
-    filename = TruncatedCharField(null=False, max_length=1023)
-    filetype = TruncatedCharField(null=False, max_length=1023)
 
 
 class Profile(models.Model):
