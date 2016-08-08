@@ -750,18 +750,25 @@ def add_proof(ticket_id, body, user):
     try:
         ticket = Ticket.objects.get(id=ticket_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket not found'}
 
-    try:
-        ticket.proof.create(**body)
-        ticket.save()
-        database.log_action_on_ticket(
-            ticket=ticket,
-            action='add_proof',
-            user=user
-        )
-    except (KeyError, FieldDoesNotExist, FieldError, IntegrityError, TypeError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+    if isinstance(body, dict):
+        body = [body]
+
+    if not isinstance(body, list):
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid body, expecting object or list'}
+
+    for param in body:
+        try:
+            ticket.proof.create(**param)
+            ticket.save()
+            database.log_action_on_ticket(
+                ticket=ticket,
+                action='add_proof',
+                user=user
+            )
+        except (KeyError, FieldDoesNotExist, FieldError, IntegrityError, TypeError, ValueError) as ex:
+            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
     return 201, {'status': 'Created', 'code': 201, 'message': 'Proof successfully added to ticket'}
 
 
