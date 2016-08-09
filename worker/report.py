@@ -39,7 +39,6 @@ from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.mailer.abstract import MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
 from factory.factory import ImplementationFactory, ReportWorkflowHookFactory
-from parsing import regexp
 from parsing.parser import EmailParser
 from utils import pglocks, schema, utils
 from worker import Logger
@@ -82,6 +81,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
 
     # Parse email content
     abuse_report = Parser.parse(email_content)
+    Logger.debug(unicode('New email from %s' % (abuse_report.provider)), extra={'from': abuse_report.provider, 'action': 'new email'})
 
     # Check if provider is not blacklisted
     if abuse_report.provider in settings.PARSING['providers_to_ignore']:
@@ -89,13 +89,10 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         return
 
     # Check if it's an answer to a ticket
-    ticket = __get_ticket_if_answer(abuse_report, filename)
+    ticket, category = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').is_email_ticket_answer(abuse_report)
     if ticket:  # OK it's an anwser, updating ticket and exiting
-        try:
-            __update_ticket_if_answer(ticket, abuse_report, filename)
-            return
-        except MailerServiceException as ex:
-            raise MailerServiceException(ex)
+        _update_ticket_if_answer(ticket, category, abuse_report, filename)
+        return
 
     # Check if items are linked to customer and get corresponding services
     try:
@@ -391,58 +388,7 @@ def __get_attributes_based_on_tags(report, recipients):
     return autoarchive, attach_only, no_phishtocheck
 
 
-def __get_ticket_if_answer(abuse_report, filename):
-    """ Check if the email is a ticket's answer
-
-        :param `worker.parsing.parser.ParsedEmail` abuse_report: The ParsedEmail
-        :return: the corresponding ticket
-        :rtype: `abuse.models.Ticket`
-    """
-    Logger.debug(
-        unicode('New email from %s' % (abuse_report.provider)),
-        extra={
-            'from': abuse_report.provider,
-            'action': 'new email',
-            'hash': filename,
-        }
-    )
-
-    ticket = None
-    if all((abuse_report.provider, abuse_report.recipients, abuse_report.subject, abuse_report.body)):
-        ticket = __identify_ticket_from_meta(
-            abuse_report.provider,
-            abuse_report.recipients,
-            abuse_report.subject,
-        )
-    return ticket
-
-
-def __identify_ticket_from_meta(provider, recipients, subject):
-    """
-        Try to identify an answer to a Cerberus ticket with email meta
-    """
-    if not all((provider, recipients, subject)):
-        return None
-
-    ticket = None
-    # Trying with recipient
-    for recipient in recipients:
-        search = regexp.RECIPIENT.search(str(recipient).lower())
-        if search is not None:
-            public_id = str(search.group(1)).lower()
-            try:
-                ticket = Ticket.objects.get(publicId__iexact=public_id)
-                hsh = hashlib.sha512(str(ticket.id)).hexdigest()[-4:]
-            except (IndexError, TypeError, ValueError, ObjectDoesNotExist):
-                continue
-
-            # Checking hash
-            if str(search.group(2)) == str(hsh):
-                break
-    return ticket
-
-
-def __update_ticket_if_answer(ticket, abuse_report, filename):
+def _update_ticket_if_answer(ticket, category, abuse_report, filename):
     """
         If the email is an answer to a cerberus ticket:
 
@@ -491,6 +437,7 @@ def __update_ticket_if_answer(ticket, abuse_report, filename):
         abuse_report.provider,
         abuse_report.subject,
         abuse_report.body,
+        category
     )
 
     if abuse_report.attachments:

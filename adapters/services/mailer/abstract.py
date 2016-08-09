@@ -25,8 +25,12 @@
 import abc
 from collections import namedtuple
 
-Email = namedtuple('Email', ['sender', 'recipient', 'created', 'subject', 'body'])
-PrefetchedEmail = namedtuple('PrefetchedEmail', ['sender', 'recipients', 'subject', 'body'])  # 'recipients' is a list
+from abuse.models import MailTemplate
+
+Email = namedtuple('Email', ['sender', 'recipient', 'created', 'subject', 'body', 'category'])  # Category : 'defendant', 'plaintiff' or 'other'
+PrefetchedEmail = namedtuple('PrefetchedEmail', ['sender', 'recipients', 'subject', 'body', 'category'])  # 'recipients' is a list
+
+EMAIL_VALID_CATEGORIES = [t[0] for t in MailTemplate.RECIPIENT_TYPE]
 
 
 class MailerServiceException(Exception):
@@ -49,7 +53,7 @@ class MailerServiceBase(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def send_email(self, ticket, recipient, subject, body, sender=None):
+    def send_email(self, ticket, recipient, subject, body, category, sender=None):
         """
             Send a email.
 
@@ -58,6 +62,7 @@ class MailerServiceBase(object):
             :param str subject: The subject of the email
             :param str body: The body of the email
             :param str sender: Eventually the sender of the email (From)
+            :param str category: defendant, plaintiff or other
             :raises MailerServiceException: if any error occur
         """
         cls = self.__class__.__name__
@@ -77,7 +82,19 @@ class MailerServiceBase(object):
         raise NotImplementedError("'%s' object does not implement the method 'get_emails'" % (cls))
 
     @abc.abstractmethod
-    def attach_external_answer(self, ticket, sender, subject, body):
+    def is_email_ticket_answer(self, email):
+        """
+            Returns if the email is an answer to a `abuse.models.Ticket`
+
+            :param `worker.parsing.parser.ParsedEmail` email: The parsed email
+            :return: the tuple (`abuse.models.Ticket`, category) or (None, None)  # Category : 'defendant', 'plaintiff' or 'other'
+            :rtype: tuple
+        """
+        cls = self.__class__.__name__
+        raise NotImplementedError("'%s' object does not implement the method 'is_email_answer'" % (cls))
+
+    @abc.abstractmethod
+    def attach_external_answer(self, ticket, sender, subject, body, category):
         """
             Usefull if an answer for a ticket come from Phone/CRM/API/CustomerUX/Other mailbox ...
 
@@ -85,6 +102,7 @@ class MailerServiceBase(object):
             :param str sender: The sender of the email
             :param str subject: The subject of the email
             :param str body: The body of the email
+            :param str category: defendant, plaintiff or other
             :raises MailerServiceException: if any error occur
         """
         cls = self.__class__.__name__

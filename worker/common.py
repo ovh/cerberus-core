@@ -52,7 +52,8 @@ def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report
             ticket,
             email,
             prefetched_email.subject,
-            prefetched_email.body
+            prefetched_email.body,
+            prefetched_email.category
         )
         database.log_action_on_ticket(
             ticket=ticket,

@@ -429,7 +429,8 @@ def __send_mass_contact_email(ticket, email_subject, email_body):
         ticket,
         ticket.defendant.details.email,
         subject,
-        body
+        body,
+        'MassContact',
     )
 
 

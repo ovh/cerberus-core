@@ -42,7 +42,7 @@ from abuse.models import (AbusePermission, ContactedProvider, Defendant,
                           ServiceAction, ServiceActionJob, Tag, Ticket,
                           TicketComment)
 from adapters.services.action.abstract import ActionServiceException
-from adapters.services.mailer.abstract import MailerServiceException
+from adapters.services.mailer.abstract import EMAIL_VALID_CATEGORIES, MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
 from api.controllers import (DefendantsController, GeneralController,
                              ProvidersController)
@@ -1141,9 +1141,12 @@ def interact(ticket_id, body, user):
     if not all(key in body for key in ('emails', 'action')):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing param(s): need emails and action'}
 
-    for email_to_send in body['emails']:
-        if not all(email_to_send.get(key) for key in ('to', 'subject', 'body')):
+    for params in body['emails']:
+        if not all(params.get(key) for key in ('to', 'subject', 'body')):
             return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing param(s): need subject and body in email'}
+        category = params['category'] if params.get('category') else 'Defendant'
+        if category not in EMAIL_VALID_CATEGORIES:
+            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid email category'}
 
     action = body['action']
     code = 200
@@ -1155,15 +1158,16 @@ def interact(ticket_id, body, user):
     except (AttributeError, KeyError, ValueError, TypeError):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing or invalid params in action'}
 
-    for email_to_send in body['emails']:
-        params = {k: v for k, v in email_to_send.iteritems() if k in ['to', 'body', 'subject']}
+    for params in body['emails']:
+        category = params['category'] if params.get('category') else 'Other'
         for recipient in params['to']:
             try:
                 ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
                     ticket,
                     recipient,
                     params['subject'],
-                    params['body']
+                    params['body'],
+                    category
                 )
                 database.log_action_on_ticket(
                     ticket=ticket,
@@ -1515,8 +1519,17 @@ def get_emails(ticket_id):
 
     try:
         emails = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').get_emails(ticket)
-        emails = [{'body': e.body, 'created': e.created, 'from': e.sender, 'subject': e.subject, 'to': e.recipient} for e in emails]
-        return 200, emails
+        response = []
+        for email in emails:
+            response.append({
+                'body': email.body,
+                'created': email.created,
+                'from': email.sender,
+                'subject': email.subject,
+                'to': email.recipient,
+                'category': email.category
+            })
+        return 200, response
     except MailerServiceException as ex:
         return 500, {'status': 'Internal Server Error', 'code': 500, 'message': str(ex)}
 

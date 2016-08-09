@@ -22,10 +22,10 @@
     Default Mailer Service Implementation
 """
 
-import hashlib
 import os
 import re
 import sqlite3
+
 from time import time
 
 import html2text
@@ -37,9 +37,11 @@ from django.template import (Context, TemplateEncodingError,
                              TemplateSyntaxError, loader)
 
 from abuse.models import ContactedProvider, MailTemplate, Provider, Ticket
-from adapters.services.mailer.abstract import (Email, MailerServiceBase,
+from adapters.services.mailer.abstract import (EMAIL_VALID_CATEGORIES,
+                                               Email, MailerServiceBase,
                                                MailerServiceException,
                                                PrefetchedEmail)
+from worker.parsing.parser import regexp
 
 html2text.ignore_images = True
 html2text.images_to_alt = True
@@ -75,13 +77,13 @@ class DefaultMailerService(MailerServiceBase):
         self._db_conn = sqlite3.connect(directory + '/' + CERBERUS_EMAIL_DB)
         cursor = self._db_conn.cursor()
         cursor.execute('''CREATE TABLE IF NOT EXISTS emails
-                (publicid text, sender text, recipient text, subject text, body text, timestamp int)''')
+                (publicid text, sender text, recipient text, subject text, body text, category text, timestamp int)''')
         self._db_conn.commit()
 
         self._html_parser = html2text.HTML2Text()
         self._html_parser.body_width = 0
 
-    def send_email(self, ticket, recipient, subject, body, sender=None):
+    def send_email(self, ticket, recipient, subject, body, category, sender=None):
         """
             Send a email.
 
@@ -93,6 +95,7 @@ class DefaultMailerService(MailerServiceBase):
             :param str subject: The subject of the email
             :param str body: The body of the email
             :param str sender: Eventually the sender of the email (From)
+            :param str category: defendant, plaintiff or other
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         if not isinstance(ticket, Ticket):
@@ -105,6 +108,9 @@ class DefaultMailerService(MailerServiceBase):
         except (AttributeError, TypeError, ValueError, ValidationError):
             raise MailerServiceException('Invalid email')
 
+        if category not in EMAIL_VALID_CATEGORIES:
+            raise MailerServiceException('Invalid email category')
+
         # Save contacted provider
         ticket_providers = list(set(ticket.reportTicket.all().values_list('provider__email', flat=True).distinct()))
         if recipient in ticket_providers:
@@ -112,9 +118,8 @@ class DefaultMailerService(MailerServiceBase):
             if not ticket.contactedProviders.filter(provider__email=recipient).exists():
                 ContactedProvider.objects.create(ticket=ticket, provider=provider)
 
-        hsh = hashlib.sha512(str(ticket.id)).hexdigest()[-4:]
-        sender = settings.EMAIL_FETCHER['cerberus_email'] % (ticket.publicId, hsh) if not sender else sender
-        self.__update_emails_db(ticket.publicId, sender, recipient, subject, body, int(time()))
+        sender = settings.EMAIL_FETCHER['cerberus_email'] % (ticket.publicId, category) if not sender else sender
+        self.__update_emails_db(ticket.publicId, sender, recipient, subject, body, category, int(time()))
 
         # You cans fill this method
         send_email_with_backend()
@@ -140,14 +145,15 @@ class DefaultMailerService(MailerServiceBase):
         param = (ticket.publicId,)
         emails = []
         try:
-            for row in cursor.execute('SELECT sender, recipient, subject, body, timestamp FROM emails WHERE publicid=?', param):
+            for row in cursor.execute('SELECT sender, recipient, subject, body, category, timestamp FROM emails WHERE publicid=?', param):
                 body = self._html_parser.handle(row[3].replace('<br>\n', '\n').replace('\n', '<br>\n'))
                 emails.append(Email(
                     sender=row[0],
                     recipient=row[1],
                     subject=row[2],
                     body=re.sub(r'^(\s*\n){2,}', '\n', body, flags=re.MULTILINE),
-                    created=row[4],
+                    category=row[4],
+                    created=row[5],
                 ))
         except (KeyError, ValueError) as ex:
             raise MailerServiceException(ex)
@@ -155,7 +161,7 @@ class DefaultMailerService(MailerServiceBase):
         emails = sorted(emails, key=lambda k: k.created)
         return emails
 
-    def attach_external_answer(self, ticket, sender, subject, body):
+    def attach_external_answer(self, ticket, sender, subject, body, category):
         """
             Can be usefull if an answer for a ticket come from Phone/CRM/API/CustomerUX ...
 
@@ -171,9 +177,29 @@ class DefaultMailerService(MailerServiceBase):
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
                 raise MailerServiceException('Ticket %s cannot be found in DB. Skipping...' % (str(ticket)))
 
+        if category not in EMAIL_VALID_CATEGORIES:
+            raise MailerServiceException('Invalid email category')
+
         self.__check_ticket_emails(ticket)
         recipient = settings.EMAIL_FETCHER['cerberus_email'] % (ticket.publicId, 'test', 'test') if not sender else sender
-        self.__update_emails_db(ticket.publicId, sender, recipient, subject, body, int(time()))
+        self.__update_emails_db(ticket.publicId, sender, recipient, subject, body, category, int(time()))
+
+    def is_email_ticket_answer(self, email):
+        """
+            Returns if the email is an answer to a `abuse.models.Ticket`
+
+            :param `worker.parsing.parser.ParsedEmail` email: The parsed email
+            :return: the tuple (`abuse.models.Ticket`, category) or (None, None)  # Category : 'defendant', 'plaintiff' or 'other'
+            :rtype: tuple
+        """
+        ticket = category = None
+        if all((email.provider, email.recipients, email.subject, email.body)):
+            ticket, category = identify_ticket_from_meta(
+                email.provider,
+                email.recipients,
+                email.subject,
+            )
+        return ticket, category
 
     @staticmethod
     def prefetch_email_from_template(ticket, template_codename, lang='EN', acknowledged_report=None):
@@ -221,6 +247,7 @@ class DefaultMailerService(MailerServiceBase):
             recipients=['test@example.com'],
             subject=subject,
             body=body,
+            category=mail_template.recipientType
         )
 
     def close_thread(self, ticket):
@@ -243,13 +270,13 @@ class DefaultMailerService(MailerServiceBase):
         if not cursor.fetchone()[0]:
             raise MailerServiceException('No emails found for this ticket')
 
-    def __update_emails_db(self, public_id, sender, recipient, subject, body, timestamp):
+    def __update_emails_db(self, public_id, sender, recipient, subject, body, category, timestamp):
         """
             Insert emails infos in db
         """
-        data = (public_id, sender, recipient, subject, body, timestamp,)
+        data = (public_id, sender, recipient, subject, body, category, timestamp,)
         cursor = self._db_conn.cursor()
-        cursor.execute('INSERT INTO emails VALUES (?,?,?,?,?,?)', data)
+        cursor.execute('INSERT INTO emails VALUES (?,?,?,?,?,?,?)', data)
         self._db_conn.commit()
 
 
@@ -258,3 +285,26 @@ def send_email_with_backend():
         Send an email using SMTP/API or other backend
     """
     pass
+
+
+def identify_ticket_from_meta(provider, recipients, subject):
+    """
+        Try to identify an answer to a Cerberus ticket with email meta
+    """
+    category = 'other'
+    if not all((provider, recipients, subject)):
+        return None, None
+
+    ticket = None
+    # Trying with recipient
+    for recipient in recipients:
+        search = regexp.RECIPIENT.search(str(recipient).lower())
+        if search is not None:
+            public_id = str(search.group(1)).lower()
+            try:
+                ticket = Ticket.objects.get(publicId__iexact=public_id)
+                category = recipient.split('@')[0].split('.')[1]
+            except (AttributeError, IndexError, TypeError, ValueError, ObjectDoesNotExist):
+                continue
+
+    return ticket, category
