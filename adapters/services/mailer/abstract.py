@@ -87,19 +87,20 @@ class MailerServiceBase(object):
             Returns if the email is an answer to a `abuse.models.Ticket`
 
             :param `worker.parsing.parser.ParsedEmail` email: The parsed email
-            :return: the tuple (`abuse.models.Ticket`, category) or (None, None)  # Category : 'defendant', 'plaintiff' or 'other'
+            :return: the tuple (`abuse.models.Ticket`, category, recipient)  # Category : 'defendant', 'plaintiff' or 'other'
             :rtype: tuple
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'is_email_answer'" % (cls))
 
     @abc.abstractmethod
-    def attach_external_answer(self, ticket, sender, subject, body, category):
+    def attach_external_answer(self, ticket, sender, recipient, subject, body, category):
         """
             Usefull if an answer for a ticket come from Phone/CRM/API/CustomerUX/Other mailbox ...
 
             :param Ticket ticket: A Cerberus ticket instance.
             :param str sender: The sender of the email
+            :param str recipient: The recipient of the answer
             :param str subject: The subject of the email
             :param str body: The body of the email
             :param str category: defendant, plaintiff or other

@@ -89,9 +89,9 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         return
 
     # Check if it's an answer to a ticket
-    ticket, category = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').is_email_ticket_answer(abuse_report)
-    if ticket:  # OK it's an anwser, updating ticket and exiting
-        _update_ticket_if_answer(ticket, category, abuse_report, filename)
+    ticket, category, recipient = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').is_email_ticket_answer(abuse_report)
+    if all((ticket, category, recipient)):  # OK it's an anwser, updating ticket and exiting
+        _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename)
         return
 
     # Check if items are linked to customer and get corresponding services
@@ -388,7 +388,7 @@ def __get_attributes_based_on_tags(report, recipients):
     return autoarchive, attach_only, no_phishtocheck
 
 
-def _update_ticket_if_answer(ticket, category, abuse_report, filename):
+def _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename):
     """
         If the email is an answer to a cerberus ticket:
 
@@ -398,11 +398,13 @@ def _update_ticket_if_answer(ticket, category, abuse_report, filename):
         - save attachments
 
         :param `abuse.models.Ticket` ticket: A Cerberus `abuse.models.Ticket` instance
+        :param str category: The category of the answer ('Defendant', 'Plaintiff' or 'Other)
+        :param str recipient: The recipient of the answer
         :param `worker.parsing.parser.ParsedEmail` abuse_report: The ParsedEmail
         :param str filename: The filename of the email
     """
     Logger.debug(
-        unicode('New answer from %s for ticket %s' % (abuse_report.provider, ticket.id)),
+        unicode('New %s answer from %s for ticket %s' % (category, abuse_report.provider, ticket.id)),
         extra={
             'from': abuse_report.provider,
             'action': 'new answer',
@@ -435,6 +437,7 @@ def _update_ticket_if_answer(ticket, category, abuse_report, filename):
     ImplementationFactory.instance.get_singleton_of('MailerServiceBase').attach_external_answer(
         ticket,
         abuse_report.provider,
+        recipient,
         abuse_report.subject,
         abuse_report.body,
         category

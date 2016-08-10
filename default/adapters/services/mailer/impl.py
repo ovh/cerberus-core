@@ -109,7 +109,7 @@ class DefaultMailerService(MailerServiceBase):
             raise MailerServiceException('Invalid email')
 
         if category not in EMAIL_VALID_CATEGORIES:
-            raise MailerServiceException('Invalid email category')
+            raise MailerServiceException('Invalid email category %s' % category)
 
         # Save contacted provider
         ticket_providers = list(set(ticket.reportTicket.all().values_list('provider__email', flat=True).distinct()))
@@ -161,14 +161,16 @@ class DefaultMailerService(MailerServiceBase):
         emails = sorted(emails, key=lambda k: k.created)
         return emails
 
-    def attach_external_answer(self, ticket, sender, subject, body, category):
+    def attach_external_answer(self, ticket, sender, recipient, subject, body, category):
         """
             Can be usefull if an answer for a ticket come from Phone/CRM/API/CustomerUX ...
 
             :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
             :param str sender: The sender of the email
+            :param str recipient: The recipient of the answer
             :param str subject: The subject of the email
             :param str body: The body of the email
+            :param str category: Defendant, Plaintiff or Other
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         if not isinstance(ticket, Ticket):
@@ -178,10 +180,9 @@ class DefaultMailerService(MailerServiceBase):
                 raise MailerServiceException('Ticket %s cannot be found in DB. Skipping...' % (str(ticket)))
 
         if category not in EMAIL_VALID_CATEGORIES:
-            raise MailerServiceException('Invalid email category')
+            raise MailerServiceException('Invalid email category %s' % category)
 
         self.__check_ticket_emails(ticket)
-        recipient = settings.EMAIL_FETCHER['cerberus_email'] % (ticket.publicId, 'test', 'test') if not sender else sender
         self.__update_emails_db(ticket.publicId, sender, recipient, subject, body, category, int(time()))
 
     def is_email_ticket_answer(self, email):
@@ -189,17 +190,17 @@ class DefaultMailerService(MailerServiceBase):
             Returns if the email is an answer to a `abuse.models.Ticket`
 
             :param `worker.parsing.parser.ParsedEmail` email: The parsed email
-            :return: the tuple (`abuse.models.Ticket`, category) or (None, None)  # Category : 'defendant', 'plaintiff' or 'other'
+            :return: the tuple (`abuse.models.Ticket`, category, recipient) # Category : 'defendant', 'plaintiff' or 'other'
             :rtype: tuple
         """
-        ticket = category = None
+        ticket = category = recipient = None
         if all((email.provider, email.recipients, email.subject, email.body)):
-            ticket, category = identify_ticket_from_meta(
+            ticket, category, recipient = identify_ticket_from_meta(
                 email.provider,
                 email.recipients,
                 email.subject,
             )
-        return ticket, category
+        return ticket, category, recipient
 
     @staticmethod
     def prefetch_email_from_template(ticket, template_codename, lang='EN', acknowledged_report=None):
@@ -291,11 +292,10 @@ def identify_ticket_from_meta(provider, recipients, subject):
     """
         Try to identify an answer to a Cerberus ticket with email meta
     """
-    category = 'other'
     if not all((provider, recipients, subject)):
         return None, None
 
-    ticket = None
+    ticket = recipient = category = None
     # Trying with recipient
     for recipient in recipients:
         search = regexp.RECIPIENT.search(str(recipient).lower())
@@ -303,8 +303,11 @@ def identify_ticket_from_meta(provider, recipients, subject):
             public_id = str(search.group(1)).lower()
             try:
                 ticket = Ticket.objects.get(publicId__iexact=public_id)
-                category = recipient.split('@')[0].split('.')[1]
+                extract = recipient.split('@')[0].split('.')[1].title()
+                if extract in EMAIL_VALID_CATEGORIES:
+                    category = extract
+                    break
             except (AttributeError, IndexError, TypeError, ValueError, ObjectDoesNotExist):
                 continue
 
-    return ticket, category
+    return ticket, category, recipient

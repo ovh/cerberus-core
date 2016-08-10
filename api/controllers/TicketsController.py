@@ -1159,7 +1159,7 @@ def interact(ticket_id, body, user):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing or invalid params in action'}
 
     for params in body['emails']:
-        category = params['category'] if params.get('category') else 'Other'
+        category = params['category'] if params.get('category') else 'Defendant'
         for recipient in params['to']:
             try:
                 ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
