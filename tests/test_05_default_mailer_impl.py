@@ -80,11 +80,19 @@ class TestDefaultMailerImpl(GlobalTestCase):
         """
             Test attach_external_answer
         """
+        recipient = 'ticket+AAAAAAAAAA.defendant@example.com'
         self._impl.send_email(self._ticket, 'test@test.com', 'test', 'test', 'Defendant')
-        self._impl.attach_external_answer(self._ticket, 'test123@site.com', 'Re: test', 'Answer test', 'Defendant')
+        self._impl.attach_external_answer(
+            self._ticket,
+            'test123@site.com',
+            recipient,
+            'Re: test',
+            'Answer test',
+            'Defendant'
+        )
         emails = self._impl.get_emails(self._ticket)
         self.assertEqual(4, len(emails))
-        self.assertRaises(MailerServiceException, lambda: self._impl.attach_external_answer(123456, 'test', 'test', 'test', 'Defendant'))
+        self.assertRaises(MailerServiceException, lambda: self._impl.attach_external_answer(123456, 'test', recipient, 'test', 'test', 'Defendant'))
 
     def test_prefetch_template(self):
         """
