@@ -361,3 +361,13 @@ def get_providers(ticket=None):
     """
     code, resp = TicketsController.get_providers(ticket)
     return code, resp
+
+
+@ticket_views.route('/api/tickets/<ticket>/timeline', methods=['GET'])
+@jsonify
+@perm_required
+def get_timeline(ticket=None):
+    """ Get ticket's timeline
+    """
+    code, resp = TicketsController.get_timeline(ticket, filters=request.args.get('filters'))
+    return code, resp

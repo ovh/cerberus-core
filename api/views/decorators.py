@@ -22,8 +22,11 @@
     Decorators for Cerberus protected API.
 """
 
+import datetime
+import json
+
 from functools import wraps
-from json import dumps
+from time import mktime
 
 from django.conf import settings
 from flask import g, Response, request
@@ -68,7 +71,7 @@ class Cached(object):
         @wraps(func)
         def decorator(*args, **kwargs):
             user = g.user.id if self.current_user else None
-            route = '%s,%s,%s' % (request.path, dumps(request.args), user)
+            route = '%s,%s,%s' % (request.path, json.dumps(request.args), user)
             if not USE_CACHE:
                 return func(*args, **kwargs)
             response = Cache.get(unicode(route))
@@ -100,16 +103,29 @@ class InvalidateCache(object):
                 return response
             if response[0] == 200:
                 for path in self.routes:
-                    route = '%s,%s,%s' % (path, dumps(self.args), None)
+                    route = '%s,%s,%s' % (path, json.dumps(self.args), None)
                     Cache.delete(unicode(route))
                     user = kwargs.get('user', None) if self.clear_for_user else None
                     Logger.debug(unicode('clear %s from cache' % (route)))
                     if user:
-                        route = '%s,%s,%s' % (path, dumps(self.args), user)
+                        route = '%s,%s,%s' % (path, json.dumps(self.args), user)
                         Cache.delete(unicode(route))
                         Logger.debug(unicode('clear %s from cache' % (route)))
             return response
         return decorator
+
+
+class TimestampJSONEncoder(json.JSONEncoder):
+    """
+        JSONEncoder subclass that convert datetime to timestamp
+    """
+    def default(self, o):
+        # See "Date Time String Format" in the ECMA-262 specification.
+        if isinstance(o, datetime.datetime):
+            timestamp = int(mktime(o.timetuple()))
+            return timestamp
+        else:
+            return super(TimestampJSONEncoder, self).default(o)
 
 
 def admin_required(func):
@@ -150,7 +166,14 @@ def jsonify(func):
     @wraps(func)
     def decorated_function(*args, **kwargs):
         retval = func(*args, **kwargs)
-        response = Response(dumps(retval[1]), status=retval[0], content_type='application/json')
+        response = Response(
+            json.dumps(
+                retval[1],
+                cls=TimestampJSONEncoder,
+            ),
+            status=retval[0],
+            content_type='application/json'
+        )
         return response
     return decorated_function
 

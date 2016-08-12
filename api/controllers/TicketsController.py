@@ -1566,3 +1566,89 @@ def _precheck_user_status_update_authorizations(user, status):
         return status.lower() in authorizations['ticket']['status']
     else:
         return False
+
+
+def get_timeline(ticket_id, **kwargs):
+    """
+        Get ̀àbuse.models.Ticket` history and activities
+    """
+    try:
+        ticket = Ticket.objects.get(id=ticket_id)
+    except (IndexError, ObjectDoesNotExist, ValueError):
+        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket not found'}
+
+    # Parse filters from request
+    filters = {}
+    if kwargs.get('filters'):
+        try:
+            filters = json.loads(unquote(unquote(kwargs['filters'])))
+        except (ValueError, SyntaxError, TypeError) as ex:
+            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+    try:
+        limit = int(filters['paginate']['resultsPerPage'])
+        offset = int(filters['paginate']['currentPage'])
+    except KeyError:
+        limit = 10
+        offset = 1
+
+    with_meta = False
+    if filters.get('withMetadata'):
+        with_meta = True
+
+    order_by = 'date' if filters.get('reverse') else '-date'
+
+    history = _get_timeline_history(ticket, with_meta, order_by, limit, offset)
+    return 200, history
+
+
+def _get_timeline_history(ticket, with_meta, order_by, limit, offset):
+
+    history = ticket.ticketHistory.all().values_list(
+        'user__username',
+        'date',
+        'action',
+        'actionType'
+    ).order_by(order_by)[(offset - 1) * limit:limit * offset]
+
+    history = [{
+        'username': username,
+        'date': date,
+        'log': log,
+        'actionType': action_type
+    } for username, date, log, action_type in history]
+
+    if not with_meta:
+        return history
+
+    for entry in history:
+        entry['metadata'] = None
+        if entry['actionType'] in ['AddComment', 'UpdateComment']:
+            comment = ticket.comments.filter(
+                comment__date__range=(
+                    entry['date'] - timedelta(seconds=1),
+                    entry['date'] + timedelta(seconds=1),
+                )
+            ).values_list(
+                'comment__comment',
+                flat=True
+            ).last()
+            entry['metadata'] = {
+                'key': 'comment',
+                'value': comment
+            }
+        elif entry['actionType'] in ['AddItem', 'UpdateItem']:
+            item = ticket.reportTicket.filter(
+                reportItemRelatedReport__date__range=(
+                    entry['date'] - timedelta(seconds=1),
+                    entry['date'] + timedelta(seconds=1),
+                )
+            ).values_list(
+                'reportItemRelatedReport__rawItem',
+                flat=True
+            ).last()
+            entry['metadata'] = {
+                'key': 'item',
+                'value': item
+            }
+
+    return history
