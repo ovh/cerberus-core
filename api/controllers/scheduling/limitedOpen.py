@@ -116,27 +116,37 @@ def get_specific_filtered_todo_tickets(where, ids, priority, status, treated_by,
     """
         Returns a list of `abuse.models.Ticket` dict-mapping based on multiple filters
     """
-    tickets = Ticket.objects.filter(
-        where,
-        ~Q(id__in=ids),
-        priority=priority,
-        status__in=status,
-        **treated_by
-    ).values(
-        *TICKET_FIELDS
-    ).order_by(
-        *order_by
-    ).annotate(
-        attachedReportsCount=Count('reportTicket')
-    ).distinct()[:limit * offset]
-
     res = []
-    for ticket in tickets:
-        if ticket.get('defendant'):
-            defendant = Defendant.objects.get(id=ticket['defendant'])
-            count = defendant.ticketDefendant.filter(creationDate__lte=datetime.now() - timedelta(days=90)).count()
-            if count == 0 and defendant.details.creationDate < (datetime.now() - timedelta(days=15)):
+    custom_offset = offset
+
+    while True:
+        tickets = Ticket.objects.filter(
+            where,
+            ~Q(id__in=ids),
+            priority=priority,
+            status__in=status,
+            **treated_by
+        ).values(
+            *TICKET_FIELDS
+        ).order_by(
+            *order_by
+        ).annotate(
+            attachedReportsCount=Count('reportTicket')
+        ).distinct()[:limit * custom_offset]
+
+        for ticket in tickets:  # Only defendant with no open tickets for the last 3 months and not too recent defendant
+            if ticket.get('defendant'):
+                defendant = Defendant.objects.get(id=ticket['defendant'])
+                count = defendant.ticketDefendant.filter(creationDate__lte=datetime.now() - timedelta(days=90)).count()
+                if count == 0 and defendant.details.creationDate < (datetime.now() - timedelta(days=15)):
+                    res.append(ticket)
+            else:
                 res.append(ticket)
-        else:
-            res.append(ticket)
+
+        if len(tickets) == 0 or len(res) > limit * offset:
+            break
+
+        ids.update([r['id'] for r in res])
+        custom_offset += 1
+
     return res
