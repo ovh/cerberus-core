@@ -135,6 +135,7 @@ def get_specific_filtered_todo_tickets(where, ids, priority, status, treated_by,
         ).distinct()[:limit * custom_offset]
 
         for ticket in tickets:  # Only defendant with no open tickets for the last 3 months and not too recent defendant
+            ids.update([t['id'] for t in tickets])
             if ticket.get('defendant'):
                 defendant = Defendant.objects.get(id=ticket['defendant'])
                 count = defendant.ticketDefendant.filter(creationDate__lte=datetime.now() - timedelta(days=90)).count()
@@ -146,7 +147,6 @@ def get_specific_filtered_todo_tickets(where, ids, priority, status, treated_by,
         if len(tickets) == 0 or len(res) > limit * offset:
             break
 
-        ids.update([r['id'] for r in res])
         custom_offset += 1
 
     return res
