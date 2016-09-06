@@ -464,7 +464,7 @@ class TestWorkers(GlobalTestCase):
 
         sample = self._samples['sample6']
         content = sample.read()
-        report.create_from_email(email_content=content, send_ack=False)
+        report.create_from_email(email_content=content, send_ack=True)
 
         cerberus_report = Report.objects.last()
         self.assertEqual('Phishing', cerberus_report.category.name)

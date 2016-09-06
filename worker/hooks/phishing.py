@@ -26,7 +26,6 @@ from datetime import datetime, timedelta
 
 from django.conf import settings
 
-from abuse.models import Ticket
 from utils import utils
 from worker import Logger
 from worker.hooks.abstract import WorkflowHookBase
@@ -87,8 +86,9 @@ class PhishingWorkflowHook(WorkflowHookBase):
                 new_ticket = True
 
             _attach_report_to_ticket(report, ticket, new_ticket)
-            phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
+            phishing.block_url_and_mail(ticket_id=ticket, report_id=report)
             Logger.debug(unicode('Clearly phishing workflow applied'))
+            Logger.debug(unicode(' ***** MailerId %s **** ' % (report.ticket.mailerId)))
             return True
 
         # Report has to be manually checked
@@ -110,7 +110,7 @@ class PhishingWorkflowHook(WorkflowHookBase):
             if ticket:
                 _attach_report_to_ticket(report, ticket, new_ticket)
                 if is_there_some_urls:  # Block urls
-                    phishing.block_url_and_mail(ticket_id=ticket.id, report_id=report.id)
+                    phishing.block_url_and_mail(ticket_id=ticket, report_id=report)
 
             Logger.debug(unicode('Trusted phishing provider workflow applied'))
             return True
@@ -162,7 +162,7 @@ def _attach_report_to_ticket(report, ticket, new_ticket):
 
     from worker import database
 
-    report.ticket = Ticket.objects.get(id=ticket.id)
+    report.ticket = ticket
     report.status = 'Attached'
     report.save()
     database.log_action_on_ticket(

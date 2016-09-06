@@ -22,7 +22,6 @@
     Functional tests for Cerberus API
 """
 import json
-import shutil
 
 from django.conf import settings
 from mock import patch
@@ -327,6 +326,3 @@ class ApiTestCase(GlobalTestCase):
             },
         )
         self.assertEqual(response.status_code, 400)
-
-    def test_clean(self):
-        shutil.rmtree(settings.GENERAL_CONFIG['email_storage_dir'], ignore_errors=True)

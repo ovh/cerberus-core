@@ -23,6 +23,7 @@
 """
 
 import os
+import random
 import re
 import sqlite3
 
@@ -121,8 +122,8 @@ class DefaultMailerService(MailerServiceBase):
         sender = settings.EMAIL_FETCHER['cerberus_email'] % (ticket.publicId, category) if not sender else sender
         self.__update_emails_db(ticket.publicId, sender, recipient, subject, body, category, int(time()))
 
-        # You cans fill this method
-        send_email_with_backend()
+        # You can fill this method
+        send_email_with_backend(ticket)
 
     def get_emails(self, ticket):
         """
@@ -281,11 +282,13 @@ class DefaultMailerService(MailerServiceBase):
         self._db_conn.commit()
 
 
-def send_email_with_backend():
+def send_email_with_backend(ticket):
     """
         Send an email using SMTP/API or other backend
     """
-    pass
+    if not ticket.mailerId:
+        ticket.mailerId = random.randint(1, 100000)
+        ticket.save()
 
 
 def identify_ticket_from_meta(provider, recipients, subject):

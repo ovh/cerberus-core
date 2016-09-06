@@ -168,19 +168,26 @@ def block_url_and_mail(ticket_id=None, report_id=None):
         :param int ticket_id: The id of the Cerberus `abuse.models.Ticket`
         :param int report_id: The id of the Cerberus `abuse.models.Report`
     """
-    if not all((ticket_id, report_id)):
-        Logger.error(unicode('Invalid parameters submitted [ticket_id=%s, report_id=%s]' % (ticket_id, report_id)))
-        return
-
-    try:
-        ticket = Ticket.objects.get(id=ticket_id)
-        report = Report.objects.get(id=report_id)
-        if not ticket.defendant or not ticket.service:
-            Logger.error(unicode('Ticket %d has no defendant/service' % (ticket_id)))
+    if not isinstance(ticket_id, Ticket):
+        try:
+            ticket = Ticket.objects.get(id=ticket_id)
+            if not ticket.defendant or not ticket.service:
+                Logger.error(unicode('Ticket %d has no defendant/service' % (ticket_id)))
+                return
+        except (ObjectDoesNotExist, ValueError):
+            Logger.error(unicode('Ticket %d cannot be found in DB. Skipping...' % (ticket_id)))
             return
-    except (ObjectDoesNotExist, ValueError):
-        Logger.error(unicode('Ticket %d or report %d cannot be found in DB. Skipping...' % (ticket_id, report_id)))
-        return
+    else:
+        ticket = ticket_id
+
+    if not isinstance(report_id, Report):
+        try:
+            report = Report.objects.get(id=report_id)
+        except (ObjectDoesNotExist, ValueError):
+            Logger.error(unicode('Report %d cannot be found in DB. Skipping...' % (report_id)))
+            return
+    else:
+        report = report_id
 
     for item in report.reportItemRelatedReport.filter(itemType='URL'):
         ImplementationFactory.instance.get_singleton_of('PhishingServiceBase').block_url(item.rawItem, item.report)
@@ -197,7 +204,7 @@ def block_url_and_mail(ticket_id=None, report_id=None):
         ticket.snoozeStart = datetime.now()
 
     ticket.save()
-    Logger.info(unicode('Ticket %d now with status WaitingAnswer for %d' % (ticket_id, ticket_snooze)))
+    Logger.info(unicode('Ticket %d now with status WaitingAnswer for %d' % (ticket.id, ticket_snooze)))
 
 
 def is_all_down_for_ticket(ticket, last=5):

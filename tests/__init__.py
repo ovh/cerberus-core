@@ -19,7 +19,6 @@
 
 
 import os
-import shutil
 
 from abuse.models import (AbusePermission, ServiceAction, Category, MailTemplate,
                           Provider, ReportThreshold, User, Profile, Resolution, Tag,
@@ -286,6 +285,6 @@ class GlobalTestCase(TestCase):
                 route = ApiRoute.objects.create(method=method, endpoint=route)
                 role.allowedRoutes.add(route)
 
-    def tearDown(self):
+    # def tearDown(self):
 
-        shutil.rmtree(settings.GENERAL_CONFIG['email_storage_dir'], ignore_errors=True)
+    #     shutil.rmtree(settings.GENERAL_CONFIG['email_storage_dir'], ignore_errors=True)
