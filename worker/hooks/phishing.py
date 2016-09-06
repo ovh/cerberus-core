@@ -88,7 +88,6 @@ class PhishingWorkflowHook(WorkflowHookBase):
             _attach_report_to_ticket(report, ticket, new_ticket)
             phishing.block_url_and_mail(ticket_id=ticket, report_id=report)
             Logger.debug(unicode('Clearly phishing workflow applied'))
-            Logger.debug(unicode(' ***** MailerId %s **** ' % (report.ticket.mailerId)))
             return True
 
         # Report has to be manually checked

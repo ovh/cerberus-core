@@ -107,6 +107,7 @@ def _check_auto_unassignation(ticket):
         unassigned_on_multiple_alarm = ticket.treatedBy.operator.role.modelsAuthorizations['ticket']['unassignedOnMultipleAlarm']
         if unassigned_on_multiple_alarm and history == [WAITING, ALARM, WAITING]:
             ticket.treatedBy = None
+            Logger.debug(unicode('Unassigning ticket %d because of operator role configuration' % (ticket.id)))
     except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
         pass
 
