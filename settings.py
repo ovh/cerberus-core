@@ -47,9 +47,7 @@ GENERAL_CONFIG = {
     'copyright': {
         'wait': 172800,
         'acns_patterns': ('www.acns.net/ACNS',),
-        'trusted_copyright_providers': [
-            'takedown@entura.co.uk'
-        ],
+        'trusted_copyright_providers': [],
     },
     'magic_smtp_header': os.getenv('MAGIC_SMTP_HEADER', 'X-MAGIC-SMTP-HEADER-TO-IDENTIFY-TRUSTED-PROVIDER'),
     'report_timeout': 30,

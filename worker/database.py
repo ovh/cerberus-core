@@ -132,7 +132,7 @@ def log_action_on_ticket(ticket=None, action=None, user=None, **kwargs):
     )
 
     if ImplementationFactory.instance.is_implemented('KPIServiceBase'):
-        _generates_kpi_infos(ticket, action)
+        _generates_kpi_infos(ticket, log_msg)
 
     Logger.debug(
         unicode(action),
