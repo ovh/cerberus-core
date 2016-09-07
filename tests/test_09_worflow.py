@@ -339,7 +339,7 @@ class TestWorkers(GlobalTestCase):
         """
             Sample6 is a trusted phishing report
         """
-        ReportWorkflowHookFactory.instance.registered_hook_instances = set()
+        ReportWorkflowHookFactory.instance.registered_hook_instances = []
         from worker import report
 
         mock_rq.return_value = None
@@ -359,7 +359,7 @@ class TestWorkers(GlobalTestCase):
         """
             Sample7 is not a trusted phishing report
         """
-        ReportWorkflowHookFactory.instance.registered_hook_instances = set()
+        ReportWorkflowHookFactory.instance.registered_hook_instances = []
         from worker import report
 
         mock_rq.return_value = None
@@ -378,7 +378,7 @@ class TestWorkers(GlobalTestCase):
         """
             Test copyright/acns specific workflow
         """
-        ReportWorkflowHookFactory.instance.registered_hook_instances = set()
+        ReportWorkflowHookFactory.instance.registered_hook_instances = []
         from worker import report
 
         Provider.objects.create(email='broadgreenpictures@copyright-compliance.com', trusted=True)
@@ -396,7 +396,7 @@ class TestWorkers(GlobalTestCase):
         """
             Test copyright/acns specific workflow
         """
-        ReportWorkflowHookFactory.instance.registered_hook_instances = set()
+        ReportWorkflowHookFactory.instance.registered_hook_instances = []
         from worker import report
 
         Provider.objects.create(email='broadgreenpictures@copyright-compliance.com', trusted=False)

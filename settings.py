@@ -82,6 +82,7 @@ CUSTOM_IMPLEMENTATIONS = (
     'default.adapters.services.action.impl.DefaultActionService',
 )
 
+# /!\ Order matter
 CUSTOM_WORKFLOW_HOOKS = (
     'worker.hooks.phishing.PhishingWorkflowHook',
     'worker.hooks.copyright.CopyrightWorkflowHook',

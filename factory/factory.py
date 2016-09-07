@@ -159,7 +159,7 @@ class ReportWorkflowHookFactory(object):
     """
     def __init__(self):
 
-        self.registered_hook_instances = set()
+        self.registered_hook_instances = []
         self.read_hooks_available()
 
     def read_hooks_available(self):
@@ -181,7 +181,7 @@ class ReportWorkflowHookFactory(object):
         return getattr(importlib.import_module(module_name), cls_name)
 
     def __register_impl(self, class_obj):
-        self.registered_hook_instances.add(class_obj())
+        self.registered_hook_instances.append(class_obj())
 
 
 class TicketSchedulingAlgorithmFactory(object):
