@@ -72,4 +72,4 @@ ACK_RE = {
 }
 
 
-ACNS_PROOF = re.compile(r'Dear Sir or Madam(\n|.)*?(<|---\s*Start)', re.MULTILINE)
+ACNS_PROOF = re.compile(r'Dear Sir or Madam|On behalf of(\n|.)*?(<|---\s*Start)', re.MULTILINE)
