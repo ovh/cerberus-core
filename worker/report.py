@@ -581,7 +581,7 @@ def _reinject_validated(report, user):
 
     # Create ticket if trusted
     new_ticket = False
-    if not ticket and trusted:
+    if not ticket:
         ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
         new_ticket = True
 

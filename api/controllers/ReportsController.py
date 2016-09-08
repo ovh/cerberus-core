@@ -323,7 +323,7 @@ def _update_status(body, report, user):
             ticket.save()
         body['ticket'] = None
     elif report.status.lower() == 'tovalidate' and body['status'].lower() == 'attached':
-        report.status = 'New'
+        report.status = 'Attached'
         report.save()
         utils.queue.enqueue(
             'report.reparse_validated',

@@ -24,8 +24,6 @@
 
 import operator
 
-import logutils
-
 from datetime import datetime, timedelta
 from time import mktime, time
 
@@ -102,10 +100,6 @@ def update_waiting():
 
         except (AttributeError, ValueError) as ex:
             Logger.debug(unicode('Error while updating ticket %d : %s' % (ticket.id, ex)))
-
-    for handler in Logger.handlers:
-        if isinstance(handler, logutils.queue.QueueHandler):
-            handler.queue.join()
 
 
 def _check_auto_unassignation(ticket):
