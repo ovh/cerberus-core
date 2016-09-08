@@ -47,11 +47,13 @@ class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
             where = kwargs['where']
             count = Ticket.objects.filter(
                 where,
+                escalated=False,
                 status='Open',
                 priority__in=TODO_TICKET_PRIORITY_FILTERS
             ).order_by('id').distinct().count()
         else:
             count = Ticket.objects.filter(
+                escalated=False,
                 status__in='Open',
                 priority__in=TODO_TICKET_PRIORITY_FILTERS
             ).order_by('id').distinct().count()
@@ -80,6 +82,7 @@ class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
             offset = 1
 
         where = common.get_user_filters(user)
+        where.append(Q(escalated=False))
         order_by = ['modificationDate', '-reportTicket__tags__level']
 
         if filters.get('onlyUnassigned'):

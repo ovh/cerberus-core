@@ -23,6 +23,9 @@
 """
 
 import operator
+
+import logutils
+
 from datetime import datetime, timedelta
 from time import mktime, time
 
@@ -38,6 +41,7 @@ from worker import Logger
 WAITING = 'WaitingAnswer'
 PAUSED = 'Paused'
 ALARM = 'Alarm'
+STATUS_SEQUENCE = [WAITING, ALARM, WAITING]
 CERBERUS_BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
 
 
@@ -99,14 +103,31 @@ def update_waiting():
         except (AttributeError, ValueError) as ex:
             Logger.debug(unicode('Error while updating ticket %d : %s' % (ticket.id, ex)))
 
+    for handler in Logger.handlers:
+        if isinstance(handler, logutils.queue.QueueHandler):
+            handler.queue.join()
+
 
 def _check_auto_unassignation(ticket):
 
     history = ticket.ticketHistory.filter(actionType='ChangeStatus').order_by('-date').values_list('ticketStatus', flat=True)[:3]
     try:
         unassigned_on_multiple_alarm = ticket.treatedBy.operator.role.modelsAuthorizations['ticket']['unassignedOnMultipleAlarm']
-        if unassigned_on_multiple_alarm and history == [WAITING, ALARM, WAITING]:
+        if unassigned_on_multiple_alarm and len(history) == 3 and all([STATUS_SEQUENCE[i] == history[i] for i in xrange(3)]):
+            database.log_action_on_ticket(
+                ticket=ticket,
+                action='change_treatedby',
+                previous_value=ticket.treatedBy
+            )
+            database.log_action_on_ticket(
+                ticket=ticket,
+                action='update_property',
+                property='escalated',
+                previous_value=ticket.escalated,
+                new_value=True,
+            )
             ticket.treatedBy = None
+            ticket.escalated = True
             Logger.debug(unicode('Unassigning ticket %d because of operator role configuration' % (ticket.id)))
     except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
         pass
