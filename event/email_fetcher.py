@@ -170,6 +170,8 @@ class EmailFetcher(object):
         _, data = self._imap_conn.uid('search', None, 'ALL')
         messages = data[0].split()
 
+        Logger.debug(unicode('Still %d emails to fetch' % (len(messages))))
+
         for message_uid in messages[:50]:
             _, data = self._imap_conn.uid('fetch', message_uid, '(RFC822)')
             body = data[0][1]

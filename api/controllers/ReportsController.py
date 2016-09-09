@@ -294,7 +294,7 @@ def update(report_id, body, user):
 
     # Update other fields
     try:
-        valid_fields = ['status', 'defendant', 'category', 'ticket']
+        valid_fields = ['defendant', 'category', 'ticket']
         body = {k: v for k, v in body.iteritems() if k in valid_fields}
         Report.objects.filter(id=report.id).update(**body)
         report = Report.objects.get(id=int(report_id))
@@ -322,6 +322,8 @@ def _update_status(body, report, user):
             ticket.status = 'Closed'
             ticket.save()
         body['ticket'] = None
+        report.status = 'New'
+        report.save()
     elif report.status.lower() == 'tovalidate' and body['status'].lower() == 'attached':
         report.status = 'Attached'
         report.save()
