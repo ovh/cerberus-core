@@ -77,7 +77,8 @@ class CopyrightWorkflowHook(WorkflowHookBase):
             utils.scheduler.enqueue_in(
                 timedelta(seconds=settings.GENERAL_CONFIG['copyright']['wait']),
                 'ticket.timeout',
-                ticket_id=ticket.id
+                ticket_id=ticket.id,
+                timeout=3600,
             )
             ticket_snooze = settings.GENERAL_CONFIG['copyright']['wait']
             ticket.previousStatus = ticket.status
