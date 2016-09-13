@@ -60,15 +60,9 @@ CERBERUS_USERS = User.objects.all().values_list('username', flat=True)
 IPS_NETWORKS = {}
 BLACKLISTED_NETWORKS = []
 
-queue = Queue(connection=Redis())
-scheduler = Scheduler(connection=Redis())
-
-redis = Redis(
-    host=settings.REDIS['host'],
-    port=settings.REDIS['port'],
-    password=None,
-    db=0,
-)
+queue = Queue(connection=Redis(**settings.REDIS))
+scheduler = Scheduler(connection=Redis(**settings.REDIS))
+redis = Redis(**settings.REDIS)
 
 html2text.ignore_images = True
 html2text.images_to_alt = True

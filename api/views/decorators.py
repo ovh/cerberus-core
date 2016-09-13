@@ -46,10 +46,7 @@ USE_CACHE = False
 if settings.API['use_cache']:
     USE_CACHE = True
     if settings.API['cache_engine'] == 'redis':
-        Cache = RedisCache(
-            host=settings.REDIS['host'],
-            port=settings.REDIS['port']
-        )
+        Cache = RedisCache(**settings.REDIS)
     elif settings.API['cache_engine'] == 'memory':
         Cache = SimpleCache()
     else:

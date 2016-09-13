@@ -36,6 +36,8 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 django.setup()
 
 import logutils
+
+from django.conf import settings
 from redis import Redis
 from rq import Queue
 
@@ -43,7 +45,7 @@ from utils.logger import get_logger
 
 
 Logger = get_logger('workflow')
-Worker = Queue(connection=Redis())
+Worker = Queue(connection=Redis(**settings.REDIS))
 
 
 def main():

@@ -53,7 +53,7 @@ from utils.logger import get_logger
 
 
 Logger = get_logger(os.path.basename(__file__))
-Worker = rq_queue(connection=Redis())
+Worker = rq_queue(connection=Redis(**settings.REDIS))
 
 CHARSETS = ('iso-8859-1', 'iso-8859-15', 'utf-8', 'ascii', 'utf-16', 'windows-1252', 'cp850', 'iso-8859-11')
 HOST = settings.EMAIL_FETCHER['host']
