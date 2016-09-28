@@ -57,14 +57,14 @@ class MailerServiceBase(object):
         """
             Send a email.
 
-            :param Ticket ticket: A Cerberus ticket instance.
+            :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
             :param str recipient: The recipient of the email
             :param str subject: The subject of the email
             :param str body: The body of the email
             :param str category: defendant, plaintiff or other
             :param str sender: Eventually the sender of the email (From)
-            :param listr attachments: A list of attachements [{'content': ..., 'contentType': ... ,'filename': ...}]
-            :raises MailerServiceException: if any error occur
+            :param list attachments: A list of attachements [{'content': ..., 'content_type': ... ,'filename': ...}]
+            :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'send_email'" % (cls))
@@ -74,10 +74,10 @@ class MailerServiceBase(object):
         """
             Get all emails for the given ticket
 
-            :param Ticket ticket: A Cerberus ticket instance.
+            :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
             :return: A list of Email object
             :rtype: list
-            :raises MailerServiceException: if any error occur
+            :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'get_emails'" % (cls))
@@ -99,13 +99,14 @@ class MailerServiceBase(object):
         """
             Usefull if an answer for a ticket come from Phone/CRM/API/CustomerUX/Other mailbox ...
 
+            :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
             :param Ticket ticket: A Cerberus ticket instance.
             :param str sender: The sender of the email
             :param str recipient: The recipient of the answer
             :param str subject: The subject of the email
             :param str body: The body of the email
             :param str category: defendant, plaintiff or other
-            :raises MailerServiceException: if any error occur
+            :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'attach_external_answer'" % (cls))
@@ -115,13 +116,14 @@ class MailerServiceBase(object):
         """
             Try to fill email template with ticket meta
 
+            :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
             :param Ticket ticket: A Cerberus ticket instance.
             :param str template: The codename of the template
             :param str lang: The langage to use
             :param int acknowledged_report: Eventually add a report body to the email body (e.g for acknowledgment)
             :return: The prefetched email
             :rtype: PrefetchedEmail
-            :raises MailerServiceException: if any error occur
+            :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'prefetch_email_from_template'" % (cls))
@@ -131,8 +133,9 @@ class MailerServiceBase(object):
         """
             Usefull for archive/index/notify/send summary to customer
 
+            :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
             :param Ticket ticket: A Cerberus ticket instance.
-            :raises MailerServiceException: if any error occur
+            :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'close_thread'" % (cls))

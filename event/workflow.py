@@ -35,17 +35,11 @@ import django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 django.setup()
 
-import logutils
-
-from django.conf import settings
-from redis import Redis
-from rq import Queue
-
+from utils import utils
 from utils.logger import get_logger
 
 
 Logger = get_logger('workflow')
-Worker = Queue(connection=Redis(**settings.REDIS))
 
 
 def main():
@@ -53,15 +47,11 @@ def main():
         Create worker event for workflow
     """
     Logger.debug(unicode('Starting follow_the_sun'))
-    Worker.enqueue('workflow.follow_the_sun', timeout=43200)
+    utils.queue.enqueue('ticket.follow_the_sun', timeout=43200)
     Logger.debug(unicode('Starting update_waiting'))
-    Worker.enqueue('workflow.update_waiting', timeout=43200)
+    utils.queue.enqueue('ticket.update_waiting', timeout=43200)
     Logger.debug(unicode('Starting update_paused'))
-    Worker.enqueue('workflow.update_paused', timeout=43200)
-
-    for handler in Logger.handlers:
-        if isinstance(handler, logutils.queue.QueueHandler):
-            handler.queue.join()
+    utils.queue.enqueue('ticket.update_paused', timeout=43200)
 
 if __name__ == "__main__":
     main()

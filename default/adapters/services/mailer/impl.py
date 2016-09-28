@@ -84,7 +84,7 @@ class DefaultMailerService(MailerServiceBase):
         self._html_parser = html2text.HTML2Text()
         self._html_parser.body_width = 0
 
-    def send_email(self, ticket, recipient, subject, body, category, sender=None):
+    def send_email(self, ticket, recipient, subject, body, category, sender=None, attachments=None):
         """
             Send a email.
 
@@ -95,8 +95,9 @@ class DefaultMailerService(MailerServiceBase):
             :param str recipient: The recipient of the email
             :param str subject: The subject of the email
             :param str body: The body of the email
-            :param str sender: Eventually the sender of the email (From)
             :param str category: defendant, plaintiff or other
+            :param str sender: Eventually the sender of the email (From)
+            :param list attachments: A list of attachements [{'content': ..., 'content_type': ... ,'filename': ...}]
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         if not isinstance(ticket, Ticket):
