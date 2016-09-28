@@ -39,7 +39,6 @@ class WorkflowHookBase(object):
             :param `abuse.models.Report` report: A Cerberus report instance
             :param `abuse.models.Ticket` ticket: A Cerberus ticket instance
             :param bool is_trusted: If the report is trusted
-            :param bool no_phishtocheckstr: if the report does not need PhishToCheck
             :return: If the workflow match
             :rtype: bool
         """
@@ -53,6 +52,8 @@ class WorkflowHookBase(object):
 
             :param `abuse.models.Report` report: A Cerberus report instance
             :param `abuse.models.Ticket` ticket: A Cerberus ticket instance
+            :param bool is_trusted: If the report is trusted
+            :param bool no_phishtocheck: if the report does not need PhishToCheck
             :return: If the workflow is applied
             :rtype: bool
         """

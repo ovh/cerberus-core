@@ -35,6 +35,8 @@ import django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 django.setup()
 
+from django.conf import settings
+from redis import StrictRedis
 from rq import Connection, Queue, Worker
 
 from utils.logger import get_logger
@@ -45,7 +47,7 @@ Logger = get_logger(os.path.basename('worker'))
 def main():
     """ Main
     """
-    with Connection():
+    with Connection(connection=StrictRedis(**settings.REDIS)):
         qs = map(Queue, sys.argv[1:]) or [Queue()]
 
         worker = Worker(qs)
