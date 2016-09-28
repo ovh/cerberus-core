@@ -22,7 +22,9 @@
     Ticket views for Cerberus protected API.
 """
 
-from flask import Blueprint, g, request
+from io import BytesIO
+
+from flask import Blueprint, json, g, make_response, request, send_file
 
 from api.controllers import (CommentsController, TicketsController,
                              PresetsController, ReportItemsController,
@@ -371,3 +373,16 @@ def get_timeline(ticket=None):
     """
     code, resp = TicketsController.get_timeline(ticket, filters=request.args.get('filters'))
     return code, resp
+
+
+@ticket_views.route('/api/tickets/<ticket>/attachments/<attachment>', methods=['GET'])
+@perm_required
+def get_ticket_attachment(ticket=None, attachment=None):
+    """ Get `abuse.models.Ticket`'s `abuse.models.AttachedDocument`
+    """
+    code, resp = TicketsController.get_attachment(ticket, attachment)
+    if code != 200:
+        return make_response(json.dumps(resp), code, {'content-type': 'application/json'})
+
+    bytes_io = BytesIO(resp['raw'])
+    return send_file(bytes_io, attachment_filename=resp['filename'], mimetype=resp['filetype'], as_attachment=True)

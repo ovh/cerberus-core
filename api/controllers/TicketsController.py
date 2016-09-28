@@ -22,6 +22,8 @@
     Cerberus tickets manager
 """
 
+import base64
+import hashlib
 import json
 import operator
 import re
@@ -30,20 +32,23 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from urllib import unquote
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import FieldError, MultipleObjectsReturned
 from django.db import IntegrityError, transaction
 from django.db.models import Count, FieldDoesNotExist, ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
+from django.utils import text
 from netaddr import AddrConversionError, AddrFormatError, IPNetwork
 
 from abuse.models import (AbusePermission, ContactedProvider, Defendant,
                           History, Proof, Report, Resolution, Service,
                           ServiceAction, ServiceActionJob, Tag, Ticket,
-                          TicketComment)
+                          TicketComment, AttachedDocument)
 from adapters.services.action.abstract import ActionServiceException
 from adapters.services.mailer.abstract import EMAIL_VALID_CATEGORIES, MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
+from adapters.services.storage.abstract import StorageServiceException
 from api.controllers import (DefendantsController, GeneralController,
                              ProvidersController)
 from factory.factory import (ImplementationFactory,
@@ -115,6 +120,13 @@ MODIFICATION_INVALID_FIELDS = (
     'creationDate',
     'modificationDate'
 )
+
+WORKER_TICKET_FUNC = (
+    'ticket.timeout',
+    'ticket.reminder',
+    'action.apply_if_no_reply'
+)
+
 
 TICKET_FIELDS = [fld.name for fld in Ticket._meta.fields]
 
@@ -334,6 +346,7 @@ def show(ticket_id, user):
     ticket_dict['history'] = __get_ticket_history(ticket)
     ticket_dict['attachedReportsCount'] = ticket.reportTicket.count()
     ticket_dict['tags'] = __get_ticket_tags(ticket)
+    ticket_dict['attachments'] = [model_to_dict(a) for r in ticket.reportTicket.all() for a in r.attachments.all()]
     ticket_dict['justAssigned'] = just_assigned
 
     return 200, ticket_dict
@@ -355,7 +368,13 @@ def __get_ticket_history(ticket):
     """
         Get ticket history..
     """
-    history = History.objects.filter(ticket=ticket.id).values_list('user__username', 'date', 'action').order_by('-date')
+    history = History.objects.filter(
+        ticket=ticket.id
+    ).values_list(
+        'user__username',
+        'date',
+        'action'
+    ).order_by('-date')
     return [{
         'username': username,
         'date': time.mktime(date.timetuple()),
@@ -927,6 +946,10 @@ def update_status(ticket, status, body, user):
             if user.abusepermission_set.filter(category=ticket.category, profile__name='Beginner').count():
                 ticket.moderation = True
 
+            for job in utils.scheduler.get_jobs():
+                if job.func_name in WORKER_TICKET_FUNC and job.kwargs['ticket_id'] == ticket.id:
+                    utils.scheduler.cancel(job.id)
+
             action = {
                 'ticket': ticket,
                 'action': 'change_status',
@@ -1159,6 +1182,18 @@ def interact(ticket_id, body, user):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing or invalid params in action'}
 
     for params in body['emails']:
+
+        attachments = None
+        if params.get('attachments'):
+            if len(params['attachments']) > 5:
+                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Too many attachments'}
+            try:
+                attachments = _save_and_sanitize_attachments(ticket, params['attachments'])
+            except StorageServiceException:
+                return 500, {'status': 'Internal Server Error', 'code': 500, 'message': 'Error while uploading attachments'}
+            except KeyError:
+                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing or invalid params in attachments'}
+
         category = params['category'] if params.get('category') else 'Defendant'
         for recipient in params['to']:
             try:
@@ -1167,7 +1202,8 @@ def interact(ticket_id, body, user):
                     recipient,
                     params['subject'],
                     params['body'],
-                    category
+                    category,
+                    attachments=attachments,
                 )
                 database.log_action_on_ticket(
                     ticket=ticket,
@@ -1175,10 +1211,34 @@ def interact(ticket_id, body, user):
                     user=user,
                     email=recipient
                 )
-            except MailerServiceException:
-                return 500, {'status': 'Internal Server Error', 'code': 500, 'message': 'Error while sending emails (actions ok)'}
+            except MailerServiceException as ex:
+                return 500, {'status': 'Internal Server Error', 'code': 500, 'message': str(ex)}
 
     return 200, {'status': 'OK', 'code': 200, 'message': 'Ticket successfully updated'}
+
+
+def _save_and_sanitize_attachments(ticket, attachments):
+
+    for attachment in attachments:
+        attachment['filename'] = text.get_valid_filename(attachment['filename'])
+        attachment['content_type'] = attachment.pop('contentType')
+
+        content = base64.b64decode(attachment['content'])
+        storage_filename = hashlib.sha256(attachment['content']).hexdigest()
+        storage_filename = storage_filename + '-attach-'
+        storage_filename = storage_filename.encode('utf-8')
+        storage_filename = storage_filename + attachment['filename']
+
+        with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
+            cnx.write(storage_filename, content)
+
+        ticket.reportTicket.last().attachments.add(AttachedDocument.objects.create(
+            filename=storage_filename,
+            filetype=attachment['content_type'],
+            name=attachment['filename']
+        ))
+
+    return attachments
 
 
 def __parse_interact_action(ticket, action, user):
@@ -1652,3 +1712,31 @@ def _get_timeline_history(ticket, with_meta, order_by, limit, offset):
             }
 
     return history
+
+
+def get_attachment(ticket_id, attachment_id):
+    """
+        Get given abuse.models.AttachedDocument`for given `abuse.models.Ticket`
+    """
+    try:
+        Ticket.objects.filter(id=ticket_id)
+        attachment = AttachedDocument.objects.get(id=attachment_id)
+    except (ObjectDoesNotExist, ValueError):
+        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket or attachment not found'}
+
+    resp = None
+    try:
+        with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
+            raw = cnx.read(attachment.filename)
+            resp = {
+                'raw': base64.b64encode(raw),
+                'filetype': str(attachment.filetype),
+                'filename': attachment.name.encode('utf-8'),
+            }
+    except StorageServiceException:
+        pass
+
+    if not resp:
+        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Raw attachment not found'}
+
+    return 200, resp

@@ -24,11 +24,12 @@
 
 import operator
 
+from collections import Counter
 from datetime import datetime, timedelta
 
 from django.db.models import Count, Q
 
-from abuse.models import Defendant, Ticket
+from abuse.models import Ticket
 from api.controllers.scheduling import common
 from api.controllers.scheduling.abstract import TicketSchedulingAlgorithmBase
 
@@ -45,16 +46,22 @@ class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
 
         if kwargs.get('where'):
             where = kwargs['where']
+            rejected = get_defendant_to_reject(where=where)
             count = Ticket.objects.filter(
+                ~Q(defendant__in=rejected),
                 where,
                 escalated=False,
                 status='Open',
                 priority__in=TODO_TICKET_PRIORITY_FILTERS
             ).order_by('id').distinct().count()
         else:
+            rejected = get_defendant_to_reject()
+            where = [~Q(defendant__in=rejected)]
+            where = reduce(operator.and_, where)
             count = Ticket.objects.filter(
+                where,
                 escalated=False,
-                status__in='Open',
+                status='Open',
                 priority__in=TODO_TICKET_PRIORITY_FILTERS
             ).order_by('id').distinct().count()
 
@@ -91,13 +98,15 @@ class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
         else:
             treated_by_filters = common.get_treated_by_filters(user)
 
-        # Aggregate all filters
+        temp_where = reduce(operator.and_, where)
+        rejected = get_defendant_to_reject(where=temp_where)
+        where.append(~Q(defendant__in=rejected))
         where = reduce(operator.and_, where)
 
         nb_record = Ticket.objects.filter(
             where,
             status='Open',
-            priority__in=TODO_TICKET_PRIORITY_FILTERS
+            priority__in=TODO_TICKET_PRIORITY_FILTERS,
         ).distinct().count()
 
         res = []
@@ -138,16 +147,27 @@ def get_specific_filtered_todo_tickets(where, ids, priority, status, treated_by,
 
         ids.update([t['id'] for t in tickets])
 
-        for ticket in tickets:  # Only defendant with no open tickets for the last 3 months and not too recent defendant
-            if ticket.get('defendant'):
-                defendant = Defendant.objects.get(id=ticket['defendant'])
-                count = defendant.ticketDefendant.filter(creationDate__lte=datetime.now() - timedelta(days=90)).count()
-                if count == 0 and defendant.details.creationDate < (datetime.now() - timedelta(days=15)):
-                    res.append(ticket)
-            else:
-                res.append(ticket)
+        for ticket in tickets:
+            res.append(ticket)
 
         if len(tickets) == 0 or len(res) > limit * offset:
             break
 
     return res
+
+
+def get_defendant_to_reject(where=None):
+
+    if not where:
+        where = [Q()]
+        where = reduce(operator.and_, where)
+
+    defendants = Ticket.objects.filter(
+        where,
+        status='Open',
+        priority__in=TODO_TICKET_PRIORITY_FILTERS,
+        defendant__details__creationDate__lt=datetime.now() - timedelta(days=30)
+    ).values_list('defendant', flat=True)
+    rejected = set([k for k, v in Counter(defendants).iteritems() if v > 1])
+
+    return rejected
