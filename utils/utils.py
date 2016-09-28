@@ -435,3 +435,18 @@ def is_ipaddr_ignored(ip_str):
         if network.netmask.value & ip_addr.value == network.value:
             return True
     return False
+
+
+def is_valid_ipaddr(ip_addr):
+    """
+        Check if the `ip_addr` is a valid ipv4
+
+        :param str ip_str: The IP address
+        :rtype: bool
+        :returns: If the ip_addr is valid
+    """
+    try:
+        validate_ipv46_address(ip_addr)
+        return True
+    except ValidationError:
+        return False

@@ -276,7 +276,7 @@ class TestWorkers(GlobalTestCase):
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
     def test_report_tovalidate(self, mock_rq):
         """
-            Check that report's status is 'New' when no services identified
+            Check that report's status is 'ToValidate' when trusted but no services identified
         """
         from worker import report
 

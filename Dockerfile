@@ -2,7 +2,7 @@ FROM debian:latest
 MAINTAINER Simon Vasseur "simon.vasseur@corp.ovh.com"
 
 RUN apt-get update
-RUN apt-get install -y git apache2 python2.7 postgresql redis-server python-pip python-psycopg2 python-dev supervisor
+RUN apt-get install -y git apache2 cron nano python2.7 postgresql redis-server python-pip python-psycopg2 python-dev supervisor
 
 RUN useradd -ms /bin/bash cerberus
 
@@ -66,9 +66,8 @@ RUN mkdir cerberus-core \
 EXPOSE 6060
 
 COPY docker/apache.conf /etc/apache2/sites-available/000-default.conf
-COPY docker/crontab /etc/cron.d/cerberus
-RUN chmod 0644 /etc/cron.d/cerberus
 
+COPY docker/crontab /crontab
 COPY docker/run.sh /run.sh
 COPY docker/cerberus.sh /home/cerberus/cerberus-core/
 RUN chmod 0644 /home/cerberus/cerberus-core/cerberus.sh
