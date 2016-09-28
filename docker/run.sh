@@ -6,6 +6,7 @@ a2enmod rewrite
 a2enmod proxy
 a2enmod proxy_http
 /etc/init.d/apache2 start
-cron
+crontab /crontab
 touch /var/log/cron.log
+/etc/init.d/cron restart
 /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf
