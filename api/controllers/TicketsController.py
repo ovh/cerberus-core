@@ -121,13 +121,6 @@ MODIFICATION_INVALID_FIELDS = (
     'modificationDate'
 )
 
-WORKER_TICKET_FUNC = (
-    'ticket.timeout',
-    'ticket.reminder',
-    'action.apply_if_no_reply'
-)
-
-
 TICKET_FIELDS = [fld.name for fld in Ticket._meta.fields]
 
 
@@ -945,10 +938,6 @@ def update_status(ticket, status, body, user):
 
             if user.abusepermission_set.filter(category=ticket.category, profile__name='Beginner').count():
                 ticket.moderation = True
-
-            for job in utils.scheduler.get_jobs():
-                if job.func_name in WORKER_TICKET_FUNC and job.kwargs['ticket_id'] == ticket.id:
-                    utils.scheduler.cancel(job.id)
 
             action = {
                 'ticket': ticket,
