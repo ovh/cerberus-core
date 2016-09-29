@@ -22,6 +22,8 @@
     Defined CopyrightWorkflow hook
 """
 
+import re
+
 from datetime import datetime, timedelta
 
 from django.conf import settings
@@ -29,6 +31,7 @@ from django.conf import settings
 from abuse.models import Proof, Ticket
 from utils import utils
 from worker.hooks.abstract import WorkflowHookBase
+from worker.parsing import regexp
 
 
 class CopyrightWorkflowHook(WorkflowHookBase):
@@ -97,8 +100,19 @@ class CopyrightWorkflowHook(WorkflowHookBase):
         # Send emails to provider/defendant (template, email, lang)
 
         ticket.proof.all().delete()
-        Proof.objects.create(content=report.body, ticket=ticket)
 
+        # Add proof
+        content = report.body
+
+        for email in re.findall(regexp.EMAIL, content):  # Remove potentially sensitive emails
+            content = content.replace(email, 'email-removed@provider.com')
+
+        Proof.objects.create(
+            content=content,
+            ticket=ticket,
+        )
+
+        # Send emails
         templates = [
             (settings.CODENAMES['ack_received'], report.provider.email, 'EN'),
             (settings.CODENAMES['first_alert'], report.defendant.details.email, report.defendant.details.lang),

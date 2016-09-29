@@ -22,6 +22,8 @@
     Defined AcnsWorkflow hook
 """
 
+import re
+
 from django.conf import settings
 
 from abuse.models import Proof, Resolution, Ticket
@@ -80,6 +82,10 @@ class AcnsWorkflowHook(WorkflowHookBase):
 
         # Add proof
         content = regexp.ACNS_PROOF.search(report.body).group()
+
+        for email in re.findall(regexp.EMAIL, content):  # Remove potentially sensitive emails
+            content = content.replace(email, 'email-removed@provider.com')
+
         Proof.objects.create(
             content=content,
             ticket=ticket,

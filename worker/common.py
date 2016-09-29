@@ -22,6 +22,8 @@
     Common functions for worker
 """
 
+import re
+
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
@@ -29,6 +31,7 @@ import database
 from abuse.models import Proof, Resolution, User
 from factory.factory import ImplementationFactory
 from utils import utils
+from parsing import regexp
 
 
 def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report_id=None):
@@ -125,6 +128,8 @@ def get_temp_proofs(ticket, only_urls=False):
                 report.subject,
                 utils.dehtmlify(report.body)
             )
+        for email in re.findall(regexp.EMAIL, content):  # Remove potentially sensitive emails
+            content = content.replace(email, 'email-removed@provider.com')
         temp_proofs.append(
             Proof.objects.create(
                 content=content,

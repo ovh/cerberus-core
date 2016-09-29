@@ -55,6 +55,8 @@ from factory.factory import (ImplementationFactory,
                              TicketSchedulingAlgorithmFactory)
 from utils import utils
 from worker import database
+from worker.parsing import regexp
+
 
 IP_CIDR_RE = re.compile(r"(?<!\d\.)(?<!\d)(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}(?!\d|(?:\.\d))")
 STATUS = [status[0].lower() for status in Ticket.TICKET_STATUS]
@@ -772,6 +774,8 @@ def add_proof(ticket_id, body, user):
 
     for param in body:
         try:
+            for email in re.findall(regexp.EMAIL, param['content']):  # Remove potentially sensitive emails
+                param['content'] = param['content'].replace(email, 'email-removed@provider.com')
             ticket.proof.create(**param)
             ticket.save()
             database.log_action_on_ticket(
