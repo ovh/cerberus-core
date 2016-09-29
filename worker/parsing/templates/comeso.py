@@ -30,6 +30,9 @@ TEMPLATE = {
         'ips': {
             'pattern': r'(?:IP\s*:\s*)' + regexp.IPV4,
         },
+        'urls': {
+            'pattern': r'(?:URLs\s*:\s*\n*)' + regexp.URL,
+        },
         'category': {
             'value': 'Copyright',
         },
