@@ -164,10 +164,9 @@ class TestWorkers(GlobalTestCase):
         cerberus_report.ticket.save()
         cerberus_report.save()
 
-        from worker import workflow
         from worker import ticket as ticket_func
 
-        workflow.update_waiting()
+        ticket_func.update_waiting()
 
         ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
         self.assertEqual('Alarm', ticket.status)
@@ -187,7 +186,7 @@ class TestWorkers(GlobalTestCase):
         cerberus_report.ticket.save()
         cerberus_report.save()
 
-        workflow.update_waiting()
+        ticket_func.update_waiting()
 
         ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
         self.assertEqual('Alarm', ticket.status)
@@ -217,6 +216,7 @@ class TestWorkers(GlobalTestCase):
         cerberus_report.reportItemRelatedReport.all().update(fqdnResolved='1.2.3.4')
         self.assertEqual('Attached', cerberus_report.status)
         self.assertTrue(cerberus_report.ticket)
+        self.assertIn('report:copyright_workflow_hook', cerberus_report.tags.all().values_list('name', flat=True))
 
         cerberus_report.status = 'Attached'
         cerberus_report.ticket.status = 'WaitingAnswer'
@@ -225,10 +225,9 @@ class TestWorkers(GlobalTestCase):
         cerberus_report.ticket.save()
         cerberus_report.save()
 
-        from worker import workflow
         from worker import ticket as ticket_func
 
-        workflow.update_waiting()
+        ticket_func.update_waiting()
 
         ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
         self.assertEqual('Alarm', ticket.status)
@@ -426,7 +425,7 @@ class TestWorkers(GlobalTestCase):
         cerberus_report = Report.objects.last()
         self.assertEqual('Phishing', cerberus_report.category.name)
         self.assertTrue(cerberus_report.ticket)
-        self.assertTrue('Attached', cerberus_report.status)
+        self.assertEqual('Attached', cerberus_report.status)
 
         sample = self._samples['sample6']
         content = sample.read()
@@ -472,6 +471,6 @@ class TestWorkers(GlobalTestCase):
         self.assertEqual('WaitingAnswer', cerberus_report.ticket.status)
         self.assertEqual('Attached', cerberus_report.status)
         emails = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').get_emails(cerberus_report.ticket)
-        self.assertTrue(2, len(emails))
+        self.assertEqual(2, len(emails))
         email = emails[0]
         self.assertIn('http://www.example.com/phishing.html', email.body)

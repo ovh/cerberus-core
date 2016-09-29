@@ -227,7 +227,8 @@ def __create_with_services(abuse_report, filename, services):
             if hook.identify(report, ticket, is_trusted=trusted):
                 is_workflow_applied = hook.apply(report, ticket, trusted, no_phishtocheck)
                 if is_workflow_applied:
-                    Logger.debug(unicode('Specific workflow %s applied' % (str(hook.__class__.__name__))))
+                    database.set_report_specificworkflow_tag(report, str(hook.__class__.__name__))
+                    Logger.debug(unicode('Specific workflow %s applied' % str(hook.__class__.__name__)))
                     break
 
         if is_workflow_applied:

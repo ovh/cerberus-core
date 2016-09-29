@@ -450,3 +450,15 @@ def is_valid_ipaddr(ip_addr):
         return True
     except ValidationError:
         return False
+
+
+def string_to_underscore_case(string):
+    """
+        Convert a string to underscore case
+
+        :param str string: The sting to convert
+        :rtype: str
+        :returns: The converted string
+    """
+    tmp = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', tmp).lower()

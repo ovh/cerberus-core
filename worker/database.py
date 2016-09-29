@@ -41,7 +41,7 @@ from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.kpi.abstract import KPIServiceException
 from factory.factory import ImplementationFactory
 from parsing import regexp
-from utils import schema
+from utils import schema, utils
 from worker import Logger
 
 DEFENDANT_REVISION_FIELDS = [f.name for f in DefendantRevision._meta.fields]
@@ -510,3 +510,15 @@ def log_new_report(report):
             ImplementationFactory.instance.get_singleton_of('KPIServiceBase').new_report(report)
         except KPIServiceException as ex:
             Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
+
+
+def set_report_specificworkflow_tag(report, workflow_name):
+    """
+        Add workflow tag to `abuse.models.Report`
+    """
+    name = utils.string_to_underscore_case(workflow_name)
+    report.tags.add(Tag.objects.get_or_create(
+        codename=name,
+        name='report:%s' % name,
+        tagType='Report',
+    )[0])
