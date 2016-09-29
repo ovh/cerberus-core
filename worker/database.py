@@ -26,7 +26,7 @@ import random
 import re
 import string
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.core.exceptions import MultipleObjectsReturned, ValidationError
@@ -391,6 +391,11 @@ def set_ticket_higher_priority(ticket):
         Set `abuse.models.Ticket` higher priority available through it's
         `abuse.models.Report`'s `abuse.models.Provider`
     """
+    if ticket.defendant.details.creationDate >= datetime.now() - timedelta(days=30):
+        ticket.priority = sorted(PRIORITY_LEVEL.items(), key=operator.itemgetter(1))[1]  # High
+        ticket.save()
+        return
+
     priorities = list(set(ticket.reportTicket.all().values_list('provider__priority', flat=True)))
     for priority, _ in sorted(PRIORITY_LEVEL.items(), key=operator.itemgetter(1)):
         if priority in priorities:
