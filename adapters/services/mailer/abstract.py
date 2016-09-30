@@ -27,8 +27,29 @@ from collections import namedtuple
 
 from abuse.models import MailTemplate
 
-Email = namedtuple('Email', ['sender', 'recipient', 'created', 'subject', 'body', 'category'])  # Category : 'defendant', 'plaintiff' or 'other'
-PrefetchedEmail = namedtuple('PrefetchedEmail', ['sender', 'recipients', 'subject', 'body', 'category'])  # 'recipients' is a list
+Email = namedtuple(
+    'Email',
+    [
+        'sender',       # str
+        'recipient',    # str
+        'created',      # str
+        'subject',      # str
+        'body',         # str
+        'category',     # Category : 'defendant', 'plaintiff' or 'other'
+        'attachments'   # List of {'filename'; .... 'content_type': 'text/plain'}
+    ]
+)
+
+PrefetchedEmail = namedtuple(
+    'PrefetchedEmail',
+    [
+        'sender',       # str
+        'recipients',   # list
+        'subject',      # str
+        'body',         # str
+        'category'      # str
+    ]
+)
 
 EMAIL_VALID_CATEGORIES = [t[0] for t in MailTemplate.RECIPIENT_TYPE]
 
@@ -63,7 +84,7 @@ class MailerServiceBase(object):
             :param str body: The body of the email
             :param str category: defendant, plaintiff or other
             :param str sender: Eventually the sender of the email (From)
-            :param list attachments: A list of attachements [{'content': ..., 'content_type': ... ,'filename': ...}]
+            :param list attachments: A list of attachments [{'content': ..., 'content_type': ... ,'filename': ...}]
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         cls = self.__class__.__name__
@@ -75,7 +96,7 @@ class MailerServiceBase(object):
             Get all emails for the given ticket
 
             :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
-            :return: A list of Email object
+            :return: A list of `adapters.services.mailer.abstract.Email` object
             :rtype: list
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
@@ -95,17 +116,17 @@ class MailerServiceBase(object):
         raise NotImplementedError("'%s' object does not implement the method 'is_email_answer'" % (cls))
 
     @abc.abstractmethod
-    def attach_external_answer(self, ticket, sender, recipient, subject, body, category):
+    def attach_external_answer(self, ticket, sender, recipient, subject, body, category, attachments=None):
         """
             Usefull if an answer for a ticket come from Phone/CRM/API/CustomerUX/Other mailbox ...
 
             :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
-            :param Ticket ticket: A Cerberus ticket instance.
             :param str sender: The sender of the email
             :param str recipient: The recipient of the answer
             :param str subject: The subject of the email
             :param str body: The body of the email
             :param str category: defendant, plaintiff or other
+            :param list attachments: A list of attachments [{'content': ..., 'content_type': ... ,'filename': ...}]
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         cls = self.__class__.__name__
@@ -117,12 +138,11 @@ class MailerServiceBase(object):
             Try to fill email template with ticket meta
 
             :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
-            :param Ticket ticket: A Cerberus ticket instance.
             :param str template: The codename of the template
             :param str lang: The langage to use
             :param int acknowledged_report: Eventually add a report body to the email body (e.g for acknowledgment)
             :return: The prefetched email
-            :rtype: PrefetchedEmail
+            :rtype: `adapters.services.mailer.abstract.PrefetchedEmail`
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         cls = self.__class__.__name__
@@ -134,7 +154,6 @@ class MailerServiceBase(object):
             Usefull for archive/index/notify/send summary to customer
 
             :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
-            :param Ticket ticket: A Cerberus ticket instance.
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         cls = self.__class__.__name__

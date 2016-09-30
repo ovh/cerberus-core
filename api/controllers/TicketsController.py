@@ -341,7 +341,6 @@ def show(ticket_id, user):
     ticket_dict['history'] = __get_ticket_history(ticket)
     ticket_dict['attachedReportsCount'] = ticket.reportTicket.count()
     ticket_dict['tags'] = __get_ticket_tags(ticket)
-    ticket_dict['attachments'] = [model_to_dict(a) for r in ticket.reportTicket.all() for a in r.attachments.all()]
     ticket_dict['justAssigned'] = just_assigned
 
     return 200, ticket_dict
@@ -1570,21 +1569,43 @@ def get_emails(ticket_id):
     except (ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket not found'}
 
+    ticket_reports_id = ticket.reportTicket.all().values_list('id')
+
     try:
         emails = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').get_emails(ticket)
         response = []
         for email in emails:
+            attachments = _get_email_attachments(email, ticket_reports_id)
             response.append({
                 'body': email.body,
                 'created': email.created,
                 'from': email.sender,
                 'subject': email.subject,
                 'to': email.recipient,
-                'category': email.category
+                'category': email.category,
+                'attachments': attachments,
             })
         return 200, response
-    except MailerServiceException as ex:
+    except (KeyError, MailerServiceException) as ex:
         return 500, {'status': 'Internal Server Error', 'code': 500, 'message': str(ex)}
+
+
+def _get_email_attachments(email, ticket_reports_id):
+
+    attachments = []
+    if not email.attachments:
+        return attachments
+
+    for attach in email.attachments:
+        attach_obj = AttachedDocument.objects.filter(
+            report__in=ticket_reports_id,
+            name=attach['filename'],
+            filetype=attach['content_type'],
+        ).last()
+        if attach_obj:
+            attachments.append(model_to_dict(attach_obj))
+
+    return attachments
 
 
 def _precheck_user_interact_authorizations(user, body):

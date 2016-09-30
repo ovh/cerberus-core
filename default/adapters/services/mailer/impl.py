@@ -97,7 +97,7 @@ class DefaultMailerService(MailerServiceBase):
             :param str body: The body of the email
             :param str category: defendant, plaintiff or other
             :param str sender: Eventually the sender of the email (From)
-            :param list attachments: A list of attachements [{'content': ..., 'content_type': ... ,'filename': ...}]
+            :param list attachments: A list of attachments [{'content': ..., 'content_type': ... ,'filename': ...}]
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         if not isinstance(ticket, Ticket):
@@ -156,6 +156,7 @@ class DefaultMailerService(MailerServiceBase):
                     body=re.sub(r'^(\s*\n){2,}', '\n', body, flags=re.MULTILINE),
                     category=row[4],
                     created=row[5],
+                    attachments=[],
                 ))
         except (KeyError, ValueError) as ex:
             raise MailerServiceException(ex)
@@ -163,7 +164,7 @@ class DefaultMailerService(MailerServiceBase):
         emails = sorted(emails, key=lambda k: k.created)
         return emails
 
-    def attach_external_answer(self, ticket, sender, recipient, subject, body, category):
+    def attach_external_answer(self, ticket, sender, recipient, subject, body, category, attachments=None):
         """
             Can be usefull if an answer for a ticket come from Phone/CRM/API/CustomerUX ...
 
@@ -173,6 +174,7 @@ class DefaultMailerService(MailerServiceBase):
             :param str subject: The subject of the email
             :param str body: The body of the email
             :param str category: Defendant, Plaintiff or Other
+            :param list attachments: A list of attachements [{'content': ..., 'content_type': ... ,'filename': ...}]
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         if not isinstance(ticket, Ticket):
