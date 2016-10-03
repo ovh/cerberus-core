@@ -12,7 +12,7 @@ DOC_DIR=doc/build
 
 clean: clean-doc
 	$(FIND) . -name __pycache__ | xargs -r $(DEL) -rf
-	$(FIND) . -name *.pyc | xargs -r $(DEL)
+	$(FIND) . -name "*.pyc*" | xargs -r $(DEL)
 
 clean-doc:
 	$(DEL) -rf $(DOC_DIR)
