@@ -28,7 +28,7 @@ import inspect
 from django.conf import settings
 
 from api.controllers.scheduling.abstract import TicketSchedulingAlgorithmBase
-from worker.hooks.abstract import WorkflowHookBase
+from worker.workflows.report.abstract import ReportWorkflowBase
 
 
 class WrongImplementationException(Exception):
@@ -41,14 +41,14 @@ class WrongImplementationException(Exception):
         super(WrongImplementationException, self).__init__(message)
 
 
-class WrongHookException(Exception):
+class WrongReportWorkflowException(Exception):
     """
-        Exception raised when provided hook implementation does not inherit of our interface.
+        Exception raised when provided report workflow implementation does not inherit of our interface.
 
-        .. py:class:: WrongHookException
+        .. py:class:: WrongReportWorkflowException
     """
     def __init__(self, message):
-        super(WrongHookException, self).__init__(message)
+        super(WrongReportWorkflowException, self).__init__(message)
 
 
 class WrongAlgoException(Exception):
@@ -152,26 +152,26 @@ class ImplementationFactory(object):
         self._registered_implementations[base.__name__] = class_obj
 
 
-class ReportWorkflowHookFactory(object):
+class ReportWorkflowFactory(object):
     """
-        This handy magical class provides an easy way to let users inject their own report workflow hook
+        This handy magical class provides an easy way to let users inject their own report workflow
         used in report processing (worker/report.py).
     """
     def __init__(self):
 
-        self.registered_hook_instances = []
-        self.read_hooks_available()
+        self.registered_instances = []
+        self.read_worflows_available()
 
-    def read_hooks_available(self):
+    def read_worflows_available(self):
         """
-            Read custom hooks implementation from settings
+            Read custom workflows implementation from settings
         """
-        for hook in settings.CUSTOM_WORKFLOW_HOOKS:
-            class_object = self.get_impl_adapter_from_string(hook)
+        for workflow in settings.CUSTOM_REPORT_WORKFLOWS:
+            class_object = self.get_impl_adapter_from_string(workflow)
 
             # Ensure the implementation really implements provided interface
-            if not issubclass(class_object, WorkflowHookBase):
-                raise WrongHookException(hook)
+            if not issubclass(class_object, ReportWorkflowBase):
+                raise WrongReportWorkflowException(workflow)
 
             self.__register_impl(class_object)
 
@@ -181,7 +181,7 @@ class ReportWorkflowHookFactory(object):
         return getattr(importlib.import_module(module_name), cls_name)
 
     def __register_impl(self, class_obj):
-        self.registered_hook_instances.append(class_obj())
+        self.registered_instances.append(class_obj())
 
 
 class TicketSchedulingAlgorithmFactory(object):
@@ -247,8 +247,8 @@ class TicketSchedulingAlgorithmFactory(object):
 if not hasattr(ImplementationFactory, 'instance'):
     ImplementationFactory.instance = ImplementationFactory()
 
-if not hasattr(ReportWorkflowHookFactory, 'instance'):
-    ReportWorkflowHookFactory.instance = ReportWorkflowHookFactory()
+if not hasattr(ReportWorkflowFactory, 'instance'):
+    ReportWorkflowFactory.instance = ReportWorkflowFactory()
 
 if not hasattr(TicketSchedulingAlgorithmFactory, 'instance'):
     TicketSchedulingAlgorithmFactory.instance = TicketSchedulingAlgorithmFactory()

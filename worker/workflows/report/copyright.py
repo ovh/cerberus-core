@@ -19,7 +19,7 @@
 
 
 """
-    Defined CopyrightWorkflow hook
+    Defined CopyrightWorkflow
 """
 
 import re
@@ -30,13 +30,13 @@ from django.conf import settings
 
 from abuse.models import Proof, Ticket
 from utils import utils
-from worker.hooks.abstract import WorkflowHookBase
+from worker.workflows.report.abstract import ReportWorkflowBase
 from worker.parsing import regexp
 
 
-class CopyrightWorkflowHook(WorkflowHookBase):
+class CopyrightReportWorkflow(ReportWorkflowBase):
     """
-        Abstract class defining hook in report processing workflow
+        Copyright report workflow
     """
     def identify(self, report, ticket, is_trusted=False):
         """

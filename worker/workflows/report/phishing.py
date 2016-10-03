@@ -19,7 +19,7 @@
 
 
 """
-    Defined PhishingWorkflow hook
+    Defined PhishingWorkflow
 """
 
 from datetime import datetime, timedelta
@@ -28,12 +28,12 @@ from django.conf import settings
 
 from utils import utils
 from worker import Logger
-from worker.hooks.abstract import WorkflowHookBase
+from worker.workflows.report.abstract import ReportWorkflowBase
 
 
-class PhishingWorkflowHook(WorkflowHookBase):
+class PhishingReportWorkflow(ReportWorkflowBase):
     """
-        Abstract class defining hook in report processing workflow
+        Phishing report workflow
     """
     def identify(self, report, ticket, is_trusted=False):
         """

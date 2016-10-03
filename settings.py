@@ -83,10 +83,10 @@ CUSTOM_IMPLEMENTATIONS = (
 )
 
 # /!\ Order matter
-CUSTOM_WORKFLOW_HOOKS = (
-    'worker.hooks.phishing.PhishingWorkflowHook',
-    'worker.hooks.copyright.CopyrightWorkflowHook',
-    'worker.hooks.acns.AcnsWorkflowHook',
+CUSTOM_REPORT_WORKFLOWS = (
+    'worker.workflows.report.phishing.PhishingReportWorkflow',
+    'worker.workflows.report.copyright.CopyrightReportWorkflow',
+    'worker.workflows.report.acns.AcnsReportWorkflow',
 )
 
 CUSTOM_SCHEDULING_ALGORITHMS = (

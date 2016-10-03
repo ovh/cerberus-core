@@ -19,7 +19,7 @@
 
 
 """
-    Defined AcnsWorkflow hook
+    Defined AcnsWorkflow
 """
 
 import re
@@ -29,13 +29,13 @@ from django.conf import settings
 from abuse.models import Proof, Resolution, Ticket
 
 from factory.factory import ImplementationFactory
-from worker.hooks.abstract import WorkflowHookBase
+from worker.workflows.report.abstract import ReportWorkflowBase
 from worker.parsing import regexp
 
 
-class AcnsWorkflowHook(WorkflowHookBase):
+class AcnsReportWorkflow(ReportWorkflowBase):
     """
-        Abstract class defining hook in report processing workflow
+        ACNS report workflow
     """
     def identify(self, report, ticket, is_trusted=False):
         """

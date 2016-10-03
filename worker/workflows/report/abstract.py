@@ -19,15 +19,15 @@
 
 
 """
-    Defined WorkflowHook abstract class
+    Defined ReportWorkflowBase abstract class
 """
 
 import abc
 
 
-class WorkflowHookBase(object):
+class ReportWorkflowBase(object):
     """
-        Abstract class defining hook in report processing workflow
+        Abstract class defining report processing workflow
     """
     __metaclass__ = abc.ABCMeta
 

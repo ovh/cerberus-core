@@ -38,7 +38,7 @@ from abuse.models import (AttachedDocument, Defendant, Proof, Report,
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.mailer.abstract import MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
-from factory.factory import ImplementationFactory, ReportWorkflowHookFactory
+from factory.factory import ImplementationFactory, ReportWorkflowFactory
 from parsing.parser import EmailParser
 from utils import pglocks, schema, utils
 from worker import Logger
@@ -223,12 +223,12 @@ def __create_with_services(abuse_report, filename, services):
 
         # Checking specific processing workflow
         is_workflow_applied = False
-        for hook in ReportWorkflowHookFactory.instance.registered_hook_instances:
-            if hook.identify(report, ticket, is_trusted=trusted):
-                is_workflow_applied = hook.apply(report, ticket, trusted, no_phishtocheck)
+        for workflow in ReportWorkflowFactory.instance.registered_instances:
+            if workflow.identify(report, ticket, is_trusted=trusted):
+                is_workflow_applied = workflow.apply(report, ticket, trusted, no_phishtocheck)
                 if is_workflow_applied:
-                    database.set_report_specificworkflow_tag(report, str(hook.__class__.__name__))
-                    Logger.debug(unicode('Specific workflow %s applied' % str(hook.__class__.__name__)))
+                    database.set_report_specificworkflow_tag(report, str(workflow.__class__.__name__))
+                    Logger.debug(unicode('Specific workflow %s applied' % str(workflow.__class__.__name__)))
                     break
 
         if is_workflow_applied:
@@ -575,9 +575,9 @@ def _reinject_validated(report, user):
         ticket = database.search_ticket(report.defendant, report.category, report.service)
 
     # Checking specific processing workflow
-    for hook in ReportWorkflowHookFactory.instance.registered_hook_instances:
-        if hook.identify(report, ticket, is_trusted=trusted) and hook.apply(report, ticket, trusted, False):
-            Logger.debug(unicode('Specific workflow %s applied' % (str(hook.__class__.__name__))))
+    for workflow in ReportWorkflowFactory.instance.registered_instances:
+        if workflow.identify(report, ticket, is_trusted=trusted) and workflow.apply(report, ticket, trusted, False):
+            Logger.debug(unicode('Specific workflow %s applied' % (str(workflow.__class__.__name__))))
             return
 
     # Create ticket if trusted
