@@ -52,9 +52,11 @@ from worker import Logger
 
 BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
 
-WORKER_TICKET_FUNC = (
+ASYNC_JOB_TO_CANCEL = (
+    'action.apply_if_no_reply',
+    'action.apply_then_close',
+    'action.apply_action',
     'ticket.timeout',
-    'action.apply_if_no_reply'
 )
 
 WAITING = 'WaitingAnswer'
@@ -563,11 +565,12 @@ def create_ticket_from_phishtocheck(report=None, user=None):
     return ticket
 
 
-def cancel_rq_scheduler_jobs(ticket_id=None):
+def cancel_rq_scheduler_jobs(ticket_id=None, status='answered'):
     """
         Cancel all rq scheduler jobs for given `abuse.models.Ticket`
 
         :param int ticket_id: The id of the `abuse.models.Ticket`
+        :param str status: The `abuse.models.Ticket.TICKET_STATUS' reason of the cancel
     """
     try:
         ticket = Ticket.objects.get(id=ticket_id)
@@ -576,8 +579,14 @@ def cancel_rq_scheduler_jobs(ticket_id=None):
         return
 
     for job in utils.scheduler.get_jobs():
-        if job.func_name in WORKER_TICKET_FUNC and job.kwargs['ticket_id'] == ticket.id:
+        if job.func_name in ASYNC_JOB_TO_CANCEL and job.kwargs['ticket_id'] == ticket.id:
             utils.scheduler.cancel(job.id)
+
+    for job in ticket.jobs.all():
+        if job.asynchronousJobId in utils.scheduler:
+            utils.scheduler.cancel(job.asynchronousJobId)
+            job.status = 'cancelled by %s' % status
+            job.save()
 
 
 def follow_the_sun():

@@ -343,7 +343,7 @@ def show(ticket_id, user):
     ticket_dict['history'] = __get_ticket_history(ticket)
     ticket_dict['attachedReportsCount'] = ticket.reportTicket.count()
     ticket_dict['tags'] = __get_ticket_tags(ticket, ticket_reports_id)
-    ticket_dict['attachments'] = __get_ticket_attachments(ticket_reports_id)
+    ticket_dict['attachments'] = __get_ticket_attachments(ticket, ticket_reports_id)
     ticket_dict['justAssigned'] = just_assigned
 
     return 200, ticket_dict
@@ -390,11 +390,12 @@ def __get_ticket_tags(ticket, ticket_reports_id):
     return [model_to_dict(tag) for tag in tags]
 
 
-def __get_ticket_attachments(ticket_reports_id):
+def __get_ticket_attachments(ticket, ticket_reports_id):
     """
         Get ticket attachments..
     """
     reports_attachments = AttachedDocument.objects.filter(
+        ticket__id=ticket.id,
         report__id__in=ticket_reports_id
     ).distinct()
     return [model_to_dict(attach) for attach in reports_attachments]
@@ -952,6 +953,13 @@ def update_status(ticket, status, body, user):
             ticket.status = 'Closed'
             ticket.reportTicket.all().update(status='Archived')
             ticket.resolution = resolution
+
+            # Cancel pending jobs
+            utils.queue.enqueue(
+                'ticket.cancel_rq_scheduler_jobs',
+                ticket_id=ticket.id,
+                status=status
+            )
 
             if user.abusepermission_set.filter(category=ticket.category, profile__name='Beginner').count():
                 ticket.moderation = True
