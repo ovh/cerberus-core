@@ -38,6 +38,12 @@ CUSTOM_REPORT_WORKFLOWS = (
     'worker.workflows.report.acns.AcnsReportWorkflow',
 )
 
+CUSTOM_TICKET_ANSWER_WORKFLOWS = (
+    'worker.workflows.ticket.mailerdaemon.MailerDaemonWorkflow',
+    'worker.workflows.ticket.customeranswer.CustomerAnswerWorkflow',
+    'worker.workflows.ticket.default.DefaultAnswerWorkflow',
+)
+
 CUSTOM_SCHEDULING_ALGORITHMS = (
     'api.controllers.scheduling.global.GlobalSchedulingAlgorithm',
     'api.controllers.scheduling.limitedOpen.LimitedOpenSchedulingAlgorithm',

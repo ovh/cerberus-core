@@ -38,7 +38,8 @@ from abuse.models import (AttachedDocument, Defendant, Proof, Report,
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.mailer.abstract import MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
-from factory.factory import ImplementationFactory, ReportWorkflowFactory
+from factory.factory import (ImplementationFactory, ReportWorkflowFactory,
+                             TicketAnswerWorkflowFactory)
 from parsing.parser import EmailParser
 from utils import pglocks, schema, utils
 from worker import Logger
@@ -116,7 +117,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
 
     # Upload attachments
     if abuse_report.attachments:
-        __save_attachments(created_reports, filename, abuse_report.attachments)
+        _save_attachments(filename, abuse_report.attachments, reports=created_reports)
 
     # Send acknowledgement to provider (only if send_ack = True and report is attached to a ticket)
     for report in created_reports:
@@ -314,11 +315,13 @@ def __insert_items(report_id, items):
                 ReportItem.objects.create(**item_dict)
 
 
-def __save_attachments(reports, filename, attachments):
+def _save_attachments(filename, attachments, reports=None, tickets=None):
     """ Upload email attachments to StorageService and keep a reference in Cerberus
 
-        :param list reports: A list of `abuse.models.Report` instance
+        :param str filename: The filename of the email
         :param list attachments: A list of dict {'filename': 'test.pdf', 'data': '...', 'type': 'application/pdf'}
+        :param list reports: A list of `abuse.models.Report` instance
+        :param list tickets: A list of `abuse.models.Ticket` instance
     """
     for attachment in attachments[:50]:  # Slice 50 to avoid denial of service
 
@@ -335,8 +338,12 @@ def __save_attachments(reports, filename, attachments):
             filetype=attachment['type'],
         )
 
-        for report in reports:
-            report.attachments.add(attachment_obj)
+        if reports:
+            for report in reports:
+                report.attachments.add(attachment_obj)
+        if tickets:
+            for ticket in tickets:
+                report.attachments.add(attachment_obj)
 
 
 def __save_email(filename, email):
@@ -413,7 +420,11 @@ def _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename
             'ticket': ticket.id,
         }
     )
-    actions = [{'ticket': ticket, 'action': 'receive_email', 'email': abuse_report.provider}]
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='receive_email',
+        email=abuse_report.provider
+    )
 
     try:
         if ticket.treatedBy.operator.role.modelsAuthorizations['ticket'].get('unassignedOnAnswer'):
@@ -421,48 +432,18 @@ def _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename
     except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
         pass
 
-    if not abuse_report.ack:
-
-        ticket.previousStatus = ticket.status
-        ticket.status = 'Answered'
-        ticket.snoozeStart = None
-        ticket.snoozeDuration = None
-        ticket.reportTicket.all().update(status='Attached')
-        ticket.save()
-        actions.append({'ticket': ticket, 'action': 'change_status', 'previous_value': ticket.previousStatus, 'new_value': ticket.status})
-        _cancel_ticket_jobs(ticket)
-
-    for action in actions:
-        database.log_action_on_ticket(**action)
-
-    ImplementationFactory.instance.get_singleton_of('MailerServiceBase').attach_external_answer(
-        ticket,
-        abuse_report.provider,
-        recipient,
-        abuse_report.subject,
-        abuse_report.body,
-        category
-    )
-
     if abuse_report.attachments:
-        __save_attachments(
+        _save_attachments(
             [ticket.reportTicket.all()[0]],
             filename,
             abuse_report.attachments,
+            tickets=[ticket],
         )
 
-
-def _cancel_ticket_jobs(ticket):
-
-    for job in ticket.jobs.all():
-        if job.asynchronousJobId in utils.scheduler:
-            utils.scheduler.cancel(job.asynchronousJobId)
-            job.status = 'cancelled by answered'
-            job.save()
-
-    for job in utils.scheduler.get_jobs():
-        if job.func_name == 'ticket.timeout' and job.kwargs['ticket_id'] == ticket.id:
-            utils.scheduler.cancel(job.id)
+    for workflow in TicketAnswerWorkflowFactory.instance.registered_instances:
+        if workflow.identify(ticket, abuse_report, recipient, category) and workflow.apply(ticket, abuse_report, recipient, category):
+            Logger.debug(unicode('Specific workflow %s applied' % (str(workflow.__class__.__name__))))
+            return
 
 
 def archive_if_timeout(report_id=None):

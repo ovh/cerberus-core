@@ -29,6 +29,7 @@ from django.conf import settings
 
 from api.controllers.scheduling.abstract import TicketSchedulingAlgorithmBase
 from worker.workflows.report.abstract import ReportWorkflowBase
+from worker.workflows.ticket.abstract import TicketAnswerWorkflowBase
 
 
 class WrongImplementationException(Exception):
@@ -49,6 +50,16 @@ class WrongReportWorkflowException(Exception):
     """
     def __init__(self, message):
         super(WrongReportWorkflowException, self).__init__(message)
+
+
+class WrongTicketWorkflowException(Exception):
+    """
+        Exception raised when provided ticket workflow implementation does not inherit of our interface.
+
+        .. py:class:: WrongTicketWorkflowException
+    """
+    def __init__(self, message):
+        super(WrongTicketWorkflowException, self).__init__(message)
 
 
 class WrongAlgoException(Exception):
@@ -184,6 +195,38 @@ class ReportWorkflowFactory(object):
         self.registered_instances.append(class_obj())
 
 
+class TicketAnswerWorkflowFactory(object):
+    """
+        This handy magical class provides an easy way to let users inject their own ticket answer workflow
+        used in answer processing (worker/report.py).
+    """
+    def __init__(self):
+
+        self.registered_instances = []
+        self.read_worflows_available()
+
+    def read_worflows_available(self):
+        """
+            Read custom workflows implementation from settings
+        """
+        for workflow in settings.CUSTOM_TICKET_ANSWER_WORKFLOWS:
+            class_object = self.get_impl_adapter_from_string(workflow)
+
+            # Ensure the implementation really implements provided interface
+            if not issubclass(class_object, TicketAnswerWorkflowBase):
+                raise WrongTicketWorkflowException(workflow)
+
+            self.__register_impl(class_object)
+
+    @staticmethod
+    def get_impl_adapter_from_string(string):
+        module_name, cls_name = string.rsplit('.', 1)
+        return getattr(importlib.import_module(module_name), cls_name)
+
+    def __register_impl(self, class_obj):
+        self.registered_instances.append(class_obj())
+
+
 class TicketSchedulingAlgorithmFactory(object):
     """
         This handy magical class provides an easy way to let users inject their own ticket scheduling algorithms
@@ -249,6 +292,9 @@ if not hasattr(ImplementationFactory, 'instance'):
 
 if not hasattr(ReportWorkflowFactory, 'instance'):
     ReportWorkflowFactory.instance = ReportWorkflowFactory()
+
+if not hasattr(TicketAnswerWorkflowFactory, 'instance'):
+    TicketAnswerWorkflowFactory.instance = TicketAnswerWorkflowFactory()
 
 if not hasattr(TicketSchedulingAlgorithmFactory, 'instance'):
     TicketSchedulingAlgorithmFactory.instance = TicketSchedulingAlgorithmFactory()
