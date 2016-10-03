@@ -68,6 +68,10 @@ html2text.ignore_images = True
 html2text.images_to_alt = True
 html2text.ignore_links = True
 
+DNS_ERROR = {
+    '-2': 'NXDOMAIN'
+}
+
 
 class CryptoException(Exception):
     """
@@ -300,6 +304,7 @@ def get_reverses_for_item(item, nature='IP'):
         if parsed.hostname:
             hostname = parsed.hostname
     else:
+        reverses['fqdn'] = item
         hostname = item
 
     if hostname:
@@ -307,8 +312,16 @@ def get_reverses_for_item(item, nature='IP'):
             reverses['fqdn'] = hostname
             reverses['fqdnResolved'] = socket.gethostbyname(hostname)
             reverses['fqdnResolvedReverse'] = socket.gethostbyaddr(reverses['fqdnResolved'])[0]
-        except (socket.gaierror, socket.error, socket.timeout, socket.herror, IndexError, TypeError):
+        except socket.gaierror as ex:
+            try:
+                reverses['fqdnResolved'] = DNS_ERROR[str(ex.args[0])]
+            except KeyError:
+                reverses['fqdnResolved'] = 'NXDOMAIN'
+        except (socket.error, socket.timeout, socket.herror):
+            reverses['fqdnResolved'] = 'TIMEOUT'
+        except (IndexError, TypeError):
             pass
+
     return reverses
 
 

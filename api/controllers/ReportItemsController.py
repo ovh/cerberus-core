@@ -24,12 +24,10 @@
 import json
 import operator
 import re
-import socket
 import time
 from Queue import Queue
 from threading import Thread
 from urllib import unquote
-from urlparse import urlparse
 
 from django.core.exceptions import FieldError, ValidationError
 from django.core.validators import URLValidator, validate_ipv46_address
@@ -45,7 +43,6 @@ from factory.factory import ImplementationFactory
 from utils import schema, utils
 from worker import database
 
-socket.setdefaulttimeout(5)
 ITEM_FIELDS = [f.name for f in ReportItem._meta.fields]
 
 DNS_ERROR = {
@@ -190,38 +187,10 @@ def __check_item_status(item):
         'rawItem': item['rawItem'],
     }
 
-    hostname = None
-    if item['itemType'] == 'IP':
-        current_item_infos['ip'] = item['rawItem']
-        try:
-            current_item_infos['ipReverse'] = socket.gethostbyaddr(item['ip'])[0]
-            current_item_infos['ipReverseResolved'] = socket.gethostbyname_ex(current_item_infos['ipReverse'])[2]
-        except (IndexError, socket.error, socket.gaierror, socket.herror, socket.timeout, TypeError):
-            pass
-
-    elif item['itemType'] == 'URL':
-        current_item_infos['url'] = item['rawItem']
-        parsed = urlparse(item['rawItem'])
-        hostname = parsed.hostname
-
-    elif item['itemType'] == 'FQDN':
-        current_item_infos['fqdn'] = item['rawItem']
-        hostname = item['rawItem']
-
-    if hostname:
-        try:
-            current_item_infos['fqdn'] = hostname
-            current_item_infos['fqdnResolved'] = socket.gethostbyname(hostname)
-            current_item_infos['fqdnResolvedReverse'] = socket.gethostbyaddr(current_item_infos['fqdnResolved'])[0]
-        except socket.gaierror as ex:
-            try:
-                current_item_infos['fqdnResolved'] = DNS_ERROR[str(ex.args[0])]
-            except KeyError:
-                current_item_infos['fqdnResolved'] = 'NXDOMAIN'
-        except (socket.error, socket.timeout, socket.herror):
-            current_item_infos['fqdnResolved'] = 'TIMEOUT'
-        except (IndexError, TypeError):
-            pass
+    current_item_infos.update(utils.get_reverses_for_item(
+        item['rawItem'],
+        nature=item['itemType']
+    ))
 
     return current_item_infos
 
@@ -319,7 +288,11 @@ def __get_item_infos(body, user):
     if code != 200:
         return code, resp
 
-    update_item_infos(item_infos)
+    item_infos.update(utils.get_reverses_for_item(
+        item_infos['rawItem'],
+        nature=item_infos['itemType']
+    ))
+
     code, resp = update_item_report_and_ticket(item_infos, resp['customerId'], resp['service'], user)
     if code != 200:
         return code, resp
@@ -424,35 +397,6 @@ def _get_item_ip_hostname_url(item):
             ip_addr = ips[0]
 
     return ip_addr, hostname, url
-
-
-def update_item_infos(item):
-    """ Update Reverse IP, resolved etc ...
-    """
-    hostname = None
-    if item['itemType'] == 'IP':
-        item['ip'] = item['rawItem']
-        try:
-            item['ipReverse'] = socket.gethostbyaddr(item['ip'])[0]
-            item['ipReverseResolved'] = socket.gethostbyname(item['ipReverse'])
-        except (IndexError, socket.error, socket.gaierror, socket.herror, socket.timeout, TypeError):
-            pass
-
-    elif item['itemType'] == 'URL':
-        item['url'] = item['rawItem']
-        parsed = urlparse(item['rawItem'])
-        hostname = parsed.hostname
-
-    elif item['itemType'] == 'FQDN':
-        hostname = item['rawItem']
-
-    if hostname:
-        try:
-            item['fqdn'] = hostname
-            item['fqdnResolved'] = socket.gethostbyname(hostname)
-            item['fqdnResolvedReverse'] = socket.gethostbyaddr(item['fqdnResolved'])[0]
-        except (IndexError, socket.error, socket.gaierror, socket.herror, socket.timeout, TypeError):
-            pass
 
 
 def update_item_report_and_ticket(item, customer_id, service, user):
