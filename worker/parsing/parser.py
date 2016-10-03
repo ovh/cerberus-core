@@ -426,19 +426,19 @@ def parse_attachment(part):
         :returns: The list of attachments
     """
     attachment = {}
-    attachment['type'] = part.get_content_type()
+    attachment['content_type'] = part.get_content_type()
 
-    if attachment['type'].lower() in ['message/rfc822', 'message/delivery-status']:
-        attachment['data'] = str(part)
+    if attachment['content_type'].lower() in ['message/rfc822', 'message/delivery-status']:
+        attachment['content'] = str(part)
     else:
-        attachment['data'] = part.get_payload(decode=True)
+        attachment['content'] = part.get_payload(decode=True)
 
     filename = part.get_filename()
 
     if not filename:
-        filename = hashlib.sha1(attachment['data']).hexdigest()
-        if attachment['type']:
-            extension = mimetypes.guess_extension(attachment['type'])
+        filename = hashlib.sha1(attachment['content']).hexdigest()
+        if attachment['content_type']:
+            extension = mimetypes.guess_extension(attachment['content_type'])
             if extension:
                 filename += extension
 
@@ -506,7 +506,7 @@ def get_online_logs(logs):
         :rtype: dict
         :returns: The attachment of None if failed to retreive
     """
-    attachment = {'type': 'text/plain', 'filename': 'online_logs.txt'}
+    attachment = {'content_type': 'text/plain', 'filename': 'online_logs.txt'}
     try:
         response = utils.request_wrapper(logs[0], method='GET', as_json=False)
         soup = BeautifulSoup(response.text)
@@ -515,7 +515,7 @@ def get_online_logs(logs):
         text = soup.get_text()
         text = re.sub('\n\n+', '\n\n', text)
         text = re.sub('  +', '  ', text)
-        attachment['data'] = text.encode('utf-8')
+        attachment['content'] = text.encode('utf-8')
         return attachment
     except (UnicodeDecodeError, UnicodeEncodeError, utils.RequestException):
         return None

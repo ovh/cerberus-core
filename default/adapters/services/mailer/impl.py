@@ -97,7 +97,7 @@ class DefaultMailerService(MailerServiceBase):
             :param str body: The body of the email
             :param str category: defendant, plaintiff or other
             :param str sender: Eventually the sender of the email (From)
-            :param list attachments: A list of attachments [{'content': ..., 'content_type': ... ,'filename': ...}]
+            :param list attachments: The `worker.parsing.parsed.ParsedEmail.attachments` list : [{'content': ..., 'content_type': ... ,'filename': ...}]
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         if not isinstance(ticket, Ticket):
@@ -174,7 +174,7 @@ class DefaultMailerService(MailerServiceBase):
             :param str subject: The subject of the email
             :param str body: The body of the email
             :param str category: Defendant, Plaintiff or Other
-            :param list attachments: A list of attachements [{'content': ..., 'content_type': ... ,'filename': ...}]
+            :param list attachments: The `worker.parsing.parsed.ParsedEmail.attachments` list : [{'content': ..., 'content_type': ... ,'filename': ...}]
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         if not isinstance(ticket, Ticket):

@@ -75,6 +75,7 @@ class DefaultAnswerWorkflow(TicketAnswerWorkflowBase):
             recipient,
             abuse_report.subject,
             abuse_report.body,
-            category
+            category,
+            attachments=abuse_report.attachments
         )
         return True

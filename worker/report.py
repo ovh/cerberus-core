@@ -319,7 +319,7 @@ def _save_attachments(filename, attachments, reports=None, tickets=None):
     """ Upload email attachments to StorageService and keep a reference in Cerberus
 
         :param str filename: The filename of the email
-        :param list attachments: A list of dict {'filename': 'test.pdf', 'data': '...', 'type': 'application/pdf'}
+        :param list attachments: The `worker.parsing.parsed.ParsedEmail.attachments` list : [{'content': ..., 'content_type': ... ,'filename': ...}]
         :param list reports: A list of `abuse.models.Report` instance
         :param list tickets: A list of `abuse.models.Ticket` instance
     """
@@ -330,12 +330,12 @@ def _save_attachments(filename, attachments, reports=None, tickets=None):
         storage_filename = storage_filename + attachment['filename']
 
         with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
-            cnx.write(storage_filename, attachment['data'])
+            cnx.write(storage_filename, attachment['content'])
 
         attachment_obj = AttachedDocument.objects.create(
             name=attachment['filename'],
             filename=storage_filename,
-            filetype=attachment['type'],
+            filetype=attachment['content_type'],
         )
 
         if reports:

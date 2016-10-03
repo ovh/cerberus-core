@@ -303,7 +303,7 @@ class TestParser(GlobalTestCase):
         self.assertEqual(False, parsed_email.ack)
         self.assertNotIn(u'é"', parsed_email.body)
         self.assertEqual(2, len(parsed_email.attachments))
-        self.assertIn('data', parsed_email.attachments[0])
+        self.assertIn('content', parsed_email.attachments[0])
         self.assertEqual(None, parsed_email.ips)
         self.assertIn('http://schemas.microsoft.com/office/2004/12/omml', parsed_email.urls)
         self.assertEqual(3, len(parsed_email.urls))
