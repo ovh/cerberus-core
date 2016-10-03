@@ -134,11 +134,11 @@ def __format_item_response(item, now, queue):
 
         diff = False
         if isinstance(val, list):
-            if item[key] not in val:
+            if item.get(key) and item[key] not in val:
                 current_item_infos[key] = [v for v in val if v != item[key]][0]
                 diff = True
         else:
-            if item[key] != val:
+            if item.get(key) and item[key] != val:
                 diff = True
         if diff:
             current_item_infos['date'] = now
@@ -211,7 +211,7 @@ def __check_item_status(item):
     if hostname:
         try:
             current_item_infos['fqdn'] = hostname
-            current_item_infos['fqdnResolved'] = socket.gethostbyname_ex(hostname)[2]
+            current_item_infos['fqdnResolved'] = socket.gethostbyname(hostname)
             current_item_infos['fqdnResolvedReverse'] = socket.gethostbyaddr(current_item_infos['fqdnResolved'])[0]
         except socket.gaierror as ex:
             try:

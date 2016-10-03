@@ -337,10 +337,13 @@ def show(ticket_id, user):
                     info[key] = int(time.mktime(val.timetuple()))
             ticket_dict['jobs'].append(info)
 
+    ticket_reports_id = ticket.reportTicket.all().values_list('id', flat=True).distinct()
+
     ticket_dict['comments'] = __get_ticket_comments(ticket)
     ticket_dict['history'] = __get_ticket_history(ticket)
     ticket_dict['attachedReportsCount'] = ticket.reportTicket.count()
-    ticket_dict['tags'] = __get_ticket_tags(ticket)
+    ticket_dict['tags'] = __get_ticket_tags(ticket, ticket_reports_id)
+    ticket_dict['attachments'] = __get_ticket_attachments(ticket_reports_id)
     ticket_dict['justAssigned'] = just_assigned
 
     return 200, ticket_dict
@@ -376,14 +379,25 @@ def __get_ticket_history(ticket):
     } for username, date, action in history]
 
 
-def __get_ticket_tags(ticket):
+def __get_ticket_tags(ticket, ticket_reports_id):
     """
         Get ticket tags..
     """
-    reports = ticket.reportTicket.all().values_list('id', flat=True).distinct()
-    report_tags = Tag.objects.filter(report__id__in=reports).distinct()
+    report_tags = Tag.objects.filter(
+        report__id__in=ticket_reports_id
+    ).distinct()
     tags = list(set(list(set(ticket.tags.all())) + list(set(report_tags))))
     return [model_to_dict(tag) for tag in tags]
+
+
+def __get_ticket_attachments(ticket_reports_id):
+    """
+        Get ticket attachments..
+    """
+    reports_attachments = AttachedDocument.objects.filter(
+        report__id__in=ticket_reports_id
+    ).distinct()
+    return [model_to_dict(attach) for attach in reports_attachments]
 
 
 def assign_if_not(ticket, user):

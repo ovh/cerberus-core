@@ -236,6 +236,15 @@ class Resolution(models.Model):
     codename = TruncatedCharField(null=False, max_length=1024)
 
 
+class AttachedDocument(models.Model):
+    """
+        Attached document for a `abuse.models.Report`
+    """
+    name = TruncatedCharField(null=True, max_length=255)
+    filename = TruncatedCharField(null=False, max_length=1023)
+    filetype = TruncatedCharField(null=False, max_length=1023)
+
+
 class Ticket(models.Model):
     """
         Cerberus ticket model: it brings `abuse.models.Report` together based
@@ -287,15 +296,7 @@ class Ticket(models.Model):
     update = models.BooleanField(null=False, default=True)
     tags = models.ManyToManyField(Tag, null=True)
     jobs = models.ManyToManyField(ServiceActionJob, null=True)
-
-
-class AttachedDocument(models.Model):
-    """
-        Attached document for a `abuse.models.Report`
-    """
-    name = TruncatedCharField(null=True, max_length=255)
-    filename = TruncatedCharField(null=False, max_length=1023)
-    filetype = TruncatedCharField(null=False, max_length=1023)
+    attachments = models.ManyToManyField(AttachedDocument, null=True)
 
 
 class Provider(models.Model):

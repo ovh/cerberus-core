@@ -135,7 +135,7 @@ def __generate_request_filters(filters, user):
             for key, value in field.iteritems():
                 if key == 'fulltext':
                     if ImplementationFactory.instance.is_implemented('SearchServiceBase'):
-                        add_search_filters(filters, value[0])
+                        _add_search_filters(filters, value[0])
                     filters['where']['like'].remove({key: value})
                     break
     except KeyError:
@@ -193,7 +193,7 @@ def __format_report_response(reports):
             rep['tags'] = [model_to_dict(tag) for tag in tags]
 
 
-def add_search_filters(filters, query):
+def _add_search_filters(filters, query):
     """
         Add Search Service response to filters
     """
