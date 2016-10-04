@@ -1182,6 +1182,7 @@ def interact(ticket_id, body, user):
         if not all(params.get(key) for key in ('to', 'subject', 'body')):
             return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing param(s): need subject and body in email'}
         category = params['category'] if params.get('category') else 'Defendant'
+        category = category.title()
         if category not in EMAIL_VALID_CATEGORIES:
             return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid email category'}
 
