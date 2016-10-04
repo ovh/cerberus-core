@@ -126,7 +126,7 @@ class TestUtils(GlobalTestCase):
         reverses = utils.get_reverses_for_item('ovh', nature='IP')
         self.assertEqual(1, len(reverses))
         reverses = utils.get_reverses_for_item('ovh.aze', nature='test')
-        self.assertEqual(2, len(reverses))
+        self.assertEqual(1, len(reverses))
         reverses = utils.get_reverses_for_item('ovh.fr', nature='IP')
         self.assertEqual(1, len(reverses))
         reverses = utils.get_reverses_for_item('ovh.fr', nature='URL')
