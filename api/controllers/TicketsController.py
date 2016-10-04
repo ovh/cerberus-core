@@ -394,11 +394,11 @@ def __get_ticket_attachments(ticket, ticket_reports_id):
     """
         Get ticket attachments..
     """
-    reports_attachments = AttachedDocument.objects.filter(
-        ticket__id=ticket.id,
-        report__id__in=ticket_reports_id
-    ).distinct()
-    return [model_to_dict(attach) for attach in reports_attachments]
+    attachments = AttachedDocument.objects.filter(report__id__in=ticket_reports_id).distinct()
+    attachments = list(attachments)
+    attachments.extend(ticket.attachments.all())
+    attachments = list(set(attachments))
+    return [model_to_dict(attach) for attach in attachments]
 
 
 def assign_if_not(ticket, user):
