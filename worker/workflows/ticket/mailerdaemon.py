@@ -50,8 +50,8 @@ class MailerDaemonWorkflow(TicketAnswerWorkflowBase):
             :return: If the workflow match
             :rtype: bool
         """
-        if all(all((k in abuse_report.provider for k in ['mailer-daemon@', 'mail-out.ovh'])),
-               category == 'Defendant'):
+        if all((all((k in abuse_report.provider for k in ['mailer-daemon@', 'mail-out.ovh'])),
+                category == 'Defendant')):
             return True
         return False
 
@@ -72,14 +72,14 @@ class MailerDaemonWorkflow(TicketAnswerWorkflowBase):
 
         email_to_resend = None
         for email in reversed(emails):
-            if email.body in abuse_report.body:
+            if email.body.strip() in abuse_report.body.strip():
                 email_to_resend = email
                 break
 
         if any((not email_to_resend,
-                not ticket.defendant.defendant.spareEmail,
-                ticket.defendant.defendant.spareEmail in tried_emails,
-                ticket.defendant.defendant.spareEmail == ticket.defendant.defendant.email)):  # Set to alarm
+                not ticket.defendant.details.spareEmail,
+                ticket.defendant.details.spareEmail in tried_emails,
+                ticket.defendant.details.spareEmail == ticket.defendant.details.email)):  # Set to alarm
             ticket.previousStatus = ticket.status
             ticket.status = 'Alarm'
             ticket.snoozeStart = None
@@ -95,7 +95,7 @@ class MailerDaemonWorkflow(TicketAnswerWorkflowBase):
         else:  # Retry
             ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
                 ticket,
-                ticket.defendant.defendant.spareEmail,
+                ticket.defendant.details.spareEmail,
                 email_to_resend.subject,
                 email_to_resend.body,
                 email_to_resend.category
