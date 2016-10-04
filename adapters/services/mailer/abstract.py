@@ -35,7 +35,7 @@ Email = namedtuple(
         'created',      # str
         'subject',      # str
         'body',         # str
-        'category',     # Category : 'defendant', 'plaintiff' or 'other'
+        'category',     # Category : 'Defendant', 'Plaintiff' or 'Other'  -> EMAIL_VALID_CATEGORIES
         'attachments'   # List of {'filename'; .... 'content_type': 'text/plain'}
     ]
 )
@@ -47,7 +47,7 @@ PrefetchedEmail = namedtuple(
         'recipients',   # list
         'subject',      # str
         'body',         # str
-        'category'      # str
+        'category',     # Category : 'Defendant', 'Plaintiff' or 'Other'  -> EMAIL_VALID_CATEGORIES
     ]
 )
 
@@ -82,7 +82,7 @@ class MailerServiceBase(object):
             :param str recipient: The recipient of the email
             :param str subject: The subject of the email
             :param str body: The body of the email
-            :param str category: defendant, plaintiff or other
+            :param str category: `adapters.services.mailer.abstract.EMAIL_VALID_CATEGORIES`
             :param str sender: Eventually the sender of the email (From)
             :param list attachments: The `worker.parsing.parsed.ParsedEmail.attachments` list : [{'content': ..., 'content_type': ... ,'filename': ...}]
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
@@ -109,8 +109,8 @@ class MailerServiceBase(object):
             Returns if the email is an answer to a `abuse.models.Ticket`
 
             :param `worker.parsing.parser.ParsedEmail` email: The parsed email
-            :return: the tuple (`abuse.models.Ticket`, category, recipient)  # Category : 'defendant', 'plaintiff' or 'other'
-            :rtype: tuple
+            :return: a list of tuple (`abuse.models.Ticket`, `adapters.services.mailer.abstract.EMAIL_VALID_CATEGORIES`, recipient)
+            :rtype: list
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'is_email_answer'" % (cls))
@@ -125,7 +125,7 @@ class MailerServiceBase(object):
             :param str recipient: The recipient of the answer
             :param str subject: The subject of the email
             :param str body: The body of the email
-            :param str category: defendant, plaintiff or other
+            :param str category: `adapters.services.mailer.abstract.EMAIL_VALID_CATEGORIES`
             :param list attachments: The `worker.parsing.parsed.ParsedEmail.attachments` list : [{'content': ..., 'content_type': ... ,'filename': ...}]
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """

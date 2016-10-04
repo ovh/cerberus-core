@@ -89,11 +89,12 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         Logger.error(unicode('Provider %s is blacklisted, skipping ...' % (abuse_report.provider)))
         return
 
-    # Check if it's an answer to a ticket
-    ticket, category, recipient = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').is_email_ticket_answer(abuse_report)
-    if all((ticket, category, recipient)):  # OK it's an anwser, updating ticket and exiting
-        _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename)
-        return
+    # Check if it's an answer to a ticket(s)
+    tickets = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').is_email_ticket_answer(abuse_report)
+    for ticket, category, recipient in tickets:
+        if all((ticket, category, recipient)) and not ticket.locked:  # OK it's an anwser, updating ticket and exiting
+            _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename)
+            return
 
     # Check if items are linked to customer and get corresponding services
     try:

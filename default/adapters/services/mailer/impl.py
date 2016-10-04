@@ -95,7 +95,7 @@ class DefaultMailerService(MailerServiceBase):
             :param str recipient: The recipient of the email
             :param str subject: The subject of the email
             :param str body: The body of the email
-            :param str category: defendant, plaintiff or other
+            :param str category: `adapters.services.mailer.abstract.EMAIL_VALID_CATEGORIES`
             :param str sender: Eventually the sender of the email (From)
             :param list attachments: The `worker.parsing.parsed.ParsedEmail.attachments` list : [{'content': ..., 'content_type': ... ,'filename': ...}]
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
@@ -173,7 +173,7 @@ class DefaultMailerService(MailerServiceBase):
             :param str recipient: The recipient of the answer
             :param str subject: The subject of the email
             :param str body: The body of the email
-            :param str category: Defendant, Plaintiff or Other
+            :param str category: `adapters.services.mailer.abstract.EMAIL_VALID_CATEGORIES`
             :param list attachments: The `worker.parsing.parsed.ParsedEmail.attachments` list : [{'content': ..., 'content_type': ... ,'filename': ...}]
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
@@ -194,17 +194,17 @@ class DefaultMailerService(MailerServiceBase):
             Returns if the email is an answer to a `abuse.models.Ticket`
 
             :param `worker.parsing.parser.ParsedEmail` email: The parsed email
-            :return: the tuple (`abuse.models.Ticket`, category, recipient) # Category : 'defendant', 'plaintiff' or 'other'
-            :rtype: tuple
+            :return: a list of tuple (`abuse.models.Ticket`, `adapters.services.mailer.abstract.EMAIL_VALID_CATEGORIES`, recipient)
+            :rtype: list
         """
-        ticket = category = recipient = None
+        tickets = []
         if all((email.provider, email.recipients, email.subject, email.body)):
-            ticket, category, recipient = identify_ticket_from_meta(
+            tickets = identify_ticket_from_meta(
                 email.provider,
                 email.recipients,
                 email.subject,
             )
-        return ticket, category, recipient
+        return tickets
 
     @staticmethod
     def prefetch_email_from_template(ticket, template_codename, lang='EN', acknowledged_report=None):
@@ -298,12 +298,13 @@ def identify_ticket_from_meta(provider, recipients, subject):
     """
         Try to identify an answer to a Cerberus ticket with email meta
     """
+    tickets_infos = []
     if not all((provider, recipients, subject)):
-        return None, None
+        return tickets_infos
 
-    ticket = recipient = category = None
-    # Trying with recipient
+    # Trying each recipients
     for recipient in recipients:
+        ticket = recipient = category = None
         search = regexp.RECIPIENT.search(str(recipient).lower())
         if search is not None:
             public_id = str(search.group(1)).lower()
@@ -312,8 +313,9 @@ def identify_ticket_from_meta(provider, recipients, subject):
                 extract = recipient.split('@')[0].split('.')[1].title()
                 if extract in EMAIL_VALID_CATEGORIES:
                     category = extract
-                    break
             except (AttributeError, IndexError, TypeError, ValueError, ObjectDoesNotExist):
                 continue
+        if all((ticket, category, recipient)):
+            tickets_infos.append((ticket, category, recipient))
 
-    return ticket, category, recipient
+    return tickets_infos
