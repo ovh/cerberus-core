@@ -91,10 +91,11 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
 
     # Check if it's an answer to a ticket(s)
     tickets = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').is_email_ticket_answer(abuse_report)
-    for ticket, category, recipient in tickets:
-        if all((ticket, category, recipient)) and not ticket.locked:  # OK it's an anwser, updating ticket and exiting
-            _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename)
-            return
+    if tickets:
+        for ticket, category, recipient in tickets:
+            if all((ticket, category, recipient)) and not ticket.locked:  # OK it's an anwser, updating ticket and exiting
+                _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename)
+        return
 
     # Check if items are linked to customer and get corresponding services
     try:
