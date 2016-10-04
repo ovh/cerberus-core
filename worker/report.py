@@ -343,7 +343,7 @@ def _save_attachments(filename, attachments, reports=None, tickets=None):
                 report.attachments.add(attachment_obj)
         if tickets:
             for ticket in tickets:
-                report.attachments.add(attachment_obj)
+                ticket.attachments.add(attachment_obj)
 
 
 def __save_email(filename, email):
@@ -434,7 +434,6 @@ def _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename
 
     if abuse_report.attachments:
         _save_attachments(
-            [ticket.reportTicket.all()[0]],
             filename,
             abuse_report.attachments,
             tickets=[ticket],
