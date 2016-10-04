@@ -294,6 +294,7 @@ class Ticket(models.Model):
     protected = models.BooleanField(null=False, default=False)
     escalated = models.BooleanField(null=False, default=False)
     update = models.BooleanField(null=False, default=True)
+    locked = models.BooleanField(null=False, default=False)
     tags = models.ManyToManyField(Tag, null=True)
     jobs = models.ManyToManyField(ServiceActionJob, null=True)
     attachments = models.ManyToManyField(AttachedDocument, null=True)
