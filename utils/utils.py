@@ -278,12 +278,13 @@ def get_ips_from_fqdn(fqdn):
         return None
 
 
-def get_reverses_for_item(item, nature='IP'):
+def get_reverses_for_item(item, nature='IP', replace_exception=False):
     """
         Try to get reverses infos for given item
 
         :param str item: Can be an IP address, a URL or a FQDN
         :param str nature: The nature of the item
+        :param bool replace_exception: Replace socket error by NXDOMAIN or TIMEOUT
         :rtype: dict
         :returns: a dict containing reverse infos
     """
@@ -313,12 +314,14 @@ def get_reverses_for_item(item, nature='IP'):
             reverses['fqdnResolved'] = socket.gethostbyname(hostname)
             reverses['fqdnResolvedReverse'] = socket.gethostbyaddr(reverses['fqdnResolved'])[0]
         except socket.gaierror as ex:
-            try:
-                reverses['fqdnResolved'] = DNS_ERROR[str(ex.args[0])]
-            except KeyError:
-                reverses['fqdnResolved'] = 'NXDOMAIN'
+            if replace_exception:
+                try:
+                    reverses['fqdnResolved'] = DNS_ERROR[str(ex.args[0])]
+                except KeyError:
+                    reverses['fqdnResolved'] = 'NXDOMAIN'
         except (socket.error, socket.timeout, socket.herror):
-            reverses['fqdnResolved'] = 'TIMEOUT'
+            if replace_exception:
+                reverses['fqdnResolved'] = 'TIMEOUT'
         except (IndexError, TypeError):
             pass
 

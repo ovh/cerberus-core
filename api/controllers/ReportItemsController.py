@@ -189,7 +189,8 @@ def __check_item_status(item):
 
     current_item_infos.update(utils.get_reverses_for_item(
         item['rawItem'],
-        nature=item['itemType']
+        nature=item['itemType'],
+        replace_exception=True,
     ))
 
     return current_item_infos
