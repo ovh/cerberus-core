@@ -646,7 +646,7 @@ def __create_jobs(campaign_name, ips, category, body, user):
     # For each IP, create a worker job
     jobs = []
     for ip_address in ips:
-        job = utils.queue.enqueue(
+        job = utils.default_queue.enqueue(
             'ticket.mass_contact',
             ip_address=ip_address,
             category=category.name,
@@ -654,15 +654,13 @@ def __create_jobs(campaign_name, ips, category, body, user):
             email_subject=body['email']['subject'],
             email_body=body['email']['body'],
             user_id=user.id,
-            timeout=360,
         )
         jobs.append(job.id)
 
-    utils.queue.enqueue(
+    utils.default_queue.enqueue(
         'ticket.check_mass_contact_result',
         result_campaign_id=result.id,
         jobs=jobs,
-        timeout=3600,
     )
 
 

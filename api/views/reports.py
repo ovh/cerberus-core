@@ -135,6 +135,16 @@ def get_all_items_screenshot(report=None):
     return code, resp
 
 
+@report_views.route('/api/reports/<report>/items/<item>/unblock', methods=['POST'])
+@jsonify
+@perm_required
+def unblock_report_item(report=None, item=None):
+    """ Unblock an item
+    """
+    code, resp = ReportItemsController.unblock_item(item_id=item, report_id=report)
+    return code, resp
+
+
 @report_views.route('/api/reports/<report>/raw', methods=['GET'])
 @jsonify
 @perm_required

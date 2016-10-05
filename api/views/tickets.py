@@ -110,6 +110,16 @@ def update_ticket_item(ticket=None, item=None):
     return code, resp
 
 
+@ticket_views.route('/api/tickets/<ticket>/items/<item>/unblock', methods=['POST'])
+@jsonify
+@perm_required
+def unblock_ticket_item(ticket=None, item=None):
+    """ Unblock an item
+    """
+    code, resp = ReportItemsController.unblock_item(item_id=item, ticket_id=ticket)
+    return code, resp
+
+
 @ticket_views.route('/api/tickets/<ticket>/proof', methods=['GET', 'POST'])
 @jsonify
 @perm_required

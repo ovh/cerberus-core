@@ -35,7 +35,8 @@ from django.db import IntegrityError, close_old_connections
 from django.db.models import ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
 
-from abuse.models import ItemScreenshotFeedback, Report, ReportItem, Service
+from abuse.models import (ItemScreenshotFeedback, Report, ReportItem,
+                          Service, Ticket)
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.phishing.abstract import PhishingServiceException
 from api.controllers import DefendantsController, TicketsController
@@ -505,3 +506,27 @@ def get_whois(item):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid item'}
 
     return 200, {'ipCategory': utils.get_ip_network(ip_addr)}
+
+
+def unblock_item(item_id, report_id=None, ticket_id=None):
+    """
+        Unblock given `abuse.models.ReportItem`
+    """
+    try:
+        item = ReportItem.objects.get(id=item_id)
+        if report_id:
+            report = Report.objects.get(id=report_id)
+            if item.report.id != report.id:
+                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Given item not attached to given report'}
+        if ticket_id:
+            ticket = Ticket.objects.get(id=ticket_id)
+            if item.report.id not in ticket.reportTicket.all().values_list('id', flat=True):
+                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Given item not attached to given ticket'}
+    except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
+        return 404, {'status': 'Not Found', 'code': 404}
+
+    utils.default_queue.enqueue(
+        'phishing.unblock_url',
+        url=item.rawItem,
+    )
+    return 200, {'status': 'OK', 'code': 200, 'message': 'Unblocking jobs successfully updated'}

@@ -327,11 +327,10 @@ def _update_status(body, report, user):
     elif report.status.lower() == 'tovalidate' and body['status'].lower() == 'attached':
         report.status = 'Attached'
         report.save()
-        utils.queue.enqueue(
+        utils.email_queue.enqueue(
             'report.reparse_validated',
             report_id=report.id,
             user_id=user.id,
-            timeout=3600
         )
         return 201, {'status': 'OK', 'code': 201, 'message': 'Report successfully updated'}
     elif body['status'].lower() == 'attached' and not report.ticket and all((report.category, report.defendant, report.service)):
@@ -692,7 +691,7 @@ def parse_screenshot_feedback(report_id, body, user):
     # Parse result and update Phishing Service
     try:
         for item in body:
-            utils.queue.enqueue(
+            utils.default_queue.enqueue(
                 'phishing.feedback_to_phishing_service',
                 screenshot_id=item.get('screenshotId'),
                 feedback=item.get('feedback'),
@@ -711,10 +710,10 @@ def parse_screenshot_feedback(report_id, body, user):
     report.status = 'New'
     report.save()
     if not any(result.values()):
-        utils.queue.enqueue('phishing.close_because_all_down', report=report.id, denied_by=user.id, timeout=3600)
+        utils.default_queue.enqueue('phishing.close_because_all_down', report=report.id, denied_by=user.id)
         return 200, {'status': 'OK', 'code': 200, 'message': 'Report successfully archived and mail sent to provider'}
     else:  # Else create/attach report to ticket + block_url + mail to defendant + email to provider
-        utils.queue.enqueue('ticket.create_ticket_from_phishtocheck', report=report.id, user=user.id, timeout=600)
+        utils.default_queue.enqueue('ticket.create_ticket_from_phishtocheck', report=report.id, user=user.id)
         return 200, {'status': 'OK', 'code': 200, 'message': 'Report will be attached to ticket in few seconds'}
 
 

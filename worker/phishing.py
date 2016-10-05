@@ -207,6 +207,18 @@ def block_url_and_mail(ticket_id=None, report_id=None):
     Logger.info(unicode('Ticket %d now with status WaitingAnswer for %d' % (ticket.id, ticket_snooze)))
 
 
+def unblock_url(url=None):
+    """
+        Unblock given url using PhishingService
+
+        :param str url: The url to unblock
+    """
+    if not url:
+        return
+
+    ImplementationFactory.instance.get_singleton_of('PhishingServiceBase').unblock_url(url)
+
+
 def is_all_down_for_ticket(ticket, last=5):
     """
         Check if all items for a ticket are down

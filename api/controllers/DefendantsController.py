@@ -51,7 +51,7 @@ def show(defendant_id):
         return 404, {'status': 'Not Found', 'code': 404}
 
     # BTW, refresh defendant infos
-    utils.queue.enqueue('database.refresh_defendant_infos', defendant_id=defendant.id)
+    utils.default_queue.enqueue('database.refresh_defendant_infos', defendant_id=defendant.id)
 
     # Flat details
     defendant_dict = model_to_dict(defendant)

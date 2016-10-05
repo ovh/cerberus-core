@@ -643,11 +643,11 @@ def update_snooze_duration(ticket_id, body, user):
         if new_duration > ticket.snoozeDuration:
             delay = new_duration - ticket.snoozeDuration
             delay = timedelta(seconds=delay)
-            utils.queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=False)
+            utils.default_queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=False)
         else:
             delay = ticket.snoozeDuration - new_duration
             delay = timedelta(seconds=delay)
-            utils.queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=True)
+            utils.default_queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=True)
 
         return __update_duration(ticket, data, user)
     except (KeyError, ValueError) as ex:
@@ -674,11 +674,11 @@ def update_pause_duration(ticket_id, body, user):
         if new_duration > ticket.pauseDuration:
             delay = new_duration - ticket.pauseDuration
             delay = timedelta(seconds=delay)
-            utils.queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=False)
+            utils.default_queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=False)
         else:
             delay = ticket.pauseDuration - new_duration
             delay = timedelta(seconds=delay)
-            utils.queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=True)
+            utils.default_queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=True)
 
         return __update_duration(ticket, data, user)
     except (KeyError, ValueError) as ex:
@@ -955,7 +955,7 @@ def update_status(ticket, status, body, user):
             ticket.resolution = resolution
 
             # Cancel pending jobs
-            utils.queue.enqueue(
+            utils.default_queue.enqueue(
                 'ticket.cancel_rq_scheduler_jobs',
                 ticket_id=ticket.id,
                 status=status
@@ -1013,7 +1013,7 @@ def pause_ticket(ticket, body):
 
     # Delay jobs
     delay = timedelta(seconds=ticket.pauseDuration)
-    utils.queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=False)
+    utils.default_queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=False)
 
     return 200, {'status': 'OK', 'code': 200, 'message': 'Ticket paused for %d hour(s)' % (ticket.pauseDuration)}
 
@@ -1023,7 +1023,7 @@ def unpause_ticket(ticket):
     """
     # Delay jobs
     delay = timedelta(seconds=ticket.pauseDuration) - (datetime.now() - ticket.pauseStart)
-    utils.queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=True)
+    utils.default_queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=True)
 
     if ticket.previousStatus == 'WaitingAnswer' and ticket.snoozeDuration and ticket.snoozeStart:
         ticket.snoozeDuration = ticket.snoozeDuration + (datetime.now() - ticket.pauseStart).seconds
