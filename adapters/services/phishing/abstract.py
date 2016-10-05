@@ -160,11 +160,22 @@ class PhishingServiceBase(object):
             Block/remove a phishing url
 
             :param str url: The URL to block
-
+            :param `abuse.models.Report` report: The associated report
             :raises PhishingServiceException: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'block_url'" % (cls))
+
+    @abc.abstractmethod
+    def unblock_url(self, url):
+        """
+            Unblock a phishing url
+
+            :param str url: The URL to block
+            :raises PhishingServiceException: if any error occur
+        """
+        cls = self.__class__.__name__
+        raise NotImplementedError("'%s' object does not implement the method 'unblock_url'" % (cls))
 
     @abc.abstractmethod
     def get_http_headers(self, url):
@@ -189,7 +200,6 @@ class PhishingServiceBase(object):
             :param str url: The URL to block
             :return: Details about headers
             :rtype: dict
-
             :raises PhishingServiceException: if any error occur
         """
         cls = self.__class__.__name__

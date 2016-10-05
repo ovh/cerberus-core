@@ -40,7 +40,7 @@ class DefaultPhishingService(PhishingServiceBase):
             :return: A dict containing these infos:
                 direct_status, proxied_status, http_code, score (0 for 'UP' to 100 for 'DOWN') and is_phishing (computed by your solution)
             :rtype: dict
-            :raises PhishingServiceException: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
         return PingResponse(0, '200', 'OK', 'OK', False)
 
@@ -82,8 +82,8 @@ class DefaultPhishingService(PhishingServiceBase):
 
             :param str screenshot_id: The uuid of the screenshot
             :param bool isphishing: Yes or not it is a phishing url
-            :raises PhishingServiceException: if any error occur
-            :raises PhishingServiceException: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
         pass
 
@@ -97,7 +97,7 @@ class DefaultPhishingService(PhishingServiceBase):
             :param str screenshot_id : The uuid of the screenshot
             :return: If yes or not the screenshot has been viwed
             :rtype: bool
-            :raises PhishingServiceException: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
         return {'viewed': False, 'views': []}
 
@@ -106,9 +106,17 @@ class DefaultPhishingService(PhishingServiceBase):
             Block/remove a phishing url
 
             :param str url: The URL to block
-            :param Report report: The associated report
+            :param `abuse.models.Report` report: The associated report
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
+        """
+        pass
 
-            :raises PhishingServiceException: if any error occur
+    def unblock_url(self, url):
+        """
+            Unblock a phishing url
+
+            :param str url: The URL to block
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
         pass
 
@@ -119,8 +127,7 @@ class DefaultPhishingService(PhishingServiceBase):
             :param str url: The URL to block
             :return: Details about headers
             :rtype: dict
-
-            :raises PhishingServiceException: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
         response = {
             'url': url,
