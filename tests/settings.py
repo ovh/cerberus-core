@@ -49,6 +49,21 @@ CUSTOM_SCHEDULING_ALGORITHMS = (
     'api.controllers.scheduling.limitedOpen.LimitedOpenSchedulingAlgorithm',
 )
 
+QUEUE = {
+    'default': {
+        'name': 'default',
+        'default_timeout': 86400,
+    },
+    'mailer': {
+        'name': 'mailer',
+        'default_timeout': 86400,
+    },
+    'kpi': {
+        'name': 'kpi',
+        'default_timeout': 1800,
+    },
+}
+
 API = {
     'host': '127.0.0.1',
     'port': 6060,

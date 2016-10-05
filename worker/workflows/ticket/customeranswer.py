@@ -72,7 +72,7 @@ class CustomerAnswerWorkflow(TicketAnswerWorkflowBase):
         ticket.save()
 
         # Cancel pending jobs
-        utils.queue.enqueue(
+        utils.default_queue.enqueue(
             'ticket.cancel_rq_scheduler_jobs',
             ticket_id=ticket.id,
             status='answered'

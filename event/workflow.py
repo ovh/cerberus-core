@@ -47,11 +47,11 @@ def main():
         Create worker event for workflow
     """
     Logger.debug(unicode('Starting follow_the_sun'))
-    utils.queue.enqueue('ticket.follow_the_sun', timeout=43200)
+    utils.default_queue.enqueue('ticket.follow_the_sun')
     Logger.debug(unicode('Starting update_waiting'))
-    utils.queue.enqueue('ticket.update_waiting', timeout=43200)
+    utils.default_queue.enqueue('ticket.update_waiting')
     Logger.debug(unicode('Starting update_paused'))
-    utils.queue.enqueue('ticket.update_paused', timeout=43200)
+    utils.default_queue.enqueue('ticket.update_paused')
 
 if __name__ == "__main__":
     main()

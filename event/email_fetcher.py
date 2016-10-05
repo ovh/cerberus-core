@@ -104,11 +104,10 @@ def push_task_to_worker(filename, email):
         :param str filename: The filename of the email
         :param str email: The content of the email
     """
-    utils.queue.enqueue(
+    utils.email_queue.enqueue(
         'report.create_from_email',
         email_content=email,
         filename=filename,
-        timeout=7200,
     )
     Logger.info(unicode('Task for email %s successfully created' % (filename)))
 

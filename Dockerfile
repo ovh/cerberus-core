@@ -19,7 +19,6 @@ COPY docker/supervisor/cerberus.conf \
     docker/supervisor/fetcher.conf \
     docker/supervisor/workflow.conf \
     docker/supervisor/worker.conf \
-    docker/supervisor/stats.conf \
     /etc/supervisor/conf.d/
 
 COPY abuse /abuse

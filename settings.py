@@ -53,6 +53,24 @@ GENERAL_CONFIG = {
     'report_timeout': 30,
 }
 
+# RQ Queues
+#
+
+QUEUE = {
+    'default': {
+        'name': 'default',
+        'default_timeout': 86400,
+    },
+    'mailer': {
+        'name': 'mailer',
+        'default_timeout': 86400,
+    },
+    'kpi': {
+        'name': 'kpi',
+        'default_timeout': 1800,
+    },
+}
+
 # API Config (via ENV)
 #
 # What's FORWARDED_HOST ? For security reason, if you use different host for Cerberus-UX and Cerberus-API (not required)

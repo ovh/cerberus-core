@@ -60,7 +60,21 @@ CERBERUS_USERS = User.objects.all().values_list('username', flat=True)
 IPS_NETWORKS = {}
 BLACKLISTED_NETWORKS = []
 
-queue = Queue(connection=Redis(**settings.REDIS))
+default_queue = Queue(
+    connection=Redis(**settings.REDIS),
+    **settings.QUEUE['default']
+)
+
+email_queue = Queue(
+    connection=Redis(**settings.REDIS),
+    **settings.QUEUE['mailer']
+)
+
+kpi_queue = Queue(
+    connection=Redis(**settings.REDIS),
+    **settings.QUEUE['kpi']
+)
+
 scheduler = Scheduler(connection=Redis(**settings.REDIS))
 redis = Redis(**settings.REDIS)
 

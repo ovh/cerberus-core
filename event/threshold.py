@@ -36,16 +36,11 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 django.setup()
 
 import logutils
-
-from django.conf import settings
-from redis import Redis
-from rq import Queue
-
+from utils import utils
 from utils.logger import get_logger
 
 
 Logger = get_logger('threshold')
-Worker = Queue(connection=Redis(**settings.REDIS))
 
 
 def main():
@@ -53,7 +48,7 @@ def main():
         Create worker event for report threshold
     """
     Logger.debug(unicode('Starting report threshold checks'))
-    Worker.enqueue('report.create_ticket_with_threshold', timeout=3600)
+    utils.default_queue.enqueue('report.create_ticket_with_threshold')
 
     for handler in Logger.handlers:
         if isinstance(handler, logutils.queue.QueueHandler):

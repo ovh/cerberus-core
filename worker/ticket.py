@@ -470,7 +470,7 @@ def check_mass_contact_result(result_campaign_id=None, jobs=None):
 
     result = []
     for job_id in jobs:
-        job = utils.queue.fetch_job(job_id)
+        job = utils.default_queue.fetch_job(job_id)
         if not job:
             continue
         while job.status.lower() == 'queued':
@@ -561,7 +561,7 @@ def create_ticket_from_phishtocheck(report=None, user=None):
             acknowledged_report_id=report.id,
         )
 
-    utils.queue.enqueue('phishing.block_url_and_mail', ticket_id=ticket.id, report_id=report.id, timeout=3600)
+    utils.default_queue.enqueue('phishing.block_url_and_mail', ticket_id=ticket.id, report_id=report.id)
     return ticket
 
 
