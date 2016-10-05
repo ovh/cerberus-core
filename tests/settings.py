@@ -115,6 +115,10 @@ GENERAL_CONFIG = {
     },
     'magic_smtp_header': 'Test-Magic-Smtp-Header',
     'report_timeout': 30,
+    'mailer_daemon_patterns': [
+        'mailer-daemon',
+        '@my.provider.com'
+    ],
 }
 
 DATABASES = {

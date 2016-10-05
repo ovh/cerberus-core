@@ -22,6 +22,8 @@
     Defined MailerDaemon workflow
 """
 
+from django.conf import settings
+
 from factory.factory import ImplementationFactory
 from worker import database
 from worker.workflows.ticket.abstract import TicketAnswerWorkflowBase
@@ -50,7 +52,7 @@ class MailerDaemonWorkflow(TicketAnswerWorkflowBase):
             :return: If the workflow match
             :rtype: bool
         """
-        if all((all((k in abuse_report.provider for k in ['mailer-daemon@', 'mail-out.ovh'])),
+        if all((all((k in abuse_report.provider for k in settings.GENERAL_CONFIG['mailer_daemon_patterns'])),
                 category == 'Defendant')):
             return True
         return False
