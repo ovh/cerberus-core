@@ -161,7 +161,7 @@ class DefendantRevision(models.Model):
         Effective detailed informations for a `abuse.models.Defendant`
     """
     email = models.EmailField(db_index=True, null=False, max_length=255)
-    spareEmail = models.EmailField(db_index=True, null=True, max_length=255)
+    spareEmail = models.EmailField(null=True, max_length=255)
     firstname = TruncatedCharField(null=True, max_length=255)
     name = TruncatedCharField(null=True, max_length=255)
     city = TruncatedCharField(null=True, max_length=255)
@@ -280,7 +280,7 @@ class Ticket(models.Model):
     creationDate = models.DateTimeField(null=False)
     modificationDate = models.DateTimeField(auto_now=True, null=False)
     alarm = models.BooleanField(null=False, default=False)
-    status = TruncatedCharField(max_length=32, null=False, choices=TICKET_STATUS, default='Open')
+    status = TruncatedCharField(db_index=True, max_length=32, null=False, choices=TICKET_STATUS, default='Open')
     previousStatus = TruncatedCharField(max_length=32, null=False, choices=TICKET_STATUS, default='Open')
     treatedBy = models.ForeignKey(User, null=True, related_name='ticketUser', on_delete=models.PROTECT)
     confidential = models.BooleanField(null=False, default=False)
@@ -340,7 +340,7 @@ class Report(models.Model):
         ('AUTO', 'Auto'),
     )
 
-    body = TruncatedCharField(max_length=524280, null=False)
+    body = models.TextField(null=False)
     provider = models.ForeignKey(Provider, null=False, related_name='provider', on_delete=models.PROTECT)
     plaintiff = models.ForeignKey(Plaintiff, null=True, related_name='plaintiff', on_delete=models.SET_NULL)
     defendant = models.ForeignKey(Defendant, null=True, related_name='reportDefendant', on_delete=models.PROTECT)
@@ -348,9 +348,9 @@ class Report(models.Model):
     service = models.ForeignKey(Service, null=True)
     ticket = models.ForeignKey(Ticket, null=True, related_name='reportTicket', on_delete=models.SET_NULL)
     receivedDate = models.DateTimeField(null=False)
-    subject = TruncatedCharField(null=True, max_length=1023)
+    subject = models.TextField(null=True)
     treatedMode = TruncatedCharField(max_length=4, null=False, choices=REPORT_TREATED_MODE, default='NONE')
-    status = TruncatedCharField(max_length=32, null=False, choices=REPORT_STATUS, default='New')
+    status = TruncatedCharField(db_index=True, max_length=32, null=False, choices=REPORT_STATUS, default='New')
     filename = TruncatedCharField(max_length=1023, null=False)
     tags = models.ManyToManyField(Tag, null=True)
     attachments = models.ManyToManyField(AttachedDocument, null=True)
@@ -367,13 +367,13 @@ class ReportItem(models.Model):
     )
 
     report = models.ForeignKey(Report, null=False, related_name='reportItemRelatedReport')
-    rawItem = TruncatedCharField(max_length=4095)
+    rawItem = TruncatedCharField(db_index=True, max_length=4095)
     itemType = TruncatedCharField(max_length=4, null=True, choices=ITEM_TYPE)
     fqdn = TruncatedCharField(null=True, max_length=255)
-    fqdnResolved = models.IPAddressField(null=True)
+    fqdnResolved = models.IPAddressField(db_index=True, null=True)
     fqdnResolvedReverse = TruncatedCharField(null=True, max_length=255)
     ip = models.IPAddressField(null=True)
-    ipReverse = TruncatedCharField(null=True, max_length=255)
+    ipReverse = TruncatedCharField(db_index=True, null=True, max_length=255)
     ipReverseResolved = models.IPAddressField(null=True)
     url = TruncatedCharField(null=True, max_length=4095)
     date = models.DateTimeField(auto_now=True, null=True, editable=True)
@@ -502,7 +502,7 @@ class MailTemplate(models.Model):
     name = TruncatedCharField(null=False, max_length=255)
     lang = TruncatedCharField(max_length=2, null=False, choices=TEMPLATE_LANG, default='EN')
     subject = TruncatedCharField(null=False, max_length=1023)
-    body = TruncatedCharField(null=False, max_length=65535)
+    body = models.TextField(null=False)
     recipientType = TruncatedCharField(max_length=32, null=False, choices=RECIPIENT_TYPE, default='Defendant')
 
 
