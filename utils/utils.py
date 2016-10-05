@@ -67,7 +67,7 @@ default_queue = Queue(
 
 email_queue = Queue(
     connection=Redis(**settings.REDIS),
-    **settings.QUEUE['mailer']
+    **settings.QUEUE['email']
 )
 
 kpi_queue = Queue(

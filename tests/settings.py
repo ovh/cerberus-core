@@ -54,8 +54,8 @@ QUEUE = {
         'name': 'default',
         'default_timeout': 86400,
     },
-    'mailer': {
-        'name': 'mailer',
+    'email': {
+        'name': 'email',
         'default_timeout': 86400,
     },
     'kpi': {
