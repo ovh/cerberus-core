@@ -115,23 +115,17 @@ class DefaultCustomerDao(CustomerDaoBase):
 
             Cerberus is expecting this kind of struct :
 
-            [
-                {
-                    'zone': 'EMEA',
-                    'services': [
-                        {
-                            'name': 'test',
-                            'reference': 'vps.test',
-                            'componentType': 'VPS',
-                            'creationDate': 1452686304,
-                            'expirationDate': 1453686304,
-                            'state': 'active',
-                        },
-                    ...
-                    ]
-                },
-            ...
-            ]
+            [{
+                'zone': 'EMEA',
+                'services': [{
+                    'name': 'test',
+                    'reference': 'vps.test',
+                    'componentType': 'VPS',
+                    'creationDate': 1452686304,
+                    'expirationDate': 1453686304,
+                    'state': 'active',
+                }],
+            }]
 
             :param str customer_id: The reference to the customer
             :return: The list of services

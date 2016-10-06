@@ -1,5 +1,5 @@
 Worker
-=====
+======
 
 Worker
 ------------------
@@ -29,11 +29,6 @@ Report
 Stats
 ------------------
 .. automodule:: worker.stats
-    :members:
-
-Workflow
-------------------
-.. automodule:: worker.workflow
     :members:
 
 Parsing
