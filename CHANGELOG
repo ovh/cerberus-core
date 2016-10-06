@@ -1,3 +1,220 @@
+2016-10-06 : v1.1
+
+* add(test): for new defendant models (and fix)
+* feaf(): api and worker func for unblock url
+* feat(): ABUSE-721 Utiliser différentes priorités par rq:queue
+* feat(): ABUSE-803
+* feat(): ABUSE-808
+* feat(): ABUSE-822
+* feat(adapters.phishing): unblock url
+* feat(adapters.services.mailer): add attachments on send_email
+* feat(): add ticket's answer attachments to mailerservice
+* feat(): add worker func/api endpoint for threshold
+* feat(api): ABUSE-819
+* feat(api): add cache on some endpoints
+* feat(api): add onlyUnassigned filters on todo tickets
+* feat(api): add ticket attachments
+* feat(api): attachments in emails
+* feat(api): avoid double ticket creation for "ToValidate" reports
+* feat(api): cancel async jobs when ticket is closed
+* feat(api): change ticket search filters conditions
+* feat(api): get timeline
+* feat(api): huge decorator refactor
+* feat(api): improve perf
+* feat(api): limitedOpen scheduling algo avoid brand new customer
+* feat(api): list created mass contact campaign
+* feat(api): mass contact controller
+* feat(api): mass-contact now with data validation
+* feat(api): more cached endpoints
+* feat(api): new run level ok for api
+* feat(api): refactor
+* feat(api): update prioritized tickets alog, critical before all others
+* feat(api): user's are now priorized in 'todo' tickets
+* feat(api): whois-like
+* feat(api/worker): use django templating in email
+* feat(): check mass contact campaign result
+* feat(*): data validation with voluptuous for CustomerDaoBase
+* feat(event): add report threshold event producer
+* feat(): first implementation without tests
+* feat(): first try
+* feat(): get_http_headers
+* feat(): new defendant model on API
+* feat(*): new defendant models for workers
+* feat(): new ticket history management
+* feat(*): new workflow for trusted copyright providers
+* feat(): now asynchronously update defendant infos
+* feat(): now using timeout for rq_scheduler jobs
+* feat(): now worker/API use same function to retreive item infos
+* feat(parsing): add blacklist of cidr
+* feat(parsing): implement blacklisted provider check
+* feat(parsing): update ACNS regexp
+* feat(phishing): add phishingGrade and score to get_screenshot
+* feat(phishing.timeout): closing if all down too
+* feat(): refactor
+* feat(): refactor 2
+* feat(): role edition on users and presets
+* feat(): specific workflow when phishing is clearly identified
+* feat(): store mass-contact campaign details
+* feat(test): add new test for automated phishing
+* feat(test): fix test for new models
+* feat(): tests
+* feat(): ticket answer generic workflow
+* feat(ticket): move ticket pause/unpause code from api to worker
+* feat(): update model, ABUSE-777
+* feat(): Update "priorized tickets" algo
+* feat(): user list instead of set for ReportWorkflowHookFactory to respect sequence
+* feat(utils): replace reverse with NXDOMAIN is now optionnal
+* feat(worker): ABUSE-817
+* feat(worker): add items to proof on phishtocheck validation
+* feat(worker): add log
+* feat(worker): add reparse_validated function
+* feat(worker): cancel ticket timeout when on ticket answer
+* feat(worker): export common functions
+* feat(worker): implement copyright/acns workflow
+* feat(worker): move report workflows
+* feat(worker): new generic report workflow factory
+* feat(worker.parsing.template): now can specify if fallback to other templates or not
+* feat(worker): split functions on phishing hook
+* feat(worker): threshold functions
+* feat(worker): unassigned ticket if parameter specified in user.role config
+* feat(worker): worker func for mass contact
+* feat(workflow): change fts value
+* fix(api): 500 when cancelling a job on a ticket with no ServiceAction
+* fix(api): add 'ActionError' ticket to myTicketsTodoCount in toolbar
+* fix(api): autogenerate codename when creating email template
+* fix(api): avoir changing report status without check
+* fix(api): bulk
+* fix(api): bulk actions on ticket
+* fix(api): defendant infos refresh
+* fix(api): defendant top20
+* fix(api): get defendant from PCS url
+* fix(api): improve bulk perf
+* fix(api): != instead of is not
+* fix(api): interact authorizations checks
+* fix(api): limitedOpen algo ..
+* fix(api): limitedOpen scheduling algo
+* fix(api): limited scheduling algo
+* fix(api): multiple same items on report/ticket
+* fix(api): now can set no defaultCategory on a provider
+* fix(api): now do not cancel all previous pending ServiceActionJobs all when scheduling a new job
+* fix(api): overrid defendant id with details id
+* fix(api): rewrite top20 db request
+* fix(api): set larger timeout for aysnc service action tasks
+* fix(api): simplify search
+* fix(api.ticket): check if body is correct in interact
+* fix(api): title email category in interact to match model
+* fix(api): typo
+* fix(api): use english language by default pour Plaintiff templates
+* fix(api): utf-8 attachments
+* fix(api): wrong idea to lower dict key
+* fix(): catch more db connection error exceptions
+* fix(doc): build
+* fix(email_fetcher): unecessary storage re-opening
+* fix(mailerdaemon): typo
+* fix(): now creates closed ticket if report is not validated
+* fix(): now really use redis settings
+* fix(): now use memory cache for testing
+* fix(parsing): bad url cleaning
+* fix(parsing): netaddr lib does not like ip like 038.140.010.024
+* fix(parsing): now try to get inline attachments
+* fix(parsing): provider's log
+* fix(parsing): special case for csv-like (comma separated) urls in report
+* fix(parsing): unusual way to arrange "to" recipients
+* fix(): pep8 compliance
+* fix(phishing): email was sent before items attachments
+* fix(): queue name
+* fix(readme): cerberus ux img
+* fix(readme): link to gif
+* fix(): redis settings
+* fix(): SonarQube compliance
+* fix(test): indentation
+* fix(test): mock rq
+* fix(test): ok, now really mocked ..
+* fix(test): pep8
+* fix(): tests
+* fix(test): utils
+* fix(worker): add proof for copyright workflow
+* fix(worker): avoid create multiple 'ticket.timeout' jobs on PhishToCheck validation
+* fix(worker): cancel ServiceAction jobs if answered
+* fix(worker): close email thread only if exists
+* fix(worker): commit 0aa3ec2ed7c break service action workflow
+* fix(worker): forget to check report receivedDate
+* fix(worker): forget to close email thread on forward_acns
+* fix(worker): forget to close_thread on phishing ticket close
+* fix(worker): for phishing timeout, check is ticket is treated by someone
+* fix(worker): get only url items for check if all down
+* fix(worker.hook.phishing): unconsistent ticket object properties
+* fix(worker): kpi on ticket modification
+* fix(worker): less code under pg_lock
+* fix(worker): log on phishing
+* fix(worker): now all tickets asnwers are attach
+* fix(worker): now use tuple[0] instead of tuple
+* fix(worker): phishing hook
+* fix(worker): phishing timeout up or down detection
+* fix(worker): reparse validated
+* fix(worker.report): defendant and service not attached to report if autoarchive
+* fix(worker.report): now save attachments only once even if multiple reports created
+* fix(worker.report): oups, set ticket to None even if ticket found
+* fix(worker): rq job timeout on copyright ticket timeout
+* fix(worker): settings
+* fix(worker): simplify phishing.is_all_down_for_ticket
+* fix(worker): ticket priority
+* fix(worker.ticket): remove debug
+* fix(worker): wrong paramaters in save_attachments
+* fix(worker): wront ticket log_action
+* fix(worke): typo
+* fix(workflow): unassignation for unassignedOnMultipleAlarm role
+* improve(api): aysnc job to flush ticket rq scheduler jobs on close ticket
+* improve(api.controllers): show ticket
+* improve(api.kpi): log views functions instead of path
+* improve(api): move POST /api/reports/<report>/feedback to worker
+* improve(api): multiple proof on POST /api/tickets/<ticket>/proof
+* improve(api.phishing): get logs for phishing screenshots
+* improve(): extract valid recipient from answer
+* improve(fetcher): simplify threading
+* improvement(): avoid duplicates db insertions for report attachments
+* improve(parser): attachments parsing
+* improve(search): in response, add email in defendant object
+* improve(test): for phishing timeout
+* improve(utils): raise http error code
+* improve(worker): move db lock to ensure customerId uniqueness
+* improve(worker.phishing): limit number of thread in is_all_down_for_ticket
+* improve(worker.report): remove attachments upload from pg_locked transactions
+* improve(worker.ticket): mass contact ticket is now treated by user
+* improve(workflows): externalise mailer daemon params
+* refactor(worker): report threshold
+* remove(): commented code
+* update(): abuse models, add attachments to ticket
+* update(api/views): decorators order
+* update(): cerberus modelsl
+* update(): CHANGELOG
+* update(docker): cerberus ux
+* update(docker): initial data
+* update(docker): settings
+* update(email_fetcher): change rq timeout
+* update(fixtures): add template and resolution for acns
+* update(fixtures): default app data
+* update(makefile): fix .pyc cleaning cmd
+* update(model): new classes for revision/history
+* update(models): change crazy varchar field to text
+* update(models): textfield instead of varchar for proof content
+* update(): new ux dist
+* update(parser): add new template
+* update(parsing): add acns
+* update(phishing): adapters and README
+* update(): readme and changelog
+* update(): README and .gitignore
+* update(schema): for phishing service
+* update(settings): add trusted copyright provider
+* update(settings): blacklist linkedin notifications
+* update(settings): mailout config
+* update(template): comeso.org
+* update(template): for cloudflare
+* update(templates): add template for network-abuse@hetzner.de
+* update(templates): lexsicom
+* update(utils): clouflare's ips range
+* update(utils): managed ips
+
 2016-05-18
 
 * update(schema): for phishing service
