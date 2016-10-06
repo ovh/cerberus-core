@@ -9,4 +9,8 @@ a2enmod proxy_http
 crontab /crontab
 touch /var/log/cron.log
 /etc/init.d/cron restart
+cd /home/cerberus/cerberus-core
+sleep 10
+/usr/bin/python manage.py migrate auth
+/usr/bin/python manage.py migrate
 /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf

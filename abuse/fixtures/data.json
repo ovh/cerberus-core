@@ -1,6 +1,411 @@
 [
 {
   "fields": {
+    "model": "permission",
+    "name": "permission",
+    "app_label": "auth"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 1
+},
+{
+  "fields": {
+    "model": "group",
+    "name": "group",
+    "app_label": "auth"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 2
+},
+{
+  "fields": {
+    "model": "user",
+    "name": "user",
+    "app_label": "auth"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 3
+},
+{
+  "fields": {
+    "model": "contenttype",
+    "name": "content type",
+    "app_label": "contenttypes"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 4
+},
+{
+  "fields": {
+    "model": "session",
+    "name": "session",
+    "app_label": "sessions"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 5
+},
+{
+  "fields": {
+    "model": "serviceaction",
+    "name": "service action",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 6
+},
+{
+  "fields": {
+    "model": "serviceactionjob",
+    "name": "service action job",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 7
+},
+{
+  "fields": {
+    "model": "category",
+    "name": "category",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 8
+},
+{
+  "fields": {
+    "model": "apiroute",
+    "name": "api route",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 9
+},
+{
+  "fields": {
+    "model": "role",
+    "name": "role",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 10
+},
+{
+  "fields": {
+    "model": "operator",
+    "name": "operator",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 11
+},
+{
+  "fields": {
+    "model": "tag",
+    "name": "tag",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 12
+},
+{
+  "fields": {
+    "model": "emailfilter",
+    "name": "email filter",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 13
+},
+{
+  "fields": {
+    "model": "emailfiltertag",
+    "name": "email filter tag",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 14
+},
+{
+  "fields": {
+    "model": "defendantrevision",
+    "name": "defendant revision",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 15
+},
+{
+  "fields": {
+    "model": "defendant",
+    "name": "defendant",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 16
+},
+{
+  "fields": {
+    "model": "defendanthistory",
+    "name": "defendant history",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 17
+},
+{
+  "fields": {
+    "model": "plaintiff",
+    "name": "plaintiff",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 18
+},
+{
+  "fields": {
+    "model": "service",
+    "name": "service",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 19
+},
+{
+  "fields": {
+    "model": "resolution",
+    "name": "resolution",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 20
+},
+{
+  "fields": {
+    "model": "attacheddocument",
+    "name": "attached document",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 21
+},
+{
+  "fields": {
+    "model": "ticket",
+    "name": "ticket",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 22
+},
+{
+  "fields": {
+    "model": "provider",
+    "name": "provider",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 23
+},
+{
+  "fields": {
+    "model": "report",
+    "name": "report",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 24
+},
+{
+  "fields": {
+    "model": "reportitem",
+    "name": "report item",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 25
+},
+{
+  "fields": {
+    "model": "history",
+    "name": "history",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 26
+},
+{
+  "fields": {
+    "model": "comment",
+    "name": "comment",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 27
+},
+{
+  "fields": {
+    "model": "ticketcomment",
+    "name": "ticket comment",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 28
+},
+{
+  "fields": {
+    "model": "defendantcomment",
+    "name": "defendant comment",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 29
+},
+{
+  "fields": {
+    "model": "profile",
+    "name": "profile",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 30
+},
+{
+  "fields": {
+    "model": "abusepermission",
+    "name": "abuse permission",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 31
+},
+{
+  "fields": {
+    "model": "stat",
+    "name": "stat",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 32
+},
+{
+  "fields": {
+    "model": "news",
+    "name": "news",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 33
+},
+{
+  "fields": {
+    "model": "mailtemplate",
+    "name": "mail template",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 34
+},
+{
+  "fields": {
+    "model": "proof",
+    "name": "proof",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 35
+},
+{
+  "fields": {
+    "model": "urlstatus",
+    "name": "url status",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 36
+},
+{
+  "fields": {
+    "model": "ticketactionparams",
+    "name": "ticket action params",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 37
+},
+{
+  "fields": {
+    "model": "ticketaction",
+    "name": "ticket action",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 38
+},
+{
+  "fields": {
+    "model": "ticketworkflowpresetconfig",
+    "name": "ticket workflow preset config",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 39
+},
+{
+  "fields": {
+    "model": "ticketworkflowpreset",
+    "name": "ticket workflow preset",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 40
+},
+{
+  "fields": {
+    "model": "itemscreenshotfeedback",
+    "name": "item screenshot feedback",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 41
+},
+{
+  "fields": {
+    "model": "contactedprovider",
+    "name": "contacted provider",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 42
+},
+{
+  "fields": {
+    "model": "reportthreshold",
+    "name": "report threshold",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 43
+},
+{
+  "fields": {
+    "model": "masscontact",
+    "name": "mass contact",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 44
+},
+{
+  "fields": {
+    "model": "masscontactresult",
+    "name": "mass contact result",
+    "app_label": "abuse"
+  },
+  "model": "contenttypes.contenttype",
+  "pk": 45
+},
+{
+  "fields": {
     "name": "Test",
     "module": "VPS",
     "level": "42"
@@ -71,60 +476,6 @@
   },
   "model": "abuse.category",
   "pk": "Spam"
-},
-{
-  "fields": {
-    "username": "abuse.robot",
-    "first_name": "",
-    "last_name": "",
-    "is_active": true,
-    "is_superuser": false,
-    "is_staff": true,
-    "last_login": "2016-02-03T15:05:54.467",
-    "groups": [],
-    "user_permissions": [],
-    "password": "",
-    "email": "",
-    "date_joined": "2016-02-03T15:05:54.467"
-  },
-  "model": "auth.user",
-  "pk": 43
-},
-{
-  "fields": {
-    "username": "user",
-    "first_name": "",
-    "last_name": "",
-    "is_active": true,
-    "is_superuser": false,
-    "is_staff": true,
-    "last_login": "1970-01-01T01:00:00",
-    "groups": [],
-    "user_permissions": [],
-    "password": "pbkdf2_sha256$12000$3OngZs3XKxyC$yv1U8vOgBmExcMvF8OOhpfEsZRIU3H0lHKvlgnYxduw=",
-    "email": "",
-    "date_joined": "2016-02-03T15:06:10.516"
-  },
-  "model": "auth.user",
-  "pk": 47
-},
-{
-  "fields": {
-    "username": "admin",
-    "first_name": "",
-    "last_name": "",
-    "is_active": true,
-    "is_superuser": true,
-    "is_staff": true,
-    "last_login": "2016-10-01T12:23:40.592",
-    "groups": [],
-    "user_permissions": [],
-    "password": "pbkdf2_sha256$15000$DMjBCuVedIxb$w8BWE6yTiq193tkHTK+kSyep7hc33p7BTHN+ZG7o9Cw=",
-    "email": "",
-    "date_joined": "2016-02-03T15:06:25.765"
-  },
-  "model": "auth.user",
-  "pk": 46
 },
 {
   "fields": {
@@ -1226,45 +1577,52 @@
   "fields": {
     "codename": "run_level_1",
     "allowedRoutes": [
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      10,
-      13,
-      15,
-      16,
-      17,
-      18,
-      19,
+      133,
+      130,
+      137,
+      136,
+      25,
+      27,
       21,
       22,
       23,
-      25,
-      27,
       29,
-      30,
-      31,
-      33,
-      34,
-      36,
-      37,
-      38,
-      39,
-      40,
-      42,
-      43,
-      44,
-      47,
-      49,
-      51,
-      52,
-      53,
-      54,
+      4,
+      122,
+      123,
+      125,
+      126,
+      127,
+      128,
       55,
+      54,
       56,
+      51,
+      53,
+      52,
+      89,
+      113,
+      82,
+      83,
+      119,
+      87,
+      84,
+      85,
+      3,
+      108,
+      102,
+      101,
+      106,
+      107,
+      105,
+      39,
+      38,
+      33,
+      31,
+      30,
+      37,
+      36,
+      34,
       61,
       62,
       63,
@@ -1274,45 +1632,38 @@
       67,
       68,
       69,
-      70,
-      71,
-      72,
-      73,
-      74,
-      79,
-      82,
-      83,
-      84,
-      85,
-      87,
-      89,
-      90,
-      91,
-      92,
-      93,
-      94,
-      95,
-      96,
+      2,
+      6,
       99,
-      101,
-      102,
-      105,
-      106,
-      107,
-      108,
-      113,
+      91,
+      90,
+      93,
+      92,
+      95,
+      94,
+      96,
+      10,
+      13,
+      15,
+      17,
+      16,
+      19,
+      18,
       116,
-      119,
-      122,
-      123,
-      125,
-      126,
-      127,
-      128,
-      130,
-      133,
-      136,
-      137
+      49,
+      47,
+      44,
+      42,
+      43,
+      40,
+      1,
+      5,
+      74,
+      73,
+      72,
+      71,
+      70,
+      79
     ],
     "modelsAuthorizations": "{\"report\":{\"fields\":[\"id\",\"category\",\"status\",\"defendant\"]},\"ticket\":{\"status\":[\"open\",\"unpaused\",\"waitinganswer\",\"reopened\",\"closed\",\"paused\"],\"unassignedOnAnswer\":true,\"fields\":[\"id\",\"escalated\",\"defendant\",\"category\",\"treatedBy\"],\"interact\":[\"pause_ticket\",\"waiting_answer\",\"close_with_resolution\"],\"schedulingAlgorithm\":\"LimitedOpenSchedulingAlgorithm\",\"unassignedOnMultipleAlarm\":true}}",
     "name": "RUN Level 1"
@@ -1334,125 +1685,27 @@
   "fields": {
     "codename": "run_level_3",
     "allowedRoutes": [
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16,
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23,
+      133,
+      132,
+      131,
+      130,
+      137,
+      136,
+      135,
+      134,
+      41,
       24,
       25,
       26,
       27,
+      20,
+      21,
+      22,
+      23,
       28,
       29,
-      30,
-      31,
-      32,
-      33,
-      34,
-      35,
-      36,
-      37,
-      38,
-      39,
-      40,
-      41,
-      42,
-      43,
-      44,
-      45,
-      46,
-      47,
-      48,
-      49,
-      50,
-      51,
-      52,
-      53,
-      54,
-      55,
-      56,
-      57,
-      58,
-      59,
-      60,
-      61,
-      62,
-      63,
-      64,
-      65,
-      66,
-      67,
-      68,
-      69,
-      70,
-      71,
-      72,
-      73,
-      74,
-      75,
-      76,
-      77,
-      78,
-      79,
-      80,
-      81,
-      82,
-      83,
-      84,
-      85,
-      86,
-      87,
-      88,
-      89,
-      90,
-      91,
-      92,
-      93,
-      94,
-      95,
-      96,
-      97,
-      98,
-      99,
-      100,
-      101,
-      102,
-      103,
-      104,
-      105,
-      106,
-      107,
-      108,
-      109,
-      110,
-      111,
-      112,
-      113,
-      114,
-      115,
-      116,
-      117,
-      118,
-      119,
+      4,
+      8,
       120,
       121,
       122,
@@ -1463,14 +1716,112 @@
       127,
       128,
       129,
-      130,
-      131,
-      132,
-      133,
-      134,
-      135,
-      136,
-      137
+      59,
+      58,
+      55,
+      54,
+      57,
+      56,
+      51,
+      50,
+      53,
+      52,
+      115,
+      114,
+      88,
+      89,
+      111,
+      110,
+      113,
+      112,
+      82,
+      83,
+      80,
+      81,
+      119,
+      118,
+      84,
+      85,
+      3,
+      7,
+      108,
+      109,
+      102,
+      103,
+      100,
+      101,
+      106,
+      107,
+      104,
+      105,
+      39,
+      38,
+      33,
+      32,
+      31,
+      30,
+      37,
+      36,
+      35,
+      34,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      2,
+      6,
+      99,
+      98,
+      91,
+      90,
+      93,
+      92,
+      95,
+      94,
+      97,
+      96,
+      11,
+      10,
+      13,
+      12,
+      15,
+      14,
+      17,
+      16,
+      19,
+      18,
+      117,
+      116,
+      48,
+      49,
+      46,
+      86,
+      44,
+      45,
+      42,
+      43,
+      40,
+      87,
+      1,
+      5,
+      9,
+      77,
+      76,
+      75,
+      74,
+      73,
+      72,
+      71,
+      70,
+      79,
+      78,
+      47
     ],
     "modelsAuthorizations": "{\"report\":{\"fields\":[\"category\",\"status\",\"tags\",\"ticket\",\"defendant\",\"id\"]},\"ticket\":{\"status\":[\"open\",\"closed\",\"alarm\",\"waitinganswer\",\"reopened\",\"unpaused\",\"paused\"],\"fields\":[\"category\",\"pauseStart\",\"service\",\"escalated\",\"comments\",\"priority\",\"snoozeDuration\",\"defendant\",\"status\",\"jobs\",\"confidential\",\"tags\",\"update\",\"moderation\",\"snoozeStart\",\"level\",\"treatedBy\",\"alarm\",\"pauseDuration\",\"attachedReportsCount\",\"protected\",\"action\",\"resolution\"],\"interact\":[\"waiting_answer_then_action\",\"waiting_answer_then_action_and_close\",\"action_then_waiting_answer\",\"action_then_close\",\"waiting_answer\",\"close_with_resolution\",\"pause_ticket\"],\"schedulingAlgorithm\":\"GlobalSchedulingAlgorithm\",\"unassignedOnAnswer\":false}}",
     "name": "RUN Level 3"
@@ -1482,125 +1833,27 @@
   "fields": {
     "codename": "admin",
     "allowedRoutes": [
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16,
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23,
+      133,
+      132,
+      131,
+      130,
+      137,
+      136,
+      135,
+      134,
+      41,
       24,
       25,
       26,
       27,
+      20,
+      21,
+      22,
+      23,
       28,
       29,
-      30,
-      31,
-      32,
-      33,
-      34,
-      35,
-      36,
-      37,
-      38,
-      39,
-      40,
-      41,
-      42,
-      43,
-      44,
-      45,
-      46,
-      47,
-      48,
-      49,
-      50,
-      51,
-      52,
-      53,
-      54,
-      55,
-      56,
-      57,
-      58,
-      59,
-      60,
-      61,
-      62,
-      63,
-      64,
-      65,
-      66,
-      67,
-      68,
-      69,
-      70,
-      71,
-      72,
-      73,
-      74,
-      75,
-      76,
-      77,
-      78,
-      79,
-      80,
-      81,
-      82,
-      83,
-      84,
-      85,
-      86,
-      87,
-      88,
-      89,
-      90,
-      91,
-      92,
-      93,
-      94,
-      95,
-      96,
-      97,
-      98,
-      99,
-      100,
-      101,
-      102,
-      103,
-      104,
-      105,
-      106,
-      107,
-      108,
-      109,
-      110,
-      111,
-      112,
-      113,
-      114,
-      115,
-      116,
-      117,
-      118,
-      119,
+      4,
+      8,
       120,
       121,
       122,
@@ -1611,36 +1864,118 @@
       127,
       128,
       129,
-      130,
-      131,
-      132,
-      133,
-      134,
-      135,
-      136,
-      137
+      59,
+      58,
+      55,
+      54,
+      57,
+      56,
+      51,
+      50,
+      53,
+      52,
+      115,
+      114,
+      88,
+      89,
+      111,
+      110,
+      113,
+      112,
+      82,
+      83,
+      80,
+      81,
+      119,
+      118,
+      84,
+      85,
+      3,
+      7,
+      108,
+      109,
+      102,
+      103,
+      100,
+      101,
+      106,
+      107,
+      104,
+      105,
+      39,
+      38,
+      33,
+      32,
+      31,
+      30,
+      37,
+      36,
+      35,
+      34,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      2,
+      6,
+      99,
+      98,
+      91,
+      90,
+      93,
+      92,
+      95,
+      94,
+      97,
+      96,
+      11,
+      10,
+      13,
+      12,
+      15,
+      14,
+      17,
+      16,
+      19,
+      18,
+      117,
+      116,
+      48,
+      49,
+      46,
+      86,
+      44,
+      45,
+      42,
+      43,
+      40,
+      87,
+      1,
+      5,
+      9,
+      77,
+      76,
+      75,
+      74,
+      73,
+      72,
+      71,
+      70,
+      79,
+      78,
+      47
     ],
     "modelsAuthorizations": "{\"report\":{\"fields\":[\"category\",\"status\",\"tags\",\"ticket\",\"defendant\",\"id\"]},\"ticket\":{\"status\":[\"open\",\"closed\",\"alarm\",\"waitinganswer\",\"reopened\",\"unpaused\",\"paused\"],\"fields\":[\"category\",\"pauseStart\",\"service\",\"escalated\",\"comments\",\"priority\",\"snoozeDuration\",\"defendant\",\"status\",\"jobs\",\"confidential\",\"tags\",\"update\",\"moderation\",\"snoozeStart\",\"level\",\"treatedBy\",\"alarm\",\"pauseDuration\",\"attachedReportsCount\",\"protected\",\"action\",\"resolution\"],\"interact\":[\"waiting_answer_then_action\",\"waiting_answer_then_action_and_close\",\"action_then_waiting_answer\",\"action_then_close\",\"waiting_answer\",\"close_with_resolution\",\"pause_ticket\"],\"schedulingAlgorithm\":\"GlobalSchedulingAlgorithm\",\"unassignedOnAnswer\":false}}",
     "name": "Admin"
   },
   "model": "abuse.role",
   "pk": 4
-},
-{
-  "fields": {
-    "role": 4,
-    "user": 46
-  },
-  "model": "abuse.operator",
-  "pk": 1
-},
-{
-  "fields": {
-    "role": 1,
-    "user": 47
-  },
-  "model": "abuse.operator",
-  "pk": 2
 },
 {
   "fields": {
@@ -2252,5 +2587,1434 @@
   },
   "model": "abuse.ticketworkflowpreset",
   "pk": 19
+},
+{
+  "fields": {
+    "codename": "add_permission",
+    "name": "Can add permission",
+    "content_type": 1
+  },
+  "model": "auth.permission",
+  "pk": 1
+},
+{
+  "fields": {
+    "codename": "change_permission",
+    "name": "Can change permission",
+    "content_type": 1
+  },
+  "model": "auth.permission",
+  "pk": 2
+},
+{
+  "fields": {
+    "codename": "delete_permission",
+    "name": "Can delete permission",
+    "content_type": 1
+  },
+  "model": "auth.permission",
+  "pk": 3
+},
+{
+  "fields": {
+    "codename": "add_group",
+    "name": "Can add group",
+    "content_type": 2
+  },
+  "model": "auth.permission",
+  "pk": 4
+},
+{
+  "fields": {
+    "codename": "change_group",
+    "name": "Can change group",
+    "content_type": 2
+  },
+  "model": "auth.permission",
+  "pk": 5
+},
+{
+  "fields": {
+    "codename": "delete_group",
+    "name": "Can delete group",
+    "content_type": 2
+  },
+  "model": "auth.permission",
+  "pk": 6
+},
+{
+  "fields": {
+    "codename": "add_user",
+    "name": "Can add user",
+    "content_type": 3
+  },
+  "model": "auth.permission",
+  "pk": 7
+},
+{
+  "fields": {
+    "codename": "change_user",
+    "name": "Can change user",
+    "content_type": 3
+  },
+  "model": "auth.permission",
+  "pk": 8
+},
+{
+  "fields": {
+    "codename": "delete_user",
+    "name": "Can delete user",
+    "content_type": 3
+  },
+  "model": "auth.permission",
+  "pk": 9
+},
+{
+  "fields": {
+    "codename": "add_contenttype",
+    "name": "Can add content type",
+    "content_type": 4
+  },
+  "model": "auth.permission",
+  "pk": 10
+},
+{
+  "fields": {
+    "codename": "change_contenttype",
+    "name": "Can change content type",
+    "content_type": 4
+  },
+  "model": "auth.permission",
+  "pk": 11
+},
+{
+  "fields": {
+    "codename": "delete_contenttype",
+    "name": "Can delete content type",
+    "content_type": 4
+  },
+  "model": "auth.permission",
+  "pk": 12
+},
+{
+  "fields": {
+    "codename": "add_session",
+    "name": "Can add session",
+    "content_type": 5
+  },
+  "model": "auth.permission",
+  "pk": 13
+},
+{
+  "fields": {
+    "codename": "change_session",
+    "name": "Can change session",
+    "content_type": 5
+  },
+  "model": "auth.permission",
+  "pk": 14
+},
+{
+  "fields": {
+    "codename": "delete_session",
+    "name": "Can delete session",
+    "content_type": 5
+  },
+  "model": "auth.permission",
+  "pk": 15
+},
+{
+  "fields": {
+    "codename": "add_serviceaction",
+    "name": "Can add service action",
+    "content_type": 6
+  },
+  "model": "auth.permission",
+  "pk": 16
+},
+{
+  "fields": {
+    "codename": "change_serviceaction",
+    "name": "Can change service action",
+    "content_type": 6
+  },
+  "model": "auth.permission",
+  "pk": 17
+},
+{
+  "fields": {
+    "codename": "delete_serviceaction",
+    "name": "Can delete service action",
+    "content_type": 6
+  },
+  "model": "auth.permission",
+  "pk": 18
+},
+{
+  "fields": {
+    "codename": "add_serviceactionjob",
+    "name": "Can add service action job",
+    "content_type": 7
+  },
+  "model": "auth.permission",
+  "pk": 19
+},
+{
+  "fields": {
+    "codename": "change_serviceactionjob",
+    "name": "Can change service action job",
+    "content_type": 7
+  },
+  "model": "auth.permission",
+  "pk": 20
+},
+{
+  "fields": {
+    "codename": "delete_serviceactionjob",
+    "name": "Can delete service action job",
+    "content_type": 7
+  },
+  "model": "auth.permission",
+  "pk": 21
+},
+{
+  "fields": {
+    "codename": "add_category",
+    "name": "Can add category",
+    "content_type": 8
+  },
+  "model": "auth.permission",
+  "pk": 22
+},
+{
+  "fields": {
+    "codename": "change_category",
+    "name": "Can change category",
+    "content_type": 8
+  },
+  "model": "auth.permission",
+  "pk": 23
+},
+{
+  "fields": {
+    "codename": "delete_category",
+    "name": "Can delete category",
+    "content_type": 8
+  },
+  "model": "auth.permission",
+  "pk": 24
+},
+{
+  "fields": {
+    "codename": "add_apiroute",
+    "name": "Can add api route",
+    "content_type": 9
+  },
+  "model": "auth.permission",
+  "pk": 25
+},
+{
+  "fields": {
+    "codename": "change_apiroute",
+    "name": "Can change api route",
+    "content_type": 9
+  },
+  "model": "auth.permission",
+  "pk": 26
+},
+{
+  "fields": {
+    "codename": "delete_apiroute",
+    "name": "Can delete api route",
+    "content_type": 9
+  },
+  "model": "auth.permission",
+  "pk": 27
+},
+{
+  "fields": {
+    "codename": "add_role",
+    "name": "Can add role",
+    "content_type": 10
+  },
+  "model": "auth.permission",
+  "pk": 28
+},
+{
+  "fields": {
+    "codename": "change_role",
+    "name": "Can change role",
+    "content_type": 10
+  },
+  "model": "auth.permission",
+  "pk": 29
+},
+{
+  "fields": {
+    "codename": "delete_role",
+    "name": "Can delete role",
+    "content_type": 10
+  },
+  "model": "auth.permission",
+  "pk": 30
+},
+{
+  "fields": {
+    "codename": "add_operator",
+    "name": "Can add operator",
+    "content_type": 11
+  },
+  "model": "auth.permission",
+  "pk": 31
+},
+{
+  "fields": {
+    "codename": "change_operator",
+    "name": "Can change operator",
+    "content_type": 11
+  },
+  "model": "auth.permission",
+  "pk": 32
+},
+{
+  "fields": {
+    "codename": "delete_operator",
+    "name": "Can delete operator",
+    "content_type": 11
+  },
+  "model": "auth.permission",
+  "pk": 33
+},
+{
+  "fields": {
+    "codename": "add_tag",
+    "name": "Can add tag",
+    "content_type": 12
+  },
+  "model": "auth.permission",
+  "pk": 34
+},
+{
+  "fields": {
+    "codename": "change_tag",
+    "name": "Can change tag",
+    "content_type": 12
+  },
+  "model": "auth.permission",
+  "pk": 35
+},
+{
+  "fields": {
+    "codename": "delete_tag",
+    "name": "Can delete tag",
+    "content_type": 12
+  },
+  "model": "auth.permission",
+  "pk": 36
+},
+{
+  "fields": {
+    "codename": "add_emailfilter",
+    "name": "Can add email filter",
+    "content_type": 13
+  },
+  "model": "auth.permission",
+  "pk": 37
+},
+{
+  "fields": {
+    "codename": "change_emailfilter",
+    "name": "Can change email filter",
+    "content_type": 13
+  },
+  "model": "auth.permission",
+  "pk": 38
+},
+{
+  "fields": {
+    "codename": "delete_emailfilter",
+    "name": "Can delete email filter",
+    "content_type": 13
+  },
+  "model": "auth.permission",
+  "pk": 39
+},
+{
+  "fields": {
+    "codename": "add_emailfiltertag",
+    "name": "Can add email filter tag",
+    "content_type": 14
+  },
+  "model": "auth.permission",
+  "pk": 40
+},
+{
+  "fields": {
+    "codename": "change_emailfiltertag",
+    "name": "Can change email filter tag",
+    "content_type": 14
+  },
+  "model": "auth.permission",
+  "pk": 41
+},
+{
+  "fields": {
+    "codename": "delete_emailfiltertag",
+    "name": "Can delete email filter tag",
+    "content_type": 14
+  },
+  "model": "auth.permission",
+  "pk": 42
+},
+{
+  "fields": {
+    "codename": "add_defendantrevision",
+    "name": "Can add defendant revision",
+    "content_type": 15
+  },
+  "model": "auth.permission",
+  "pk": 43
+},
+{
+  "fields": {
+    "codename": "change_defendantrevision",
+    "name": "Can change defendant revision",
+    "content_type": 15
+  },
+  "model": "auth.permission",
+  "pk": 44
+},
+{
+  "fields": {
+    "codename": "delete_defendantrevision",
+    "name": "Can delete defendant revision",
+    "content_type": 15
+  },
+  "model": "auth.permission",
+  "pk": 45
+},
+{
+  "fields": {
+    "codename": "add_defendant",
+    "name": "Can add defendant",
+    "content_type": 16
+  },
+  "model": "auth.permission",
+  "pk": 46
+},
+{
+  "fields": {
+    "codename": "change_defendant",
+    "name": "Can change defendant",
+    "content_type": 16
+  },
+  "model": "auth.permission",
+  "pk": 47
+},
+{
+  "fields": {
+    "codename": "delete_defendant",
+    "name": "Can delete defendant",
+    "content_type": 16
+  },
+  "model": "auth.permission",
+  "pk": 48
+},
+{
+  "fields": {
+    "codename": "add_defendanthistory",
+    "name": "Can add defendant history",
+    "content_type": 17
+  },
+  "model": "auth.permission",
+  "pk": 49
+},
+{
+  "fields": {
+    "codename": "change_defendanthistory",
+    "name": "Can change defendant history",
+    "content_type": 17
+  },
+  "model": "auth.permission",
+  "pk": 50
+},
+{
+  "fields": {
+    "codename": "delete_defendanthistory",
+    "name": "Can delete defendant history",
+    "content_type": 17
+  },
+  "model": "auth.permission",
+  "pk": 51
+},
+{
+  "fields": {
+    "codename": "add_plaintiff",
+    "name": "Can add plaintiff",
+    "content_type": 18
+  },
+  "model": "auth.permission",
+  "pk": 52
+},
+{
+  "fields": {
+    "codename": "change_plaintiff",
+    "name": "Can change plaintiff",
+    "content_type": 18
+  },
+  "model": "auth.permission",
+  "pk": 53
+},
+{
+  "fields": {
+    "codename": "delete_plaintiff",
+    "name": "Can delete plaintiff",
+    "content_type": 18
+  },
+  "model": "auth.permission",
+  "pk": 54
+},
+{
+  "fields": {
+    "codename": "add_service",
+    "name": "Can add service",
+    "content_type": 19
+  },
+  "model": "auth.permission",
+  "pk": 55
+},
+{
+  "fields": {
+    "codename": "change_service",
+    "name": "Can change service",
+    "content_type": 19
+  },
+  "model": "auth.permission",
+  "pk": 56
+},
+{
+  "fields": {
+    "codename": "delete_service",
+    "name": "Can delete service",
+    "content_type": 19
+  },
+  "model": "auth.permission",
+  "pk": 57
+},
+{
+  "fields": {
+    "codename": "add_resolution",
+    "name": "Can add resolution",
+    "content_type": 20
+  },
+  "model": "auth.permission",
+  "pk": 58
+},
+{
+  "fields": {
+    "codename": "change_resolution",
+    "name": "Can change resolution",
+    "content_type": 20
+  },
+  "model": "auth.permission",
+  "pk": 59
+},
+{
+  "fields": {
+    "codename": "delete_resolution",
+    "name": "Can delete resolution",
+    "content_type": 20
+  },
+  "model": "auth.permission",
+  "pk": 60
+},
+{
+  "fields": {
+    "codename": "add_attacheddocument",
+    "name": "Can add attached document",
+    "content_type": 21
+  },
+  "model": "auth.permission",
+  "pk": 61
+},
+{
+  "fields": {
+    "codename": "change_attacheddocument",
+    "name": "Can change attached document",
+    "content_type": 21
+  },
+  "model": "auth.permission",
+  "pk": 62
+},
+{
+  "fields": {
+    "codename": "delete_attacheddocument",
+    "name": "Can delete attached document",
+    "content_type": 21
+  },
+  "model": "auth.permission",
+  "pk": 63
+},
+{
+  "fields": {
+    "codename": "add_ticket",
+    "name": "Can add ticket",
+    "content_type": 22
+  },
+  "model": "auth.permission",
+  "pk": 64
+},
+{
+  "fields": {
+    "codename": "change_ticket",
+    "name": "Can change ticket",
+    "content_type": 22
+  },
+  "model": "auth.permission",
+  "pk": 65
+},
+{
+  "fields": {
+    "codename": "delete_ticket",
+    "name": "Can delete ticket",
+    "content_type": 22
+  },
+  "model": "auth.permission",
+  "pk": 66
+},
+{
+  "fields": {
+    "codename": "add_provider",
+    "name": "Can add provider",
+    "content_type": 23
+  },
+  "model": "auth.permission",
+  "pk": 67
+},
+{
+  "fields": {
+    "codename": "change_provider",
+    "name": "Can change provider",
+    "content_type": 23
+  },
+  "model": "auth.permission",
+  "pk": 68
+},
+{
+  "fields": {
+    "codename": "delete_provider",
+    "name": "Can delete provider",
+    "content_type": 23
+  },
+  "model": "auth.permission",
+  "pk": 69
+},
+{
+  "fields": {
+    "codename": "add_report",
+    "name": "Can add report",
+    "content_type": 24
+  },
+  "model": "auth.permission",
+  "pk": 70
+},
+{
+  "fields": {
+    "codename": "change_report",
+    "name": "Can change report",
+    "content_type": 24
+  },
+  "model": "auth.permission",
+  "pk": 71
+},
+{
+  "fields": {
+    "codename": "delete_report",
+    "name": "Can delete report",
+    "content_type": 24
+  },
+  "model": "auth.permission",
+  "pk": 72
+},
+{
+  "fields": {
+    "codename": "add_reportitem",
+    "name": "Can add report item",
+    "content_type": 25
+  },
+  "model": "auth.permission",
+  "pk": 73
+},
+{
+  "fields": {
+    "codename": "change_reportitem",
+    "name": "Can change report item",
+    "content_type": 25
+  },
+  "model": "auth.permission",
+  "pk": 74
+},
+{
+  "fields": {
+    "codename": "delete_reportitem",
+    "name": "Can delete report item",
+    "content_type": 25
+  },
+  "model": "auth.permission",
+  "pk": 75
+},
+{
+  "fields": {
+    "codename": "add_history",
+    "name": "Can add history",
+    "content_type": 26
+  },
+  "model": "auth.permission",
+  "pk": 76
+},
+{
+  "fields": {
+    "codename": "change_history",
+    "name": "Can change history",
+    "content_type": 26
+  },
+  "model": "auth.permission",
+  "pk": 77
+},
+{
+  "fields": {
+    "codename": "delete_history",
+    "name": "Can delete history",
+    "content_type": 26
+  },
+  "model": "auth.permission",
+  "pk": 78
+},
+{
+  "fields": {
+    "codename": "add_comment",
+    "name": "Can add comment",
+    "content_type": 27
+  },
+  "model": "auth.permission",
+  "pk": 79
+},
+{
+  "fields": {
+    "codename": "change_comment",
+    "name": "Can change comment",
+    "content_type": 27
+  },
+  "model": "auth.permission",
+  "pk": 80
+},
+{
+  "fields": {
+    "codename": "delete_comment",
+    "name": "Can delete comment",
+    "content_type": 27
+  },
+  "model": "auth.permission",
+  "pk": 81
+},
+{
+  "fields": {
+    "codename": "add_ticketcomment",
+    "name": "Can add ticket comment",
+    "content_type": 28
+  },
+  "model": "auth.permission",
+  "pk": 82
+},
+{
+  "fields": {
+    "codename": "change_ticketcomment",
+    "name": "Can change ticket comment",
+    "content_type": 28
+  },
+  "model": "auth.permission",
+  "pk": 83
+},
+{
+  "fields": {
+    "codename": "delete_ticketcomment",
+    "name": "Can delete ticket comment",
+    "content_type": 28
+  },
+  "model": "auth.permission",
+  "pk": 84
+},
+{
+  "fields": {
+    "codename": "add_defendantcomment",
+    "name": "Can add defendant comment",
+    "content_type": 29
+  },
+  "model": "auth.permission",
+  "pk": 85
+},
+{
+  "fields": {
+    "codename": "change_defendantcomment",
+    "name": "Can change defendant comment",
+    "content_type": 29
+  },
+  "model": "auth.permission",
+  "pk": 86
+},
+{
+  "fields": {
+    "codename": "delete_defendantcomment",
+    "name": "Can delete defendant comment",
+    "content_type": 29
+  },
+  "model": "auth.permission",
+  "pk": 87
+},
+{
+  "fields": {
+    "codename": "add_profile",
+    "name": "Can add profile",
+    "content_type": 30
+  },
+  "model": "auth.permission",
+  "pk": 88
+},
+{
+  "fields": {
+    "codename": "change_profile",
+    "name": "Can change profile",
+    "content_type": 30
+  },
+  "model": "auth.permission",
+  "pk": 89
+},
+{
+  "fields": {
+    "codename": "delete_profile",
+    "name": "Can delete profile",
+    "content_type": 30
+  },
+  "model": "auth.permission",
+  "pk": 90
+},
+{
+  "fields": {
+    "codename": "add_abusepermission",
+    "name": "Can add abuse permission",
+    "content_type": 31
+  },
+  "model": "auth.permission",
+  "pk": 91
+},
+{
+  "fields": {
+    "codename": "change_abusepermission",
+    "name": "Can change abuse permission",
+    "content_type": 31
+  },
+  "model": "auth.permission",
+  "pk": 92
+},
+{
+  "fields": {
+    "codename": "delete_abusepermission",
+    "name": "Can delete abuse permission",
+    "content_type": 31
+  },
+  "model": "auth.permission",
+  "pk": 93
+},
+{
+  "fields": {
+    "codename": "add_stat",
+    "name": "Can add stat",
+    "content_type": 32
+  },
+  "model": "auth.permission",
+  "pk": 94
+},
+{
+  "fields": {
+    "codename": "change_stat",
+    "name": "Can change stat",
+    "content_type": 32
+  },
+  "model": "auth.permission",
+  "pk": 95
+},
+{
+  "fields": {
+    "codename": "delete_stat",
+    "name": "Can delete stat",
+    "content_type": 32
+  },
+  "model": "auth.permission",
+  "pk": 96
+},
+{
+  "fields": {
+    "codename": "add_news",
+    "name": "Can add news",
+    "content_type": 33
+  },
+  "model": "auth.permission",
+  "pk": 97
+},
+{
+  "fields": {
+    "codename": "change_news",
+    "name": "Can change news",
+    "content_type": 33
+  },
+  "model": "auth.permission",
+  "pk": 98
+},
+{
+  "fields": {
+    "codename": "delete_news",
+    "name": "Can delete news",
+    "content_type": 33
+  },
+  "model": "auth.permission",
+  "pk": 99
+},
+{
+  "fields": {
+    "codename": "add_mailtemplate",
+    "name": "Can add mail template",
+    "content_type": 34
+  },
+  "model": "auth.permission",
+  "pk": 100
+},
+{
+  "fields": {
+    "codename": "change_mailtemplate",
+    "name": "Can change mail template",
+    "content_type": 34
+  },
+  "model": "auth.permission",
+  "pk": 101
+},
+{
+  "fields": {
+    "codename": "delete_mailtemplate",
+    "name": "Can delete mail template",
+    "content_type": 34
+  },
+  "model": "auth.permission",
+  "pk": 102
+},
+{
+  "fields": {
+    "codename": "add_proof",
+    "name": "Can add proof",
+    "content_type": 35
+  },
+  "model": "auth.permission",
+  "pk": 103
+},
+{
+  "fields": {
+    "codename": "change_proof",
+    "name": "Can change proof",
+    "content_type": 35
+  },
+  "model": "auth.permission",
+  "pk": 104
+},
+{
+  "fields": {
+    "codename": "delete_proof",
+    "name": "Can delete proof",
+    "content_type": 35
+  },
+  "model": "auth.permission",
+  "pk": 105
+},
+{
+  "fields": {
+    "codename": "add_urlstatus",
+    "name": "Can add url status",
+    "content_type": 36
+  },
+  "model": "auth.permission",
+  "pk": 106
+},
+{
+  "fields": {
+    "codename": "change_urlstatus",
+    "name": "Can change url status",
+    "content_type": 36
+  },
+  "model": "auth.permission",
+  "pk": 107
+},
+{
+  "fields": {
+    "codename": "delete_urlstatus",
+    "name": "Can delete url status",
+    "content_type": 36
+  },
+  "model": "auth.permission",
+  "pk": 108
+},
+{
+  "fields": {
+    "codename": "add_ticketactionparams",
+    "name": "Can add ticket action params",
+    "content_type": 37
+  },
+  "model": "auth.permission",
+  "pk": 109
+},
+{
+  "fields": {
+    "codename": "change_ticketactionparams",
+    "name": "Can change ticket action params",
+    "content_type": 37
+  },
+  "model": "auth.permission",
+  "pk": 110
+},
+{
+  "fields": {
+    "codename": "delete_ticketactionparams",
+    "name": "Can delete ticket action params",
+    "content_type": 37
+  },
+  "model": "auth.permission",
+  "pk": 111
+},
+{
+  "fields": {
+    "codename": "add_ticketaction",
+    "name": "Can add ticket action",
+    "content_type": 38
+  },
+  "model": "auth.permission",
+  "pk": 112
+},
+{
+  "fields": {
+    "codename": "change_ticketaction",
+    "name": "Can change ticket action",
+    "content_type": 38
+  },
+  "model": "auth.permission",
+  "pk": 113
+},
+{
+  "fields": {
+    "codename": "delete_ticketaction",
+    "name": "Can delete ticket action",
+    "content_type": 38
+  },
+  "model": "auth.permission",
+  "pk": 114
+},
+{
+  "fields": {
+    "codename": "add_ticketworkflowpresetconfig",
+    "name": "Can add ticket workflow preset config",
+    "content_type": 39
+  },
+  "model": "auth.permission",
+  "pk": 115
+},
+{
+  "fields": {
+    "codename": "change_ticketworkflowpresetconfig",
+    "name": "Can change ticket workflow preset config",
+    "content_type": 39
+  },
+  "model": "auth.permission",
+  "pk": 116
+},
+{
+  "fields": {
+    "codename": "delete_ticketworkflowpresetconfig",
+    "name": "Can delete ticket workflow preset config",
+    "content_type": 39
+  },
+  "model": "auth.permission",
+  "pk": 117
+},
+{
+  "fields": {
+    "codename": "add_ticketworkflowpreset",
+    "name": "Can add ticket workflow preset",
+    "content_type": 40
+  },
+  "model": "auth.permission",
+  "pk": 118
+},
+{
+  "fields": {
+    "codename": "change_ticketworkflowpreset",
+    "name": "Can change ticket workflow preset",
+    "content_type": 40
+  },
+  "model": "auth.permission",
+  "pk": 119
+},
+{
+  "fields": {
+    "codename": "delete_ticketworkflowpreset",
+    "name": "Can delete ticket workflow preset",
+    "content_type": 40
+  },
+  "model": "auth.permission",
+  "pk": 120
+},
+{
+  "fields": {
+    "codename": "add_itemscreenshotfeedback",
+    "name": "Can add item screenshot feedback",
+    "content_type": 41
+  },
+  "model": "auth.permission",
+  "pk": 121
+},
+{
+  "fields": {
+    "codename": "change_itemscreenshotfeedback",
+    "name": "Can change item screenshot feedback",
+    "content_type": 41
+  },
+  "model": "auth.permission",
+  "pk": 122
+},
+{
+  "fields": {
+    "codename": "delete_itemscreenshotfeedback",
+    "name": "Can delete item screenshot feedback",
+    "content_type": 41
+  },
+  "model": "auth.permission",
+  "pk": 123
+},
+{
+  "fields": {
+    "codename": "add_contactedprovider",
+    "name": "Can add contacted provider",
+    "content_type": 42
+  },
+  "model": "auth.permission",
+  "pk": 124
+},
+{
+  "fields": {
+    "codename": "change_contactedprovider",
+    "name": "Can change contacted provider",
+    "content_type": 42
+  },
+  "model": "auth.permission",
+  "pk": 125
+},
+{
+  "fields": {
+    "codename": "delete_contactedprovider",
+    "name": "Can delete contacted provider",
+    "content_type": 42
+  },
+  "model": "auth.permission",
+  "pk": 126
+},
+{
+  "fields": {
+    "codename": "add_reportthreshold",
+    "name": "Can add report threshold",
+    "content_type": 43
+  },
+  "model": "auth.permission",
+  "pk": 127
+},
+{
+  "fields": {
+    "codename": "change_reportthreshold",
+    "name": "Can change report threshold",
+    "content_type": 43
+  },
+  "model": "auth.permission",
+  "pk": 128
+},
+{
+  "fields": {
+    "codename": "delete_reportthreshold",
+    "name": "Can delete report threshold",
+    "content_type": 43
+  },
+  "model": "auth.permission",
+  "pk": 129
+},
+{
+  "fields": {
+    "codename": "add_masscontact",
+    "name": "Can add mass contact",
+    "content_type": 44
+  },
+  "model": "auth.permission",
+  "pk": 130
+},
+{
+  "fields": {
+    "codename": "change_masscontact",
+    "name": "Can change mass contact",
+    "content_type": 44
+  },
+  "model": "auth.permission",
+  "pk": 131
+},
+{
+  "fields": {
+    "codename": "delete_masscontact",
+    "name": "Can delete mass contact",
+    "content_type": 44
+  },
+  "model": "auth.permission",
+  "pk": 132
+},
+{
+  "fields": {
+    "codename": "add_masscontactresult",
+    "name": "Can add mass contact result",
+    "content_type": 45
+  },
+  "model": "auth.permission",
+  "pk": 133
+},
+{
+  "fields": {
+    "codename": "change_masscontactresult",
+    "name": "Can change mass contact result",
+    "content_type": 45
+  },
+  "model": "auth.permission",
+  "pk": 134
+},
+{
+  "fields": {
+    "codename": "delete_masscontactresult",
+    "name": "Can delete mass contact result",
+    "content_type": 45
+  },
+  "model": "auth.permission",
+  "pk": 135
+},
+{
+  "fields": {
+    "username": "abuse.robot",
+    "first_name": "",
+    "last_name": "",
+    "is_active": true,
+    "is_superuser": false,
+    "is_staff": true,
+    "last_login": "2016-02-03T15:05:54.467",
+    "groups": [],
+    "user_permissions": [],
+    "password": "",
+    "email": "",
+    "date_joined": "2016-02-03T15:05:54.467"
+  },
+  "model": "auth.user",
+  "pk": 43
+},
+{
+  "fields": {
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "is_active": true,
+    "is_superuser": true,
+    "is_staff": true,
+    "last_login": "2016-10-06T15:26:57.878",
+    "groups": [],
+    "user_permissions": [],
+    "password": "pbkdf2_sha256$15000$DMjBCuVedIxb$w8BWE6yTiq193tkHTK+kSyep7hc33p7BTHN+ZG7o9Cw=",
+    "email": "",
+    "date_joined": "2016-02-03T15:06:25.765"
+  },
+  "model": "auth.user",
+  "pk": 46
+},
+{
+  "fields": {
+    "username": "user",
+    "first_name": "",
+    "last_name": "",
+    "is_active": true,
+    "is_superuser": false,
+    "is_staff": true,
+    "last_login": "1970-01-01T01:00:00",
+    "groups": [],
+    "user_permissions": [],
+    "password": "pbkdf2_sha256$12000$3OngZs3XKxyC$yv1U8vOgBmExcMvF8OOhpfEsZRIU3H0lHKvlgnYxduw=",
+    "email": "",
+    "date_joined": "2016-02-03T15:06:10.516"
+  },
+  "model": "auth.user",
+  "pk": 47
+},
+{
+  "fields": {
+    "role": 4,
+    "user": 46
+  },
+  "model": "abuse.operator",
+  "pk": 1
+},
+{
+  "fields": {
+    "role": 1,
+    "user": 47
+  },
+  "model": "abuse.operator",
+  "pk": 2
+},
+{
+  "fields": {
+    "category": "Copyright",
+    "profile": 5,
+    "user": 46
+  },
+  "model": "abuse.abusepermission",
+  "pk": 1
+},
+{
+  "fields": {
+    "category": "Illegal",
+    "profile": 5,
+    "user": 46
+  },
+  "model": "abuse.abusepermission",
+  "pk": 2
+},
+{
+  "fields": {
+    "category": "Intrusion",
+    "profile": 5,
+    "user": 46
+  },
+  "model": "abuse.abusepermission",
+  "pk": 3
+},
+{
+  "fields": {
+    "category": "Malware",
+    "profile": 5,
+    "user": 46
+  },
+  "model": "abuse.abusepermission",
+  "pk": 4
+},
+{
+  "fields": {
+    "category": "Network Attack",
+    "profile": 5,
+    "user": 46
+  },
+  "model": "abuse.abusepermission",
+  "pk": 5
+},
+{
+  "fields": {
+    "category": "Other",
+    "profile": 5,
+    "user": 46
+  },
+  "model": "abuse.abusepermission",
+  "pk": 6
+},
+{
+  "fields": {
+    "category": "Phishing",
+    "profile": 5,
+    "user": 46
+  },
+  "model": "abuse.abusepermission",
+  "pk": 7
+},
+{
+  "fields": {
+    "category": "Spam",
+    "profile": 5,
+    "user": 46
+  },
+  "model": "abuse.abusepermission",
+  "pk": 8
+},
+{
+  "fields": {
+    "category": "Copyright",
+    "profile": 2,
+    "user": 47
+  },
+  "model": "abuse.abusepermission",
+  "pk": 9
+},
+{
+  "fields": {
+    "category": "Illegal",
+    "profile": 2,
+    "user": 47
+  },
+  "model": "abuse.abusepermission",
+  "pk": 10
+},
+{
+  "fields": {
+    "category": "Intrusion",
+    "profile": 2,
+    "user": 47
+  },
+  "model": "abuse.abusepermission",
+  "pk": 11
+},
+{
+  "fields": {
+    "category": "Malware",
+    "profile": 2,
+    "user": 47
+  },
+  "model": "abuse.abusepermission",
+  "pk": 12
+},
+{
+  "fields": {
+    "category": "Network Attack",
+    "profile": 2,
+    "user": 47
+  },
+  "model": "abuse.abusepermission",
+  "pk": 13
+},
+{
+  "fields": {
+    "category": "Other",
+    "profile": 2,
+    "user": 47
+  },
+  "model": "abuse.abusepermission",
+  "pk": 14
+},
+{
+  "fields": {
+    "category": "Phishing",
+    "profile": 2,
+    "user": 47
+  },
+  "model": "abuse.abusepermission",
+  "pk": 15
+},
+{
+  "fields": {
+    "category": "Spam",
+    "profile": 2,
+    "user": 47
+  },
+  "model": "abuse.abusepermission",
+  "pk": 16
 }
 ]
