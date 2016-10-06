@@ -52,8 +52,8 @@ GENERAL_CONFIG = {
     'magic_smtp_header': os.getenv('MAGIC_SMTP_HEADER', 'X-MAGIC-SMTP-HEADER-TO-IDENTIFY-TRUSTED-PROVIDER'),
     'report_timeout': 30,
     'mailer_daemon_patterns': [
-        'mailer-daemon@',
-        'mail-out.ovh'
+        'mailer-daemon',
+        '@provider.com'
     ],
 }
 
