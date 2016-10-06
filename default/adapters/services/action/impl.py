@@ -62,7 +62,7 @@ class DefaultActionService(ActionServiceBase):
     @staticmethod
     def get_action_for_timeout(ticket):
         """
-            Returns action to apply when phishing ticket timeout
+            Returns action to apply when ticket timeout
 
             :param `Ticket` ticket: A Cerberus `ticket` instance
             :rtype: `abuse.models.ServiceAction`

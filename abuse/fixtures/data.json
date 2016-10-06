@@ -1,60 +1,6 @@
 [
 {
   "fields": {
-    "username": "abuse.robot",
-    "first_name": "",
-    "last_name": "",
-    "is_active": true,
-    "is_superuser": false,
-    "is_staff": true,
-    "last_login": "2016-02-03T15:05:54.467",
-    "groups": [],
-    "user_permissions": [],
-    "password": "",
-    "email": "",
-    "date_joined": "2016-02-03T15:05:54.467"
-  },
-  "model": "auth.user",
-  "pk": 43
-},
-{
-  "fields": {
-    "username": "user",
-    "first_name": "",
-    "last_name": "",
-    "is_active": true,
-    "is_superuser": false,
-    "is_staff": true,
-    "last_login": "1970-01-01T01:00:00",
-    "groups": [],
-    "user_permissions": [],
-    "password": "pbkdf2_sha256$12000$3OngZs3XKxyC$yv1U8vOgBmExcMvF8OOhpfEsZRIU3H0lHKvlgnYxduw=",
-    "email": "",
-    "date_joined": "2016-02-03T15:06:10.516"
-  },
-  "model": "auth.user",
-  "pk": 44
-},
-{
-  "fields": {
-    "username": "admin",
-    "first_name": "",
-    "last_name": "",
-    "is_active": true,
-    "is_superuser": true,
-    "is_staff": true,
-    "last_login": "2016-02-04T14:46:44.524",
-    "groups": [],
-    "user_permissions": [],
-    "password": "pbkdf2_sha256$12000$Yt4xOi4QGLss$ClAlu9lxiW3KcLqmdGjKG3Ah1ufAH2a/XxtJC9qRlg8=",
-    "email": "",
-    "date_joined": "2016-02-03T15:06:25.765"
-  },
-  "model": "auth.user",
-  "pk": 45
-},
-{
-  "fields": {
     "name": "Test",
     "module": "VPS",
     "level": "42"
@@ -125,6 +71,1576 @@
   },
   "model": "abuse.category",
   "pk": "Spam"
+},
+{
+  "fields": {
+    "username": "abuse.robot",
+    "first_name": "",
+    "last_name": "",
+    "is_active": true,
+    "is_superuser": false,
+    "is_staff": true,
+    "last_login": "2016-02-03T15:05:54.467",
+    "groups": [],
+    "user_permissions": [],
+    "password": "",
+    "email": "",
+    "date_joined": "2016-02-03T15:05:54.467"
+  },
+  "model": "auth.user",
+  "pk": 43
+},
+{
+  "fields": {
+    "username": "user",
+    "first_name": "",
+    "last_name": "",
+    "is_active": true,
+    "is_superuser": false,
+    "is_staff": true,
+    "last_login": "1970-01-01T01:00:00",
+    "groups": [],
+    "user_permissions": [],
+    "password": "pbkdf2_sha256$12000$3OngZs3XKxyC$yv1U8vOgBmExcMvF8OOhpfEsZRIU3H0lHKvlgnYxduw=",
+    "email": "",
+    "date_joined": "2016-02-03T15:06:10.516"
+  },
+  "model": "auth.user",
+  "pk": 47
+},
+{
+  "fields": {
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "is_active": true,
+    "is_superuser": true,
+    "is_staff": true,
+    "last_login": "2016-10-01T12:23:40.592",
+    "groups": [],
+    "user_permissions": [],
+    "password": "pbkdf2_sha256$15000$DMjBCuVedIxb$w8BWE6yTiq193tkHTK+kSyep7hc33p7BTHN+ZG7o9Cw=",
+    "email": "",
+    "date_joined": "2016-02-03T15:06:25.765"
+  },
+  "model": "auth.user",
+  "pk": 46
+},
+{
+  "fields": {
+    "endpoint": "reputation_views.get_url_external_reputation",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 1
+},
+{
+  "fields": {
+    "endpoint": "email_templates_views.get_recipients_type",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 2
+},
+{
+  "fields": {
+    "endpoint": "email_templates_views.get_supported_languages",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 3
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_providers_priorities",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 4
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_ticket_priorities",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 5
+},
+{
+  "fields": {
+    "endpoint": "defendant_views.get_defendant_top20",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 6
+},
+{
+  "fields": {
+    "endpoint": "preset_views.order_presets",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 7
+},
+{
+  "fields": {
+    "endpoint": "report_views.bulk_add_reports",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 8
+},
+{
+  "fields": {
+    "endpoint": "report_views.bulk_add_reports",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 9
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.get_todo_tickets",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 10
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.bulk_add_tickets",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 11
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.bulk_add_tickets",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 12
+},
+{
+  "fields": {
+    "endpoint": "threshold_views.get_all_threshold",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 13
+},
+{
+  "fields": {
+    "endpoint": "threshold_views.create_threshold",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 14
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_whois",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 15
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_url_http_headers",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 16
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_logged_user",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 17
+},
+{
+  "fields": {
+    "endpoint": "tag_views.get_tag_type",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 18
+},
+{
+  "fields": {
+    "endpoint": "email_templates_views.get_all_templates",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 19
+},
+{
+  "fields": {
+    "endpoint": "email_templates_views.create_templates",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 20
+},
+{
+  "fields": {
+    "endpoint": "category_views.get_user_categories",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 21
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_user_notifications",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 22
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_mass_contact",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 23
+},
+{
+  "fields": {
+    "endpoint": "misc_views.wrapper",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 24
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_all_ticket_resolutions",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 25
+},
+{
+  "fields": {
+    "endpoint": "misc_views.add_ticket_resolution",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 26
+},
+{
+  "fields": {
+    "endpoint": "category_views.get_all_categories",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 27
+},
+{
+  "fields": {
+    "endpoint": "category_views.create_category",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 28
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.get_user_tickets",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 29
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_dashboard",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 30
+},
+{
+  "fields": {
+    "endpoint": "provider_views.get_providers",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 31
+},
+{
+  "fields": {
+    "endpoint": "provider_views.create_provider",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 32
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_profiles",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 33
+},
+{
+  "fields": {
+    "endpoint": "preset_views.get_all_presets",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 34
+},
+{
+  "fields": {
+    "endpoint": "preset_views.create_preset",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 35
+},
+{
+  "fields": {
+    "endpoint": "misc_views.monitor",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 36
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_toolbar",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 37
+},
+{
+  "fields": {
+    "endpoint": "report_views.get_all_reports",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 38
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.get_tickets",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 39
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.create_ticket",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 40
+},
+{
+  "fields": {
+    "endpoint": "misc_views.logout",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 41
+},
+{
+  "fields": {
+    "endpoint": "misc_views.search",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 42
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_all_status",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 43
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_users_infos",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 44
+},
+{
+  "fields": {
+    "endpoint": "misc_views.auth",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 45
+},
+{
+  "fields": {
+    "endpoint": "misc_views.ping",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 46
+},
+{
+  "fields": {
+    "endpoint": "news_views.get_all_news",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 47
+},
+{
+  "fields": {
+    "endpoint": "news_views.create_news",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 48
+},
+{
+  "fields": {
+    "endpoint": "tag_views.get_all_tags",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 49
+},
+{
+  "fields": {
+    "endpoint": "tag_views.create_tag",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 50
+},
+{
+  "fields": {
+    "endpoint": "reputation_views.get_ip_external_detail",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 51
+},
+{
+  "fields": {
+    "endpoint": "report_views.get_item_screenshot",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 52
+},
+{
+  "fields": {
+    "endpoint": "reputation_views.get_ip_internal_reputation",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 53
+},
+{
+  "fields": {
+    "endpoint": "reputation_views.get_ip_external_reputation",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 54
+},
+{
+  "fields": {
+    "endpoint": "reputation_views.get_ip_tool",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 55
+},
+{
+  "fields": {
+    "endpoint": "reputation_views.get_ip_rbl_reputation",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 56
+},
+{
+  "fields": {
+    "endpoint": "defendant_views.update_or_delete_comment",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 57
+},
+{
+  "fields": {
+    "endpoint": "defendant_views.update_or_delete_comment",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 58
+},
+{
+  "fields": {
+    "endpoint": "defendant_views.delete_defendant_tag",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 59
+},
+{
+  "fields": {
+    "endpoint": "provider_views.delete_provider_tag",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 60
+},
+{
+  "fields": {
+    "endpoint": "report_views.get_report_attachment",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 61
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.get_ticket_prefetched_template",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 62
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.update_or_delete_comment",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 63
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.update_or_delete_comment",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 64
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.get_actions",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 65
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.get_ticket_prefetched_preset",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 66
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.update_status",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 67
+},
+{
+  "fields": {
+    "endpoint": "report_views.get_all_items_screenshot",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 68
+},
+{
+  "fields": {
+    "endpoint": "report_views.update_report_item",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 69
+},
+{
+  "fields": {
+    "endpoint": "report_views.update_report_item",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 70
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.update_ticket_item",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 71
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.update_ticket_item",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 72
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.update_ticket_proof",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 73
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.update_ticket_proof",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 74
+},
+{
+  "fields": {
+    "endpoint": "report_views.delete_report_tag",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 75
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.delete_ticket_tag",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 76
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.cancel_job",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 77
+},
+{
+  "fields": {
+    "endpoint": "defendant_views.add_comment",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 78
+},
+{
+  "fields": {
+    "endpoint": "defendant_views.get_defendant_services",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 79
+},
+{
+  "fields": {
+    "endpoint": "defendant_views.add_defendant_tag",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 80
+},
+{
+  "fields": {
+    "endpoint": "provider_views.add_provider_tag",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 81
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.update_ticket_snooze",
+    "method": "PATCH"
+  },
+  "model": "abuse.apiroute",
+  "pk": 82
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.update_ticket_pause",
+    "method": "PATCH"
+  },
+  "model": "abuse.apiroute",
+  "pk": 83
+},
+{
+  "fields": {
+    "endpoint": "report_views.get_all_report_attachments",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 84
+},
+{
+  "fields": {
+    "endpoint": "report_views.get_dehtmlified_report",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 85
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.update_ticket_defendant",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 86
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.get_providers",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 87
+},
+{
+  "fields": {
+    "endpoint": "report_views.post_feedback",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 88
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.interact",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 89
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.add_comment",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 90
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.get_mails",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 91
+},
+{
+  "fields": {
+    "endpoint": "report_views.get_report_items",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 92
+},
+{
+  "fields": {
+    "endpoint": "report_views.create_report_item",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 93
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.get_ticket_items",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 94
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.get_ticket_proof",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 95
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.get_ticket_proof",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 96
+},
+{
+  "fields": {
+    "endpoint": "report_views.add_report_tag",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 97
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.add_ticket_tag",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 98
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.get_jobs",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 99
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.schedule_job",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 100
+},
+{
+  "fields": {
+    "endpoint": "report_views.get_raw_report",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 101
+},
+{
+  "fields": {
+    "endpoint": "threshold_views.get_threshold",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 102
+},
+{
+  "fields": {
+    "endpoint": "threshold_views.update_threshold",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 103
+},
+{
+  "fields": {
+    "endpoint": "threshold_views.delete_threshold",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 104
+},
+{
+  "fields": {
+    "endpoint": "defendant_views.get_defendant_tickets_stats",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 105
+},
+{
+  "fields": {
+    "endpoint": "defendant_views.get_defendant_reports_stats",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 106
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_ip_report_count",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 107
+},
+{
+  "fields": {
+    "endpoint": "email_templates_views.get_template",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 108
+},
+{
+  "fields": {
+    "endpoint": "email_templates_views.update_template",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 109
+},
+{
+  "fields": {
+    "endpoint": "email_templates_views.update_template",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 110
+},
+{
+  "fields": {
+    "endpoint": "misc_views.update_ticket_resolution",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 111
+},
+{
+  "fields": {
+    "endpoint": "misc_views.delete_ticket_resolution",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 112
+},
+{
+  "fields": {
+    "endpoint": "category_views.get_category",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 113
+},
+{
+  "fields": {
+    "endpoint": "category_views.update_category",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 114
+},
+{
+  "fields": {
+    "endpoint": "category_views.delete_category",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 115
+},
+{
+  "fields": {
+    "endpoint": "defendant_views.get_defendant",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 116
+},
+{
+  "fields": {
+    "endpoint": "provider_views.update_provider",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 117
+},
+{
+  "fields": {
+    "endpoint": "provider_views.update_provider",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 118
+},
+{
+  "fields": {
+    "endpoint": "preset_views.get_preset",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 119
+},
+{
+  "fields": {
+    "endpoint": "preset_views.update_preset",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 120
+},
+{
+  "fields": {
+    "endpoint": "preset_views.delete_preset",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 121
+},
+{
+  "fields": {
+    "endpoint": "report_views.get_report",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 122
+},
+{
+  "fields": {
+    "endpoint": "report_views.update_report",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 123
+},
+{
+  "fields": {
+    "endpoint": "report_views.update_report",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 124
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.get_ticket",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 125
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.update_ticket",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 126
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_status",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 127
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_user",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 128
+},
+{
+  "fields": {
+    "endpoint": "misc_views.update_user",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 129
+},
+{
+  "fields": {
+    "endpoint": "news_views.get_news",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 130
+},
+{
+  "fields": {
+    "endpoint": "news_views.update_news",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 131
+},
+{
+  "fields": {
+    "endpoint": "news_views.delete_news",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 132
+},
+{
+  "fields": {
+    "endpoint": "tag_views.get_tag",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 133
+},
+{
+  "fields": {
+    "endpoint": "tag_views.update_tag",
+    "method": "PUT"
+  },
+  "model": "abuse.apiroute",
+  "pk": 134
+},
+{
+  "fields": {
+    "endpoint": "tag_views.delete_tag",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 135
+},
+{
+  "fields": {
+    "endpoint": "misc_views.get_cerberus_roles",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 136
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.get_timeline",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 137
+},
+{
+  "fields": {
+    "codename": "run_level_1",
+    "allowedRoutes": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      10,
+      13,
+      15,
+      16,
+      17,
+      18,
+      19,
+      21,
+      22,
+      23,
+      25,
+      27,
+      29,
+      30,
+      31,
+      33,
+      34,
+      36,
+      37,
+      38,
+      39,
+      40,
+      42,
+      43,
+      44,
+      47,
+      49,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      79,
+      82,
+      83,
+      84,
+      85,
+      87,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      99,
+      101,
+      102,
+      105,
+      106,
+      107,
+      108,
+      113,
+      116,
+      119,
+      122,
+      123,
+      125,
+      126,
+      127,
+      128,
+      130,
+      133,
+      136,
+      137
+    ],
+    "modelsAuthorizations": "{\"report\":{\"fields\":[\"id\",\"category\",\"status\",\"defendant\"]},\"ticket\":{\"status\":[\"open\",\"unpaused\",\"waitinganswer\",\"reopened\",\"closed\",\"paused\"],\"unassignedOnAnswer\":true,\"fields\":[\"id\",\"escalated\",\"defendant\",\"category\",\"treatedBy\"],\"interact\":[\"pause_ticket\",\"waiting_answer\",\"close_with_resolution\"],\"schedulingAlgorithm\":\"LimitedOpenSchedulingAlgorithm\",\"unassignedOnMultipleAlarm\":true}}",
+    "name": "RUN Level 1"
+  },
+  "model": "abuse.role",
+  "pk": 1
+},
+{
+  "fields": {
+    "codename": "run_level_2",
+    "allowedRoutes": [],
+    "modelsAuthorizations": "{}",
+    "name": "RUN Level 2"
+  },
+  "model": "abuse.role",
+  "pk": 2
+},
+{
+  "fields": {
+    "codename": "run_level_3",
+    "allowedRoutes": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129,
+      130,
+      131,
+      132,
+      133,
+      134,
+      135,
+      136,
+      137
+    ],
+    "modelsAuthorizations": "{\"report\":{\"fields\":[\"category\",\"status\",\"tags\",\"ticket\",\"defendant\",\"id\"]},\"ticket\":{\"status\":[\"open\",\"closed\",\"alarm\",\"waitinganswer\",\"reopened\",\"unpaused\",\"paused\"],\"fields\":[\"category\",\"pauseStart\",\"service\",\"escalated\",\"comments\",\"priority\",\"snoozeDuration\",\"defendant\",\"status\",\"jobs\",\"confidential\",\"tags\",\"update\",\"moderation\",\"snoozeStart\",\"level\",\"treatedBy\",\"alarm\",\"pauseDuration\",\"attachedReportsCount\",\"protected\",\"action\",\"resolution\"],\"interact\":[\"waiting_answer_then_action\",\"waiting_answer_then_action_and_close\",\"action_then_waiting_answer\",\"action_then_close\",\"waiting_answer\",\"close_with_resolution\",\"pause_ticket\"],\"schedulingAlgorithm\":\"GlobalSchedulingAlgorithm\",\"unassignedOnAnswer\":false}}",
+    "name": "RUN Level 3"
+  },
+  "model": "abuse.role",
+  "pk": 3
+},
+{
+  "fields": {
+    "codename": "admin",
+    "allowedRoutes": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129,
+      130,
+      131,
+      132,
+      133,
+      134,
+      135,
+      136,
+      137
+    ],
+    "modelsAuthorizations": "{\"report\":{\"fields\":[\"category\",\"status\",\"tags\",\"ticket\",\"defendant\",\"id\"]},\"ticket\":{\"status\":[\"open\",\"closed\",\"alarm\",\"waitinganswer\",\"reopened\",\"unpaused\",\"paused\"],\"fields\":[\"category\",\"pauseStart\",\"service\",\"escalated\",\"comments\",\"priority\",\"snoozeDuration\",\"defendant\",\"status\",\"jobs\",\"confidential\",\"tags\",\"update\",\"moderation\",\"snoozeStart\",\"level\",\"treatedBy\",\"alarm\",\"pauseDuration\",\"attachedReportsCount\",\"protected\",\"action\",\"resolution\"],\"interact\":[\"waiting_answer_then_action\",\"waiting_answer_then_action_and_close\",\"action_then_waiting_answer\",\"action_then_close\",\"waiting_answer\",\"close_with_resolution\",\"pause_ticket\"],\"schedulingAlgorithm\":\"GlobalSchedulingAlgorithm\",\"unassignedOnAnswer\":false}}",
+    "name": "Admin"
+  },
+  "model": "abuse.role",
+  "pk": 4
+},
+{
+  "fields": {
+    "role": 4,
+    "user": 46
+  },
+  "model": "abuse.operator",
+  "pk": 1
+},
+{
+  "fields": {
+    "role": 1,
+    "user": 47
+  },
+  "model": "abuse.operator",
+  "pk": 2
 },
 {
   "fields": {
@@ -205,6 +1721,16 @@
   },
   "model": "abuse.tag",
   "pk": 66
+},
+{
+  "fields": {
+    "codename": "",
+    "level": 0,
+    "name": "copyright:autoclosed",
+    "tagType": "Ticket"
+  },
+  "model": "abuse.tag",
+  "pk": 67
 },
 {
   "fields": {
@@ -441,12 +1967,12 @@
   "pk": 31
 },
 {
-   "fields": {
-      "codename": "pauseDuration",
-      "value": 43200
-   },
-   "model": "abuse.ticketactionparams",
-   "pk": 33
+  "fields": {
+    "codename": "pauseDuration",
+    "value": 43200
+  },
+  "model": "abuse.ticketactionparams",
+  "pk": 33
 },
 {
   "fields": {
@@ -620,20 +2146,21 @@
   "pk": 89
 },
 {
-   "fields": {
-      "action": 7,
-      "params": [
-         33
-      ]
-   },
-   "model": "abuse.ticketworkflowpresetconfig",
-   "pk": 91
+  "fields": {
+    "action": 7,
+    "params": [
+      33
+    ]
+  },
+  "model": "abuse.ticketworkflowpresetconfig",
+  "pk": 91
 },
 {
   "fields": {
     "orderId": 2,
     "templates": [],
     "name": "Silent fixed",
+    "roles": [],
     "codename": "silent_fixed",
     "config": 31,
     "groupId": 0
@@ -646,6 +2173,7 @@
     "orderId": 4,
     "templates": [],
     "name": "Silent invalid",
+    "roles": [],
     "codename": "silent_invalid",
     "config": 86,
     "groupId": 0
@@ -658,6 +2186,7 @@
     "orderId": 5,
     "templates": [],
     "name": "Silent expire",
+    "roles": [],
     "codename": "silent_expire",
     "config": 87,
     "groupId": 0
@@ -672,6 +2201,7 @@
       44
     ],
     "name": "Thx & Close",
+    "roles": [],
     "codename": "13._thanks_&_close",
     "config": 40,
     "groupId": 0
@@ -687,6 +2217,7 @@
       50
     ],
     "name": "Thx & close +ack",
+    "roles": [],
     "codename": "thx_&_close_+ack",
     "config": 46,
     "groupId": 0
@@ -699,6 +2230,7 @@
     "orderId": 3,
     "templates": [],
     "name": "SILENT FIX BY ISP",
+    "roles": [],
     "codename": "silent_fix_isp",
     "config": 85,
     "groupId": 0
@@ -707,172 +2239,18 @@
   "pk": 18
 },
 {
-   "fields": {
-      "orderId": 6,
-      "templates": [
-         53
-      ],
-      "name": "SBL Removal",
-      "codename": "sbl_removal",
-      "config": 91,
-      "groupId": 0
-   },
-   "model": "abuse.ticketworkflowpreset",
-   "pk": 19
-},
-{
   "fields": {
-    "category": "Copyright",
-    "profile": 5,
-    "user": 45
+    "orderId": 6,
+    "templates": [
+      53
+    ],
+    "name": "SBL Removal",
+    "roles": [],
+    "codename": "sbl_removal",
+    "config": 91,
+    "groupId": 0
   },
-  "model": "abuse.abusepermission",
-  "pk": 1197
-},
-{
-  "fields": {
-    "category": "Illegal",
-    "profile": 5,
-    "user": 45
-  },
-  "model": "abuse.abusepermission",
-  "pk": 1198
-},
-{
-  "fields": {
-    "category": "Intrusion",
-    "profile": 5,
-    "user": 45
-  },
-  "model": "abuse.abusepermission",
-  "pk": 1199
-},
-{
-  "fields": {
-    "category": "Malware",
-    "profile": 5,
-    "user": 45
-  },
-  "model": "abuse.abusepermission",
-  "pk": 1200
-},
-{
-  "fields": {
-    "category": "Network Attack",
-    "profile": 5,
-    "user": 45
-  },
-  "model": "abuse.abusepermission",
-  "pk": 1201
-},
-{
-  "fields": {
-    "category": "Other",
-    "profile": 5,
-    "user": 45
-  },
-  "model": "abuse.abusepermission",
-  "pk": 1202
-},
-{
-  "fields": {
-    "category": "Phishing",
-    "profile": 5,
-    "user": 45
-  },
-  "model": "abuse.abusepermission",
-  "pk": 1203
-},
-{
-  "fields": {
-    "category": "Spam",
-    "profile": 5,
-    "user": 45
-  },
-  "model": "abuse.abusepermission",
-  "pk": 1204
-},
-{
-  "fields": {
-    "category": "Copyright",
-    "profile": 2,
-    "user": 44
-  },
-  "model": "abuse.abusepermission",
-  "pk": 1205
-},
-{
-  "fields": {
-    "category": "Illegal",
-    "profile": 2,
-    "user": 44
-  },
-  "model": "abuse.abusepermission",
-  "pk": 1206
-},
-{
-  "fields": {
-    "category": "Intrusion",
-    "profile": 2,
-    "user": 44
-  },
-  "model": "abuse.abusepermission",
-  "pk": 1207
-},
-{
-  "fields": {
-    "category": "Malware",
-    "profile": 2,
-    "user": 44
-  },
-  "model": "abuse.abusepermission",
-  "pk": 1208
-},
-{
-  "fields": {
-    "category": "Network Attack",
-    "profile": 2,
-    "user": 44
-  },
-  "model": "abuse.abusepermission",
-  "pk": 1209
-},
-{
-  "fields": {
-    "category": "Other",
-    "profile": 2,
-    "user": 44
-  },
-  "model": "abuse.abusepermission",
-  "pk": 1210
-},
-{
-  "fields": {
-    "category": "Phishing",
-    "profile": 2,
-    "user": 44
-  },
-  "model": "abuse.abusepermission",
-  "pk": 1211
-},
-{
-  "fields": {
-    "category": "Spam",
-    "profile": 2,
-    "user": 44
-  },
-  "model": "abuse.abusepermission",
-  "pk": 1212
-},
-{
-  "fields": {
-    "content": "Hello world",
-    "date": "2016-02-03T15:08:14.051",
-    "title": "Test",
-    "tags": [],
-    "author": 45
-  },
-  "model": "abuse.news",
-  "pk": 45
+  "model": "abuse.ticketworkflowpreset",
+  "pk": 19
 }
 ]

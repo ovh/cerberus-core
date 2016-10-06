@@ -36,27 +36,43 @@ import html2text
 from django.conf import settings
 from django.core.exceptions import FieldError, MultipleObjectsReturned
 from django.db import IntegrityError, transaction
-from django.db.models import Q, FieldDoesNotExist, ObjectDoesNotExist
+from django.db.models import FieldDoesNotExist, ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
 from netaddr import AddrConversionError, AddrFormatError, IPNetwork
 
-import DefendantsController
-import GeneralController
-import ProvidersController
-import ReportItemsController
-import TicketsController
-from abuse.models import (AbusePermission, AttachedDocument, Plaintiff, Report,
-                          ReportItem, Service, Tag, Ticket, Defendant)
+from abuse.models import (AbusePermission, AttachedDocument, Defendant,
+                          Plaintiff, Report, ReportItem, Service, Tag, Ticket)
 from adapters.services.search.abstract import SearchServiceException
 from adapters.services.storage.abstract import StorageServiceException
+from api.controllers import (DefendantsController, GeneralController,
+                             ProvidersController, ReportItemsController,
+                             TicketsController)
 from factory.factory import ImplementationFactory
 from utils import utils
+from worker import database
 
 IP_CIDR_RE = re.compile(r"(?<!\d\.)(?<!\d)(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}(?!\d|(?:\.\d))")
 STATUS = [status[0].lower() for status in Report.REPORT_STATUS]
 html2text.ignore_images = True
 html2text.images_to_alt = True
 html2text.ignore_links = True
+
+# Mapping JSON fields name to django syntax
+FILTER_MAPPING = (
+    ('reportTag', 'tags__name'),
+    ('providerEmail', 'provider__email'),
+    ('providerTag', 'provider__tags__name'),
+    ('defendantCustomerId', 'defendant__customerId'),
+    ('defendantCountry', 'defendant__details__country'),
+    ('defendantEmail', 'defendant__details__email'),
+    ('defendantTag', 'defendant__tags__name'),
+    ('itemRawItem', 'reportItemRelatedReport__rawItem'),
+    ('itemIpReverse', 'reportItemRelatedReport__ipReverse'),
+    ('itemFqdnResolved', 'reportItemRelatedReport__fqdnResolved'),
+)
+
+ATTACHMENT_FIELDS = [fld.name for fld in AttachedDocument._meta.fields]
+REPORT_FIELDS = [fld.name for fld in Report._meta.fields]
 
 
 def index(**kwargs):
@@ -107,33 +123,19 @@ def index(**kwargs):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
 
     __format_report_response(reports)
-    return 200, [dict(rep) for rep in reports], nb_record_filtered
+    return 200, list(reports), nb_record_filtered
 
 
 def __generate_request_filters(filters, user):
     """ Generates filters base on filter query string
     """
-    # Mapping JSON fields name to django syntax
-    relation_field = {
-        'reportTag': 'tags__name',
-        'providerEmail': 'provider__email',
-        'providerTag': 'provider__tags__name',
-        'defendantCustomerId': 'defendant__customerId',
-        'defendantCountry': 'defendant__details__country',
-        'defendantEmail': 'defendant__details__email',
-        'defendantTag': 'defendant__tags__name',
-        'itemRawItem': 'reportItemRelatedReport__rawItem',
-        'itemIpReverse': 'reportItemRelatedReport__ipReverse',
-        'itemFqdnResolved': 'reportItemRelatedReport__fqdnResolved',
-    }
-
     # Add SearchService results if fulltext search
     try:
         for field in filters['where']['like']:
             for key, value in field.iteritems():
                 if key == 'fulltext':
                     if ImplementationFactory.instance.is_implemented('SearchServiceBase'):
-                        add_search_filters(filters, value[0])
+                        _add_search_filters(filters, value[0])
                     filters['where']['like'].remove({key: value})
                     break
     except KeyError:
@@ -146,25 +148,17 @@ def __generate_request_filters(filters, user):
         if 'in' in keys:
             for i in filters['where']['in']:
                 for key, val in i.iteritems():
-                    field = relation_field[key] if key in relation_field else key
+                    field = reduce(lambda a, kv: a.replace(*kv), FILTER_MAPPING, key)
                     where.append(reduce(operator.or_, [Q(**{field: i}) for i in val]))
         if 'like' in keys:
             like = []
             for i in filters['where']['like']:
                 for key, val in i.iteritems():
-                    field = relation_field[key] if key in relation_field else key
+                    field = reduce(lambda a, kv: a.replace(*kv), FILTER_MAPPING, key)
                     field = field + '__icontains'
                     like.append(Q(**{field: val[0]}))
             if len(like):
                 where.append(reduce(operator.or_, like))
-        if 'between' in keys:
-            for i in filters['where']['between']:
-                for key, val in i.iteritems():
-                    field = relation_field[key] if key in relation_field else key
-                    field = field + '__range'
-                    start = datetime.fromtimestamp(val[0])
-                    end = datetime.fromtimestamp(val[1])
-                    where.append(reduce(operator.or_, [Q(**{field: (start, end)})]))
     else:
         # All except closed
         where.append(~Q(status='Archived'))
@@ -199,7 +193,7 @@ def __format_report_response(reports):
             rep['tags'] = [model_to_dict(tag) for tag in tags]
 
 
-def add_search_filters(filters, query):
+def _add_search_filters(filters, query):
     """
         Add Search Service response to filters
     """
@@ -237,7 +231,7 @@ def show(report_id):
         Get report
     """
     try:
-        report = Report.objects.filter(id=report_id).values(*[f.name for f in Report._meta.fields])[0]
+        report = Report.objects.filter(id=report_id).values(*REPORT_FIELDS)[0]
     except (IndexError, ValueError):
         return 404, {'status': 'Not Found', 'code': 404}
 
@@ -265,7 +259,9 @@ def show(report_id):
 def update(report_id, body, user):
     """ Update a report
     """
-    from worker import database
+    allowed, body = _precheck_user_fields_update_authorizations(user, body)
+    if not allowed:
+        return 403, {'status': 'Forbidden', 'code': 403, 'message': 'You are not allowed to edit any fields'}
 
     try:
         report = Report.objects.get(id=int(report_id))
@@ -274,7 +270,7 @@ def update(report_id, body, user):
 
     # Update status
     if body.get('status') != report.status:
-        code, resp = update_status(body, report, user)
+        code, resp = _update_status(body, report, user)
         if code != 200:
             return code, resp
 
@@ -298,7 +294,7 @@ def update(report_id, body, user):
 
     # Update other fields
     try:
-        valid_fields = ['status', 'defendant', 'category', 'ticket']
+        valid_fields = ['defendant', 'category', 'ticket']
         body = {k: v for k, v in body.iteritems() if k in valid_fields}
         Report.objects.filter(id=report.id).update(**body)
         report = Report.objects.get(id=int(report_id))
@@ -310,8 +306,9 @@ def update(report_id, body, user):
     return show(report_id)
 
 
-def update_status(body, report, user):
-    """ Update report status
+def _update_status(body, report, user):
+    """
+        Update report status
     """
     if body['status'].lower() not in STATUS:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid status'}
@@ -325,23 +322,19 @@ def update_status(body, report, user):
             ticket.status = 'Closed'
             ticket.save()
         body['ticket'] = None
-    elif body['status'].lower() in ['attached', 'validated'] and not report.ticket and all((report.category, report.defendant, report.service)):
-        try:
-            ticket = Ticket.objects.get(
-                ~Q(status='Closed'),
-                category=report.category.pk,
-                defendant=report.defendant.id,
-                service=report.service,
-                update=True
-            )
-            body['ticket'] = ticket.id
-            body['status'] = 'Attached'
-        except ObjectDoesNotExist:  # Else create it
-            if body['status'].lower() == 'attached':
-                TicketsController.create(body, user)
-                return show(report)
-            if body['status'].lower() == 'validated':
-                body['status'] = 'New'
+        report.status = 'New'
+        report.save()
+    elif report.status.lower() == 'tovalidate' and body['status'].lower() == 'attached':
+        report.status = 'Attached'
+        report.save()
+        utils.email_queue.enqueue(
+            'report.reparse_validated',
+            report_id=report.id,
+            user_id=user.id,
+        )
+        return 201, {'status': 'OK', 'code': 201, 'message': 'Report successfully updated'}
+    elif body['status'].lower() == 'attached' and not report.ticket and all((report.category, report.defendant, report.service)):
+        return TicketsController.create(body, user)
 
     return 200, body
 
@@ -465,23 +458,22 @@ def get_all_attachments(**kwargs):
         return 404, {'status': 'Not Found', 'code': 404, 'message': 'Report not found'}, 0
 
     try:
-        fields = [fld.name for fld in AttachedDocument._meta.fields]
-        nb_record_filtered = AttachedDocument.objects.filter(report=report.id).count()
-        attached = AttachedDocument.objects.filter(report=report.id).values(*fields)
+        nb_record_filtered = report.attachments.count()
+        attached = report.attachments.all().values(*ATTACHMENT_FIELDS)
         attached = attached[(offset - 1) * limit:limit * offset]
         len(attached)  # Force django to evaluate query now
     except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
 
-    return 200, [dict(document) for document in attached], nb_record_filtered
+    return 200, list(attached), nb_record_filtered
 
 
 def get_attachment(report_id, attachment_id):
     """ Get attachment
     """
     try:
-        Report.objects.get(id=report_id)
-        attachment = AttachedDocument.objects.get(id=attachment_id)
+        report = Report.objects.get(id=report_id)
+        attachment = report.attachments.get(id=attachment_id)
     except (ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404, 'message': 'Report or attachment not found'}
 
@@ -699,7 +691,7 @@ def parse_screenshot_feedback(report_id, body, user):
     # Parse result and update Phishing Service
     try:
         for item in body:
-            utils.queue.enqueue(
+            utils.default_queue.enqueue(
                 'phishing.feedback_to_phishing_service',
                 screenshot_id=item.get('screenshotId'),
                 feedback=item.get('feedback'),
@@ -718,8 +710,21 @@ def parse_screenshot_feedback(report_id, body, user):
     report.status = 'New'
     report.save()
     if not any(result.values()):
-        utils.queue.enqueue('phishing.close_because_all_down', report=report.id, denied_by=user.id, timeout=3600)
+        utils.default_queue.enqueue('phishing.close_because_all_down', report=report.id, denied_by=user.id)
         return 200, {'status': 'OK', 'code': 200, 'message': 'Report successfully archived and mail sent to provider'}
     else:  # Else create/attach report to ticket + block_url + mail to defendant + email to provider
-        utils.queue.enqueue('ticket.create_ticket_from_phishtocheck', report=report.id, user=user.id, timeout=600)
+        utils.default_queue.enqueue('ticket.create_ticket_from_phishtocheck', report=report.id, user=user.id)
         return 200, {'status': 'OK', 'code': 200, 'message': 'Report will be attached to ticket in few seconds'}
+
+
+def _precheck_user_fields_update_authorizations(user, body):
+    """
+       Check if user's update paramaters are allowed
+    """
+    authorizations = user.operator.role.modelsAuthorizations
+    if authorizations.get('report') and authorizations['report'].get('fields'):
+        body = {k: v for k, v in body.iteritems() if k in authorizations['report']['fields']}
+        if not body:
+            return False, body
+        return True, body
+    return False, body

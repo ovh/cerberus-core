@@ -24,7 +24,6 @@
 
 import os
 
-
 # ################################ Cerberus Settings ##################################
 
 # Main Cerberus Configuration
@@ -45,9 +44,35 @@ GENERAL_CONFIG = {
         'up_threshold': 0,
         'down_threshold': 75,
     },
+    'copyright': {
+        'wait': 172800,
+        'acns_patterns': ('www.acns.net/ACNS',),
+        'trusted_copyright_providers': [],
+    },
     'magic_smtp_header': os.getenv('MAGIC_SMTP_HEADER', 'X-MAGIC-SMTP-HEADER-TO-IDENTIFY-TRUSTED-PROVIDER'),
     'report_timeout': 30,
-    'acns_patterns': ('www.acns.net/ACNS',),
+    'mailer_daemon_patterns': [
+        'mailer-daemon',
+        '@provider.com'
+    ],
+}
+
+# RQ Queues
+#
+
+QUEUE = {
+    'default': {
+        'name': 'default',
+        'default_timeout': 86400,
+    },
+    'email': {
+        'name': 'email',
+        'default_timeout': 86400,
+    },
+    'kpi': {
+        'name': 'kpi',
+        'default_timeout': 1800,
+    },
 }
 
 # API Config (via ENV)
@@ -58,6 +83,8 @@ API = {
     'host': os.getenv('API_HOST', '127.0.0.1'),
     'port': os.getenv('API_PORT', 6060),
     'forwarded_host': os.getenv('FORWARDED_HOST'),
+    'use_cache': True,
+    'cache_engine': 'redis',  # 'redis' or 'memory'
 }
 
 # Defined here your customer adapters implementations. For testing you cans use provided default impl
@@ -77,6 +104,25 @@ CUSTOM_IMPLEMENTATIONS = (
     'default.adapters.services.action.impl.DefaultActionService',
 )
 
+# /!\ Order matter
+CUSTOM_REPORT_WORKFLOWS = (
+    'worker.workflows.report.phishing.PhishingReportWorkflow',
+    'worker.workflows.report.copyright.CopyrightReportWorkflow',
+    'worker.workflows.report.acns.AcnsReportWorkflow',
+)
+
+# /!\ Order matter
+CUSTOM_TICKET_ANSWER_WORKFLOWS = (
+    'worker.workflows.ticket.mailerdaemon.MailerDaemonWorkflow',
+    'worker.workflows.ticket.customeranswer.CustomerAnswerWorkflow',
+    'worker.workflows.ticket.default.DefaultAnswerWorkflow',
+)
+
+CUSTOM_SCHEDULING_ALGORITHMS = (
+    'api.controllers.scheduling.global.GlobalSchedulingAlgorithm',
+    'api.controllers.scheduling.limitedOpen.LimitedOpenSchedulingAlgorithm',
+)
+
 # Cerberus use a lot of 'tags',required are here with their mapping to default provided data
 #
 TAGS = {
@@ -86,6 +132,7 @@ TAGS = {
     'no_autoack': 'never_auto_ack',
     'phishing_autoblocked': 'phishing:autoblocked',
     'phishing_autoclosed': 'phishing:autoclosed',
+    'copyright_autoclosed': 'copyright:autoclosed',
     'phishing_autoreopen': 'phishing:autoreopened',
     'phishing_toblock': 'phishing:toblock',
 }
@@ -101,8 +148,10 @@ CODENAMES = {
     'forward_acns': 'forward_acns',
     'no_more_content': 'no_more_content',
     'phishing_blocked': 'phishing_blocked',
-    'phishing_service_blocked': 'phishing_service_blocked',
+    'service_blocked': 'phishing_service_blocked',
     'ticket_closed': 'ticket_closed',
+    'not_managed_ip': 'not_ovh_ip',
+    'invalid': 'invalid',
 }
 
 # Above all, Cerberus is basically an abuse's email fetcher
@@ -131,6 +180,8 @@ EMAIL_FETCHER = {
 PARSING = {
     'providers_to_ignore': [
         'bad@provider.com',
+        'invitations@linkedin.com',
+        'messages-noreply@linkedin.com',
     ],
     'networks_to_ignore': [
         '0.0.0.0/8',
@@ -145,11 +196,8 @@ PARSING = {
 # Redis needed for Worker/API
 #
 REDIS = {
-    'user': os.getenv('REDIS_USER'),
-    'password': os.getenv('REDIS_PASS'),
     'host': os.getenv('REDIS_HOST', '127.0.0.1'),
     'port': os.getenv('REDIS_PORT', 6379),
-    'name': os.getenv('REDIS_NAME'),
 }
 
 # You can use 'stderr' or 'gelf' or both

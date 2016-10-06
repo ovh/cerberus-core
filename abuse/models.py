@@ -25,6 +25,7 @@
 
 from django.db import models
 from django.contrib.auth.models import User
+from jsonfield import JSONField
 
 
 # http://stackoverflow.com/questions/1809531/truncating-unicode-so-it-fits-a-maximum-size-when-encoded-for-wire-transfer
@@ -74,6 +75,39 @@ class Category(models.Model):
     name = TruncatedCharField(primary_key=True, max_length=32)
     label = TruncatedCharField(unique=True, null=False, blank=True, max_length=255)
     description = TruncatedCharField(null=False, blank=True, max_length=255)
+
+
+class ApiRoute(models.Model):
+    """
+        List all available API routes
+    """
+    HTTP_METHOD = (
+        ('GET', 'GET'),
+        ('POST', 'POST'),
+        ('PUT', 'PUT'),
+        ('PATCH', 'PATCH'),
+        ('DELETE', 'DELETE'),
+    )
+    method = TruncatedCharField(max_length=32, null=False, choices=HTTP_METHOD)
+    endpoint = TruncatedCharField(null=False, max_length=512)
+
+
+class Role(models.Model):
+    """
+        A `abuse.models.Role` defines a set of allowed `abuse.models.ApiRoute`
+    """
+    codename = TruncatedCharField(null=False, max_length=256)
+    name = TruncatedCharField(null=False, max_length=256)
+    allowedRoutes = models.ManyToManyField(ApiRoute, db_column='endpoints')
+    modelsAuthorizations = JSONField()
+
+
+class Operator(models.Model):
+    """
+        Cerberus `abuse.models.User` + `abuse.models.Role` = `abuse.models.Operator`
+    """
+    user = models.OneToOneField(User, null=False)
+    role = models.ForeignKey(Role, null=False)
 
 
 class Tag(models.Model):
@@ -127,7 +161,7 @@ class DefendantRevision(models.Model):
         Effective detailed informations for a `abuse.models.Defendant`
     """
     email = models.EmailField(db_index=True, null=False, max_length=255)
-    spareEmail = models.EmailField(db_index=True, null=True, max_length=255)
+    spareEmail = models.EmailField(null=True, max_length=255)
     firstname = TruncatedCharField(null=True, max_length=255)
     name = TruncatedCharField(null=True, max_length=255)
     city = TruncatedCharField(null=True, max_length=255)
@@ -202,6 +236,15 @@ class Resolution(models.Model):
     codename = TruncatedCharField(null=False, max_length=1024)
 
 
+class AttachedDocument(models.Model):
+    """
+        Attached document for a `abuse.models.Report`
+    """
+    name = TruncatedCharField(null=True, max_length=255)
+    filename = TruncatedCharField(null=False, max_length=1023)
+    filetype = TruncatedCharField(null=False, max_length=1023)
+
+
 class Ticket(models.Model):
     """
         Cerberus ticket model: it brings `abuse.models.Report` together based
@@ -237,7 +280,7 @@ class Ticket(models.Model):
     creationDate = models.DateTimeField(null=False)
     modificationDate = models.DateTimeField(auto_now=True, null=False)
     alarm = models.BooleanField(null=False, default=False)
-    status = TruncatedCharField(max_length=32, null=False, choices=TICKET_STATUS, default='Open')
+    status = TruncatedCharField(db_index=True, max_length=32, null=False, choices=TICKET_STATUS, default='Open')
     previousStatus = TruncatedCharField(max_length=32, null=False, choices=TICKET_STATUS, default='Open')
     treatedBy = models.ForeignKey(User, null=True, related_name='ticketUser', on_delete=models.PROTECT)
     confidential = models.BooleanField(null=False, default=False)
@@ -251,8 +294,10 @@ class Ticket(models.Model):
     protected = models.BooleanField(null=False, default=False)
     escalated = models.BooleanField(null=False, default=False)
     update = models.BooleanField(null=False, default=True)
+    locked = models.BooleanField(null=False, default=False)
     tags = models.ManyToManyField(Tag, null=True)
     jobs = models.ManyToManyField(ServiceActionJob, null=True)
+    attachments = models.ManyToManyField(AttachedDocument, null=True)
 
 
 class Provider(models.Model):
@@ -286,6 +331,7 @@ class Report(models.Model):
         ('Archived', 'Archived'),
         ('Attached', 'Attached'),
         ('PhishToCheck', 'PhishToCheck'),
+        ('ToValidate', 'ToValidate'),
     )
 
     REPORT_TREATED_MODE = (
@@ -294,7 +340,7 @@ class Report(models.Model):
         ('AUTO', 'Auto'),
     )
 
-    body = TruncatedCharField(max_length=524280, null=False)
+    body = models.TextField(null=False)
     provider = models.ForeignKey(Provider, null=False, related_name='provider', on_delete=models.PROTECT)
     plaintiff = models.ForeignKey(Plaintiff, null=True, related_name='plaintiff', on_delete=models.SET_NULL)
     defendant = models.ForeignKey(Defendant, null=True, related_name='reportDefendant', on_delete=models.PROTECT)
@@ -302,11 +348,12 @@ class Report(models.Model):
     service = models.ForeignKey(Service, null=True)
     ticket = models.ForeignKey(Ticket, null=True, related_name='reportTicket', on_delete=models.SET_NULL)
     receivedDate = models.DateTimeField(null=False)
-    subject = TruncatedCharField(null=True, max_length=1023)
+    subject = models.TextField(null=True)
     treatedMode = TruncatedCharField(max_length=4, null=False, choices=REPORT_TREATED_MODE, default='NONE')
-    status = TruncatedCharField(max_length=32, null=False, choices=REPORT_STATUS, default='New')
+    status = TruncatedCharField(db_index=True, max_length=32, null=False, choices=REPORT_STATUS, default='New')
     filename = TruncatedCharField(max_length=1023, null=False)
     tags = models.ManyToManyField(Tag, null=True)
+    attachments = models.ManyToManyField(AttachedDocument, null=True)
 
 
 class ReportItem(models.Model):
@@ -320,13 +367,13 @@ class ReportItem(models.Model):
     )
 
     report = models.ForeignKey(Report, null=False, related_name='reportItemRelatedReport')
-    rawItem = TruncatedCharField(max_length=4095)
+    rawItem = TruncatedCharField(db_index=True, max_length=4095)
     itemType = TruncatedCharField(max_length=4, null=True, choices=ITEM_TYPE)
     fqdn = TruncatedCharField(null=True, max_length=255)
-    fqdnResolved = models.IPAddressField(null=True)
+    fqdnResolved = models.IPAddressField(db_index=True, null=True)
     fqdnResolvedReverse = TruncatedCharField(null=True, max_length=255)
     ip = models.IPAddressField(null=True)
-    ipReverse = TruncatedCharField(null=True, max_length=255)
+    ipReverse = TruncatedCharField(db_index=True, null=True, max_length=255)
     ipReverseResolved = models.IPAddressField(null=True)
     url = TruncatedCharField(null=True, max_length=4095)
     date = models.DateTimeField(auto_now=True, null=True, editable=True)
@@ -336,9 +383,37 @@ class History(models.Model):
     """
         Ticket change history
     """
+    ACTION_TYPE = (
+        ('AddTag', 'AddTag'),
+        ('RemoveTag', 'RemoveTag'),
+        ('AddItem', 'AddItem'),
+        ('UpdateItem', 'UpdateItem'),
+        ('DeleteItem', 'DeleteItem'),
+        ('AddProof', 'AddProof'),
+        ('UpdateProof', 'UpdateProof'),
+        ('DeleteProof', 'DeleteProof'),
+        ('AddComment', 'AddComment'),
+        ('UpdateComment', 'UpdateComment'),
+        ('DeleteComment', 'DeleteComment'),
+        ('ValidatePhishtocheck', 'ValidatePhishtocheck'),
+        ('DenyPhishtocheck', 'DenyPhishtocheck'),
+        ('ChangeStatus', 'ChangeStatus'),
+        ('ChangeTreatedby', 'ChangeTreatedby'),
+        ('SendEmail', 'SendEmail'),
+        ('ReceiveEmail', 'ReceiveEmail'),
+        ('AttachReport', 'AttachReport'),
+        ('SetAction', 'SetAction'),
+        ('CancelAction', 'CancelAction'),
+        ('UpdateProperty', 'UpdateProperty'),
+        ('CreateThreshold', 'CreateThreshold'),
+        ('CreateMasscontact', 'CreateMasscontact'),
+    )
+
     ticket = models.ForeignKey(Ticket, null=False, related_name='ticketHistory')
     user = models.ForeignKey(User, null=False)
     action = TruncatedCharField(null=False, max_length=255)
+    actionType = TruncatedCharField(max_length=32, null=True, choices=ACTION_TYPE, default='UpdateProperty')
+    ticketStatus = TruncatedCharField(null=True, max_length=32)
     date = models.DateTimeField(auto_now=True, null=False)
 
 
@@ -365,16 +440,6 @@ class DefendantComment(models.Model):
     """
     defendant = models.ForeignKey(Defendant, null=False, related_name='comments')
     comment = models.ForeignKey(Comment, null=False)
-
-
-class AttachedDocument(models.Model):
-    """
-        Attached document for a `abuse.models.Report`
-    """
-    report = models.ForeignKey(Report, null=False, related_name='attachedDocumentRelatedReport')
-    name = TruncatedCharField(null=True, max_length=255)
-    filename = TruncatedCharField(null=False, max_length=1023)
-    filetype = TruncatedCharField(null=False, max_length=1023)
 
 
 class Profile(models.Model):
@@ -420,7 +485,7 @@ class MailTemplate(models.Model):
     """
         Cerebrus `abuse.models.Ticket` emails are based on template
     """
-    LANG = (
+    TEMPLATE_LANG = (
         ('FR', 'FR'),
         ('EN', 'EN'),
         ('CA', 'CA'),
@@ -435,9 +500,9 @@ class MailTemplate(models.Model):
 
     codename = TruncatedCharField(max_length=32)
     name = TruncatedCharField(null=False, max_length=255)
-    lang = TruncatedCharField(max_length=2, null=False, choices=LANG, default='EN')
+    lang = TruncatedCharField(max_length=2, null=False, choices=TEMPLATE_LANG, default='EN')
     subject = TruncatedCharField(null=False, max_length=1023)
-    body = TruncatedCharField(null=False, max_length=65535)
+    body = models.TextField(null=False)
     recipientType = TruncatedCharField(max_length=32, null=False, choices=RECIPIENT_TYPE, default='Defendant')
 
 
@@ -464,6 +529,7 @@ class UrlStatus(models.Model):
     proxiedStatus = TruncatedCharField(max_length=10, null=True, choices=STATUS, default='UNKNOWN')
     httpCode = models.IntegerField(null=True)
     score = models.IntegerField(null=True)
+    isPhishing = models.BooleanField(null=False, default=False)
     date = models.DateTimeField(auto_now=True, null=False)
 
 
@@ -502,6 +568,7 @@ class TicketWorkflowPreset(models.Model):
     config = models.ForeignKey(TicketWorkflowPresetConfig, null=True)
     groupId = models.PositiveSmallIntegerField(null=True)
     orderId = models.PositiveSmallIntegerField(null=True)
+    roles = models.ManyToManyField(Role)
 
 
 class ItemScreenshotFeedback(models.Model):
@@ -548,13 +615,13 @@ class MassContactResult(models.Model):
     """
         Store result of a "mass contact" campaign.
     """
-    STATE = (
+    MASSCONTACT_STATE = (
         ('Done', 'Done'),
         ('Pending', 'Pending'),
     )
 
     campaign = models.ForeignKey(MassContact, null=False)
-    state = TruncatedCharField(max_length=32, null=False, choices=STATE, default='Pending')
+    state = TruncatedCharField(max_length=32, null=False, choices=MASSCONTACT_STATE, default='Pending')
     matchingCount = models.IntegerField(null=False, default=0)  # Defendant found, report created
     notMatchingCount = models.IntegerField(null=False, default=0)  # No defendant found
     failedCount = models.IntegerField(null=False, default=0)  # Rq job failed

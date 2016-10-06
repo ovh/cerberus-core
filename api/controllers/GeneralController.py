@@ -40,20 +40,41 @@ from django.core.exceptions import (FieldError, ObjectDoesNotExist,
                                     ValidationError)
 from django.core.validators import validate_ipv46_address
 from django.db import IntegrityError
-from django.db.models import Q, Count
+from django.db.models import Count, FieldDoesNotExist, Q
 from django.forms.models import model_to_dict
 
-import ReportsController
-import TicketsController
-from abuse.models import (AbusePermission, Category, History, Profile, Report,
-                          MassContact, MassContactResult, ReportItem, Resolution, Tag, Ticket)
-from adapters.services.kpi.abstract import KPIServiceException
-from factory.factory import ImplementationFactory
+from abuse.models import (AbusePermission, Category, MassContact,
+                          MassContactResult, Profile, Report, ReportItem,
+                          Resolution, Tag, Ticket, Operator, Role)
+from factory.factory import TicketSchedulingAlgorithmFactory
 from utils import logger, utils
+from worker import database
 
 Logger = logger.get_logger(__name__)
 CRYPTO = utils.Crypto()
+
+DASHBOARD_STATUS = {
+    'idle': ('Open', 'Reopened'),
+    'waiting': ('WaitingAnswer', 'Paused'),
+    'pending': ('Answered', 'Alarm'),
+}
+
+CHECK_PERM_DEFENDANT_LEVEL = ('Beginner', 'Advanced', 'Expert')
 MASS_CONTACT_REQUIRED = ('{{ service }}', '{{ publicId }}', '{% if lang ==')
+
+SEARCH_EXTRA_FIELDS = ['defendantTag', 'providerTag', 'defendant', 'defendantCountry', 'providerEmail', 'item', 'fulltext']
+SEARCH_REPORT_FIELDS = list(set([f.name for f in Report._meta.fields] + SEARCH_EXTRA_FIELDS + ['reportTag']))
+SEARCH_TICKET_FIELDS = list(set([f.name for f in Ticket._meta.fields] + SEARCH_EXTRA_FIELDS + ['ticketTag', 'attachedReportsCount', 'ticketIds']))
+
+SEARCH_MAPPING = {
+    'defendant': ['defendantEmail', 'defendantCustomerId'],
+    'item': ['itemFqdnResolved', 'itemIpReverse', 'itemRawItem'],
+    'ticketIds': ['id', 'publicId'],
+}
+
+TOOLBAR_TODO_STATUS = ('ActionError', 'Alarm', 'Open', 'Reopened')
+TOOLBAR_TODO_COUNT_STATUS = ('ActionError', 'Answered', 'Alarm', 'Reopened', 'Open')
+TOOLBAR_SLEEPING_STATUS = ('Paused', 'WaitingAnswer')
 
 
 def auth(body):
@@ -159,54 +180,10 @@ def check_perms(**kwargs):
         except ValueError:
             code = 400
             response = {'status': 'Bad Request', 'code': 400, 'message': 'Report ID is integer'}
-    if 'defendant' in kwargs and kwargs['method'] != 'GET' and not AbusePermission.objects.filter(user=user.id, profile__name__in=['Beginner', 'Advanced', 'Expert']).count():
+    if 'defendant' in kwargs and kwargs['method'] != 'GET' and not AbusePermission.objects.filter(user=user.id, profile__name__in=CHECK_PERM_DEFENDANT_LEVEL).count():
         code = 403
         response = {'status': 'Forbidden', 'code': 403, 'message': 'Forbidden'}
     return code, response
-
-
-def check_token(request):
-    """ Check token and return associated user
-    """
-    try:
-        token = request.environ['HTTP_X_API_TOKEN']
-    except (KeyError, IndexError, TypeError):
-        return False, 'Missing HTTP X-Api-Token header'
-
-    try:
-        data = jwt.decode(token, settings.SECRET_KEY)
-        data = json.loads(CRYPTO.decrypt(str(data['data'])))
-        user = User.objects.get(id=data['id'])
-
-        if user.last_login == datetime.fromtimestamp(0):
-            return False, 'You need to login first'
-
-        if user is not None and user.is_active:
-            user.last_login = datetime.now()
-            user.save()
-            return True, None
-    except (utils.CryptoException, jwt.ExpiredSignature, jwt.DecodeError, User.DoesNotExist, KeyError):
-        return False, 'Unable to authenticate'
-
-
-def get_user(request):
-    """ Get user from token infos
-    """
-    try:
-        token = request.environ['HTTP_X_API_TOKEN']
-    except (KeyError, IndexError, TypeError):
-        return None
-
-    try:
-        data = jwt.decode(token, settings.SECRET_KEY)
-        data = json.loads(CRYPTO.decrypt(str(data['data'])))
-        if 'id' not in data:
-            return None
-        user = User.objects.get(id=data['id'])
-        if user is not None and user.is_active and user.is_authenticated():
-            return user
-    except (utils.CryptoException, jwt.DecodeError, User.DoesNotExist):
-        return None
 
 
 def get_users_infos(**kwargs):
@@ -219,7 +196,7 @@ def get_users_infos(**kwargs):
 
     where = reduce(operator.and_, where)
     try:
-        users = User.objects.filter(where).values('id', 'username', 'email', 'is_staff', 'is_superuser')
+        users = User.objects.filter(where).values('id', 'username', 'email', 'operator')
     except (TypeError, ValueError):
         return 400, {'status': 'Bad request', 'code': 400, 'message': 'Bad request'}
 
@@ -247,13 +224,16 @@ def get_users_infos(**kwargs):
                 }
             )
         user['profiles'] = profiles
-        user['isStaff'] = user.pop('is_staff')
-        user['isSuperuser'] = user.pop('is_superuser')
+        role = None
+        if Operator.objects.filter(id=user['operator']).exists():
+            role = Operator.objects.get(id=user['operator']).role.codename
+        user.pop('operator', None)
+        user['role'] = role
 
     if 'user' in kwargs:
         return 200, dict(users[0])
     else:
-        return 200, [dict(u) for u in users]
+        return 200, list(users)
 
 
 def update_user(user_id, body):
@@ -266,7 +246,7 @@ def update_user(user_id, body):
 
     if 'profiles' in body:
         try:
-            update_permissions(user, body['profiles'])
+            _update_permissions(user, body['profiles'])
         except ObjectDoesNotExist:
             return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid category or profile'}
 
@@ -274,27 +254,34 @@ def update_user(user_id, body):
         cats = AbusePermission.objects.filter(user=user).values_list('category', flat=True).distinct()
         for ticket in Ticket.objects.filter(treatedBy=user):
             if ticket.category_id not in cats:
-                abuse_user = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
-                log_action(ticket, abuse_user, 'change treatedBy from %s to nobody' % (user.username))
+                database.log_action_on_ticket(
+                    ticket=ticket,
+                    action='change_treatedby',
+                    new_value=user.username
+                )
                 ticket.treatedBy = None
                 ticket.save()
         body.pop('profiles', None)
 
     try:
         body.pop('id', None)
-        if 'isStaff' in body:
-            body['is_staff'] = body.pop('isStaff')
-        if 'isSuperuser' in body:
-            body['is_superuser'] = body.pop('isSuperuser')
+        if 'role' in body:
+            if not Operator.objects.filter(user=user).exists():
+                role = Role.objects.get(codename=body['role'])
+                Operator.objects.create(user=user, role=role)
+            elif body['role'] != user.operator.role.codename:
+                user.operator.role = Role.objects.get(codename=body['role'])
+                user.operator.save()
+            body.pop('role')
         User.objects.filter(pk=user.pk).update(**body)
-    except (KeyError, ValueError, FieldError, IntegrityError):
+    except (KeyError, ValueError, FieldError, FieldDoesNotExist, IntegrityError, ObjectDoesNotExist):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
 
     code, resp = get_users_infos(user=user_id)
     return code, resp
 
 
-def update_permissions(user, permissions):
+def _update_permissions(user, permissions):
     """ Update user permissions
     """
 
@@ -351,7 +338,7 @@ def get_profiles():
 def get_users_login():
     """ Get login for all users
     """
-    return 200, [dict(p) for p in User.objects.all().values('username')]
+    return 200, list(User.objects.all().values('username'))
 
 
 def get_ticket_resolutions():
@@ -419,15 +406,13 @@ def search(**kwargs):
         except (ValueError, SyntaxError):
             return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Unable to decode JSON'}
 
-    extra_fields = ['defendantTag', 'providerTag', 'defendant', 'defendantCountry', 'providerEmail', 'item', 'fulltext']
-
     custom_filters = {
         'ticket': {
-            'fields': list(set([f.name for f in Ticket._meta.fields] + extra_fields + ['ticketTag', 'attachedReportsCount', 'ticketIds'])),
+            'fields': SEARCH_TICKET_FIELDS,
             'filters': deepcopy(filters),
         },
         'report': {
-            'fields': list(set([f.name for f in Report._meta.fields] + extra_fields + ['reportTag'])),
+            'fields': SEARCH_REPORT_FIELDS,
             'filters': deepcopy(filters),
         },
     }
@@ -445,20 +430,13 @@ def search(**kwargs):
     except AttributeError:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
 
-    # Map search to multiple field on model
-    mapping = {
-        'defendant': ['defendantEmail', 'defendantCustomerId'],
-        'item': ['itemFqdnResolved', 'itemIpReverse', 'itemRawItem'],
-        'ticketIds': ['id', 'publicId'],
-    }
-
     for _, values in custom_filters.iteritems():
         if 'where' in values['filters']:
             new_where = deepcopy(values['filters']['where'])
             for key, val in values['filters']['where'].iteritems():
                 for field in values['filters']['where'][key]:
-                    if field.keys()[0] in mapping:
-                        for new_field in mapping[field.keys()[0]]:
+                    if field.keys()[0] in SEARCH_MAPPING:
+                        for new_field in SEARCH_MAPPING[field.keys()[0]]:
                             new_where[key].append({new_field: field[field.keys()[0]]})
                         new_where[key].remove(field)
                     elif 'ticketTag' in field:
@@ -469,6 +447,7 @@ def search(**kwargs):
                         new_where[key].remove(field)
             values['filters']['where'] = new_where
 
+    from api.controllers import ReportsController, TicketsController
     code1, reps, nb_reps = ReportsController.index(filters=json.dumps(custom_filters['report']['filters']), user=user)
     code2, ticks, nb_ticks = TicketsController.index(filters=json.dumps(custom_filters['ticket']['filters']), user=user)
 
@@ -509,10 +488,19 @@ def toolbar(**kwargs):
     res = Ticket.objects.filter(where, treatedBy=user).values('status').annotate(count=Count('status'))
     resp['myTicketsCount'] = reduce(operator.add, [t['count'] if t['status'] != 'Closed' else 0 for t in res]) if res else 0
     resp['myTicketsAnsweredCount'] = reduce(operator.add, [t['count'] if t['status'] == 'Answered' else 0 for t in res]) if res else 0
-    resp['myTicketsTodoCount'] = reduce(operator.add, [t['count'] if t['status'] in ['ActionError', 'Alarm', 'Open', 'Reopened'] else 0 for t in res]) if res else 0
-    resp['myTicketsSleepingCount'] = reduce(operator.add, [t['count'] if t['status'] in ['Paused', 'WaitingAnswer'] else 0 for t in res]) if res else 0
-    resp['todoCount'] = Ticket.objects.filter(where, status__in=['ActionError', 'Answered', 'Alarm', 'Reopened', 'Open']).order_by('id').distinct().count()
+    resp['myTicketsTodoCount'] = reduce(operator.add, [t['count'] if t['status'] in TOOLBAR_TODO_STATUS else 0 for t in res]) if res else 0
+    resp['myTicketsSleepingCount'] = reduce(operator.add, [t['count'] if t['status'] in TOOLBAR_SLEEPING_STATUS else 0 for t in res]) if res else 0
     resp['escalatedCount'] = Ticket.objects.filter(where, escalated=True).order_by('id').distinct().count()
+    resp['toValidateCount'] = Report.objects.filter(status='ToValidate').count()
+
+    # Get count of scheduling algorithm
+    try:
+        scheduling_algorithm = user.operator.role.modelsAuthorizations['ticket']['schedulingAlgorithm']
+        todo_count = TicketSchedulingAlgorithmFactory.instance.get_singleton_of(scheduling_algorithm).count(where=where)
+    except (TypeError, AttributeError, ObjectDoesNotExist, KeyError):
+        todo_count = 0
+
+    resp['todoCount'] = todo_count
     return 200, resp
 
 
@@ -535,15 +523,9 @@ def dashboard(**kwargs):
     resp['reportsByStatus'] = {k['status']: k['count'] for k in res}
     res = Ticket.objects.filter(where, ~Q(status='Closed')).values('status').annotate(count=Count('status'))
     resp['ticketsByStatus'] = {k['status']: k['count'] for k in res}
-
     resp['ticketsByCategory'] = {}
-    status = {
-        'idle': ['Open', 'Reopened'],
-        'waiting': ['WaitingAnswer', 'Paused'],
-        'pending': ['Answered', 'Alarm'],
-    }
 
-    for name, sts in status.iteritems():
+    for name, sts in DASHBOARD_STATUS.iteritems():
         request = Ticket.objects.filter(
             category__in=authorized_categories,
             status__in=sts
@@ -571,79 +553,6 @@ def status(**kwargs):
         if str(model).lower() == 'report':
             return [{'label': v} for _, v in Report.REPORT_STATUS]
     return [{'label': v} for _, v in Ticket.TICKET_STATUS] + [{'label': v} for _, v in Report.REPORT_STATUS]
-
-
-def log_action(ticket, user, action):
-    """ Log all abuse updates
-    """
-    History.objects.create(
-        date=datetime.now(),
-        ticket=ticket,
-        user=user,
-        action=action
-    )
-
-    Logger.debug(
-        unicode(action),
-        extra={
-            'ticket': ticket.id,
-            'public_id': ticket.publicId,
-            'user': user.username,
-            'action': action,
-        }
-    )
-    if ImplementationFactory.instance.is_implemented('KPIServiceBase'):
-        _generates_kpi_infos(ticket, action)
-
-
-def _generates_kpi_infos(ticket, action):
-    """
-        Generates KPI infos
-    """
-    search_assign = re.search('change treatedby from nobody to', action.lower())
-    if search_assign:
-        _generates_onassign_kpi(ticket)
-        return
-
-    search_closed = re.search('change status from .* to closed', action.lower())
-    if search_closed:
-        _generates_onclose_kpi(ticket)
-        return
-
-    search_create = re.search('create this ticket with report', action.lower())
-    if search_create:
-        _genereates_oncreate_kpi(ticket)
-        return
-
-
-def _generates_onassign_kpi(ticket):
-    """
-        Kpi on ticket assignation
-    """
-    try:
-        ImplementationFactory.instance.get_singleton_of('KPIServiceBase').new_ticket_assign(ticket)
-    except KPIServiceException as ex:
-        Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
-
-
-def _generates_onclose_kpi(ticket):
-    """
-        Kpi on ticket close
-    """
-    try:
-        ImplementationFactory.instance.get_singleton_of('KPIServiceBase').close_ticket(ticket)
-    except KPIServiceException as ex:
-        Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
-
-
-def _genereates_oncreate_kpi(ticket):
-    """
-        Kpi on ticket creation
-    """
-    try:
-        ImplementationFactory.instance.get_singleton_of('KPIServiceBase').new_ticket(ticket)
-    except KPIServiceException as ex:
-        Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
 
 
 def get_mass_contact(filters=None):
@@ -737,7 +646,7 @@ def __create_jobs(campaign_name, ips, category, body, user):
     # For each IP, create a worker job
     jobs = []
     for ip_address in ips:
-        job = utils.queue.enqueue(
+        job = utils.default_queue.enqueue(
             'ticket.mass_contact',
             ip_address=ip_address,
             category=category.name,
@@ -745,15 +654,13 @@ def __create_jobs(campaign_name, ips, category, body, user):
             email_subject=body['email']['subject'],
             email_body=body['email']['body'],
             user_id=user.id,
-            timeout=360,
         )
         jobs.append(job.id)
 
-    utils.queue.enqueue(
+    utils.default_queue.enqueue(
         'ticket.check_mass_contact_result',
         result_campaign_id=result.id,
         jobs=jobs,
-        timeout=3600,
     )
 
 
@@ -767,6 +674,13 @@ def get_notifications(user):
     """
     response = utils.get_user_notifications(user.username)
     return 200, response
+
+
+def get_roles():
+    """
+        Get Cerberus `abuse.models.Role`
+    """
+    return 200, list(Role.objects.all().values('id', 'codename', 'name'))
 
 
 def monitor():

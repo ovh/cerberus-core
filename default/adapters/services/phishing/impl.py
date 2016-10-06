@@ -37,11 +37,12 @@ class DefaultPhishingService(PhishingServiceBase):
 
             :param str url: The url to ping.
             :param str country: A country, usefull for geo-phishing
-            :return: A dict containing these infos: direct_status, proxied_status, http, score (0 for 'UP' to 100 for 'DOWN')
+            :return: A dict containing these infos:
+                direct_status, proxied_status, http_code, score (0 for 'UP' to 100 for 'DOWN') and is_phishing (computed by your solution)
             :rtype: dict
-            :raises PhishingServiceException: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
-        return PingResponse(0, '200', 'OK', 'OK')
+        return PingResponse(0, '200', 'OK', 'OK', False)
 
     @staticmethod
     def get_screenshots(url, limit=10):
@@ -53,6 +54,11 @@ class DefaultPhishingService(PhishingServiceBase):
             'location': u'https://www.ovh.com/fr/news/logos/with-baseline/logo-ovh-avec-150DPI.png',
             'screenshotId': u'123456',
             'phishingGrade': 0.0,
+            'phishingGradeDetails': {
+                'category': 'LEGIT',  # Can be "LEGIT" or "PHISHING"
+                'grade': 0.0,  # Same as phishingGrade
+                'comment': 'no comment',
+            },
             'score': 0,
             'response': {
                 'directAccess': {
@@ -76,8 +82,8 @@ class DefaultPhishingService(PhishingServiceBase):
 
             :param str screenshot_id: The uuid of the screenshot
             :param bool isphishing: Yes or not it is a phishing url
-            :raises PhishingServiceException: if any error occur
-            :raises PhishingServiceException: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
         pass
 
@@ -91,7 +97,7 @@ class DefaultPhishingService(PhishingServiceBase):
             :param str screenshot_id : The uuid of the screenshot
             :return: If yes or not the screenshot has been viwed
             :rtype: bool
-            :raises PhishingServiceException: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
         return {'viewed': False, 'views': []}
 
@@ -100,8 +106,31 @@ class DefaultPhishingService(PhishingServiceBase):
             Block/remove a phishing url
 
             :param str url: The URL to block
-            :param Report report: The associated report
-
-            :raises PhishingServiceException: if any error occur
+            :param `abuse.models.Report` report: The associated report
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
         pass
+
+    def unblock_url(self, url):
+        """
+            Unblock a phishing url
+
+            :param str url: The URL to block
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
+        """
+        pass
+
+    def get_http_headers(self, url):
+        """
+            Get url HTTP headers (like curl -I)
+
+            :param str url: The URL to block
+            :return: Details about headers
+            :rtype: dict
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
+        """
+        response = {
+            'url': url,
+            'headers': '200 OK\ncontent-length: 24187',
+        }
+        return response

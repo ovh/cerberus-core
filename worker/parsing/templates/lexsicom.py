@@ -17,19 +17,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+    Parsing template for cert-soc@lexsi.com
+"""
 
-import inspect
-import os
-import sys
-
-CURRENTDIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-PARENTDIR = os.path.dirname(CURRENTDIR)
-sys.path.insert(0, PARENTDIR)
-
-import regexp
+from worker.parsing import regexp
 
 TEMPLATE = {
     'email': 'cert-soc@lexsi.com',
+    'fallback': False,
     'regexp': {
         'ips': {
             'pattern': r'(?:(?:Adresse\s*IP|IP address\(es\))\s*:\s*)' + regexp.IPV4,

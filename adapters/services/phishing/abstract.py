@@ -25,7 +25,7 @@
 import abc
 from collections import namedtuple
 
-PingResponse = namedtuple('Ping', ['score', 'http_code', 'direct_status', 'proxied_status'])
+PingResponse = namedtuple('Ping', ['score', 'http_code', 'direct_status', 'proxied_status', 'is_phishing'])
 
 
 class PhishingServiceException(Exception):
@@ -59,7 +59,8 @@ class PhishingServiceBase(object):
 
             :param str url: The url to ping.
             :param str country: A country, usefull for geo-phishing
-            :return: A PingResponse object containing these infos: direct_status, proxied_status, http_code, score (0 for 'UP' to 100 for 'DOWN')
+            :return: A PingResponse object containing these infos:
+                direct_status, proxied_status, http_code, score (0 for 'UP' to 100 for 'DOWN') and is_phishing (computed by your solution)
             :rtype: PingResponse
             :raises PhishingServiceException: if any error occur
         """
@@ -76,6 +77,11 @@ class PhishingServiceBase(object):
                 'location': 'https://your.screenshot.storage/example.png',
                 'screenshotId': '123456',
                 'phishingGrade': '0.9',  # Between 0 and 1 (0, not phishing, 1 phishing)
+                'phishingGradeDetails': {
+                    'category': 'PHISHING',  # Can be "LEGIT" or "PHISHING"
+                    'grade': 0.1,  # Same as phishingGrade
+                    'comment': 'no comment',
+                },
                 'score': 0,  # Between 0 and 100 (0, UP, 100, DOWN)
                 'response': {
                     'directAccess': {
@@ -154,8 +160,47 @@ class PhishingServiceBase(object):
             Block/remove a phishing url
 
             :param str url: The URL to block
-
+            :param `abuse.models.Report` report: The associated report
             :raises PhishingServiceException: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'block_url'" % (cls))
+
+    @abc.abstractmethod
+    def unblock_url(self, url):
+        """
+            Unblock a phishing url
+
+            :param str url: The URL to block
+            :raises PhishingServiceException: if any error occur
+        """
+        cls = self.__class__.__name__
+        raise NotImplementedError("'%s' object does not implement the method 'unblock_url'" % (cls))
+
+    @abc.abstractmethod
+    def get_http_headers(self, url):
+        """
+            Get url HTTP headers (like curl -I)
+
+            Returns:
+
+            {
+                'url': 'https://www.ovh.com/fr/,
+                'headers': 'HTTP/1.1 200 OK
+                            Set-Cookie: a=R1837865839; path=/; expires=Sun, 12-Jun-2016 02:06:33 GMT
+                            Set-Cookie: b=R2649533674; path=/; expires=Thu, 09-Jun-2016 14:55:03 GMT
+                            Content-Type: text/html; charset=UTF-8
+                            Cache-Control: max-age=600
+                            Expires: Thu, 09 Jun 2016 13:59:02 GMT
+                            Connection: close
+                            ...,
+                }
+            }
+
+            :param str url: The URL to block
+            :return: Details about headers
+            :rtype: dict
+            :raises PhishingServiceException: if any error occur
+        """
+        cls = self.__class__.__name__
+        raise NotImplementedError("'%s' object does not implement the method 'get_http_headers'" % (cls))

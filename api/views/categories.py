@@ -22,19 +22,17 @@
     Category views for Cerberus protected API.
 """
 
-from flask import Blueprint, request
+from flask import Blueprint, g, request
 
-from api.controllers import CategoriesController, GeneralController
-from decorators import (admin_required, catch_500, json_required, jsonify,
-                        token_required)
+from api.controllers import CategoriesController
+from decorators import admin_required, Cached, InvalidateCache, jsonify
 
 category_views = Blueprint('category_views', __name__)
 
 
 @category_views.route('/api/categories', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
+@Cached(timeout=43200)
 def get_all_categories():
     """
     Returns all Cerberus categories
@@ -66,8 +64,6 @@ def get_all_categories():
 
 @category_views.route('/api/categories/<category>', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_category(category=None):
     """
     Returns the description of given `category`
@@ -100,10 +96,8 @@ def get_category(category=None):
 
 @category_views.route('/api/categories', methods=['POST'])
 @jsonify
-@token_required
 @admin_required
-@json_required
-@catch_500
+@InvalidateCache(routes=['/api/categories'])
 def create_category():
     """
     Create a new category
@@ -122,9 +116,8 @@ def create_category():
 
 @category_views.route('/api/categories/<category>', methods=['PUT'])
 @jsonify
-@token_required
 @admin_required
-@catch_500
+@InvalidateCache(routes=['/api/categories'])
 def update_category(category=None):
     """
     Update given `category`
@@ -157,9 +150,8 @@ def update_category(category=None):
 
 @category_views.route('/api/categories/<category>', methods=['DELETE'])
 @jsonify
-@token_required
 @admin_required
-@catch_500
+@InvalidateCache(routes=['/api/categories'])
 def delete_category(category=None):
     """
     Delete given `category`
@@ -180,8 +172,6 @@ def delete_category(category=None):
 
 @category_views.route('/api/my-categories', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_user_categories():
     """
     Get allowed categories for logged user
@@ -211,6 +201,5 @@ def get_user_categories():
     :status 404: category not found
 
     """
-    user = GeneralController.get_user(request)
-    code, resp = CategoriesController.index(user=user)
+    code, resp = CategoriesController.index(user=g.user)
     return code, resp

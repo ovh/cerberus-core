@@ -63,7 +63,7 @@ class ActionServiceBase(object):
     @abc.abstractmethod
     def get_action_for_timeout(self, ticket):
         """
-            Returns action to apply when phishing ticket timeout
+            Returns action to apply when ticket timeout
 
             :param `abuse.models.Ticket` ticket: A Cerberus `abuse.models.Ticket` instance
             :rtype: `abuse.models.ServiceAction`

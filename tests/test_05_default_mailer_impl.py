@@ -24,11 +24,15 @@
 
 from datetime import datetime
 
+from django.conf import settings
 from django.test import TestCase
 
 from abuse.models import MailTemplate, Ticket
 from adapters.services.mailer.abstract import MailerServiceException
 from default.adapters.services.mailer.impl import DefaultMailerService
+
+CERBERUS_EMAIL_DB = settings.GENERAL_CONFIG['cerberus_emails_db']
+SAMPLES_DIRECTORY = 'tests/samples'
 
 
 class GlobalTestCase(TestCase):
@@ -36,6 +40,7 @@ class GlobalTestCase(TestCase):
         Global setUp for tests
     """
     def setUp(self):
+
         self._ticket = Ticket.objects.create(
             publicId='AAAAAAAAAA',
             category_id='Spam',
@@ -46,6 +51,7 @@ class GlobalTestCase(TestCase):
             name='Default template',
             subject='Abuse dectected, Ticket #{{ publicId }}',
             body='Abuse dectected, Ticket #{{ publicId }}',
+            recipientType='Defendant',
         )
         self._impl = DefaultMailerService()
 
@@ -61,23 +67,32 @@ class TestDefaultMailerImpl(GlobalTestCase):
         """
             Test send_email and get_emails
         """
-        self._impl.send_email(self._ticket, 'test@test.com', 'test', 'test')
-        self._impl.send_email(self._ticket, 'test@test.com', 'test', 'test')
+        self._impl.send_email(self._ticket, 'test@test.com', 'test', 'test', 'Defendant')
+        self._impl.send_email(self._ticket, 'test@test.com', 'test', 'test', 'Other')
         emails = self._impl.get_emails(self._ticket)
         self.assertEqual(2, len(emails))
+        self.assertRaises(MailerServiceException, lambda: self._impl.send_email(self._ticket, 'test@test.com', 'test', 'test', 'InvalidCategory'))
         self._ticket.publicId = 'BBBBBBBBBB'
         self.assertRaises(MailerServiceException, lambda: self._impl.get_emails(self._ticket))
-        self.assertRaises(MailerServiceException, lambda: self._impl.send_email(self._ticket, 'test', 'test', 'test'))
+        self.assertRaises(MailerServiceException, lambda: self._impl.send_email(self._ticket, 'test', 'test', 'test', 'Defendant'))
 
     def test_attach_external_answer(self):
         """
             Test attach_external_answer
         """
-        self._impl.send_email(self._ticket, 'test@test.com', 'test', 'test')
-        self._impl.attach_external_answer(self._ticket, 'test123@site.com', 'Re: test', 'Answer test')
+        recipient = 'ticket+AAAAAAAAAA.defendant@example.com'
+        self._impl.send_email(self._ticket, 'test@test.com', 'test', 'test', 'Defendant')
+        self._impl.attach_external_answer(
+            self._ticket,
+            'test123@site.com',
+            recipient,
+            'Re: test',
+            'Answer test',
+            'Defendant'
+        )
         emails = self._impl.get_emails(self._ticket)
         self.assertEqual(4, len(emails))
-        self.assertRaises(MailerServiceException, lambda: self._impl.attach_external_answer(123456, 'test', 'test', 'test'))
+        self.assertRaises(MailerServiceException, lambda: self._impl.attach_external_answer(123456, 'test', recipient, 'test', 'test', 'Defendant'))
 
     def test_prefetch_template(self):
         """
@@ -86,5 +101,6 @@ class TestDefaultMailerImpl(GlobalTestCase):
         prefetched_email = self._impl.prefetch_email_from_template(self._ticket, 'default_template')
         self.assertIn(self._ticket.publicId, prefetched_email.subject)
         self.assertIn(self._ticket.publicId, prefetched_email.body)
+        self.assertEqual('Defendant', prefetched_email.category)
         self.assertRaises(MailerServiceException, lambda: self._impl.prefetch_email_from_template(123456, 'default_template'))
         self.assertRaises(MailerServiceException, lambda: self._impl.prefetch_email_from_template(self._ticket, 'invalid_template'))

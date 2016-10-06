@@ -24,26 +24,46 @@
 
 import hashlib
 import inspect
+import operator
 
 from collections import Counter
 from datetime import datetime, timedelta
-from time import sleep
+from time import mktime, sleep, time
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import validate_ipv46_address
+from django.core.validators import validate_email, validate_ipv46_address
 from django.db import transaction
-from django.db.models import ObjectDoesNotExist
+from django.db.models import Q, ObjectDoesNotExist
 from django.template import Context, loader
 
+import common
 import database
+import phishing
 
-from abuse.models import (Category, MassContactResult, Report,
-                          ReportItem, Resolution, Ticket, User)
+from abuse.models import (Category, Comment, ContactedProvider,
+                          MassContactResult, Report, ReportItem,
+                          Resolution, Tag, Ticket, TicketComment,
+                          ServiceActionJob, User)
 from adapters.dao.customer.abstract import CustomerDaoException
 from factory.factory import ImplementationFactory
 from utils import pglocks, schema, utils
 from worker import Logger
+
+BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
+
+ASYNC_JOB_TO_CANCEL = (
+    'action.apply_if_no_reply',
+    'action.apply_then_close',
+    'action.apply_action',
+    'ticket.timeout',
+)
+
+WAITING = 'WaitingAnswer'
+PAUSED = 'Paused'
+ALARM = 'Alarm'
+
+STATUS_SEQUENCE = [WAITING, ALARM, WAITING]
 
 
 def delay_jobs(ticket=None, delay=None, back=True):
@@ -65,24 +85,216 @@ def delay_jobs(ticket=None, delay=None, back=True):
             Logger.error(unicode('Ticket %d cannot be found in DB. Skipping...' % (ticket)))
             return
 
-    list_of_job_instances = utils.scheduler.get_jobs(
-        until=timedelta(days=5),
-        with_times=True
-    )
+    # a job is here a tuple (Job instance, datetime instance)
+    pending_jobs = {job[0].id: job for job in utils.scheduler.get_jobs(until=timedelta(days=7), with_times=True)}
 
     for job in ticket.jobs.all():
-        if job.asynchronousJobId in utils.scheduler:
-            for scheduled_job in list_of_job_instances:
-                if scheduled_job[0].id == job.asynchronousJobId:
-                    if back:
-                        date = scheduled_job[1] - delay
-                    else:
-                        date = scheduled_job[1] + delay
-                    utils.scheduler.change_execution_time(
-                        scheduled_job[0],
-                        date
-                    )
-                    break
+        if pending_jobs.get(job.asynchronousJobId):
+            current_date = pending_jobs[job.asynchronousJobId][1]
+            new_date = current_date - delay if back else current_date + delay
+            utils.scheduler.change_execution_time(
+                pending_jobs[job.asynchronousJobId][0],
+                new_date
+            )
+
+
+def timeout(ticket_id=None):
+    """
+        If ticket timeout , apply action on service (if defendant not internal/VIP) and ticket is not assigned
+
+        :param int ticket_id: The id of the Cerberus `abuse.models.Ticket`
+    """
+    try:
+        ticket = Ticket.objects.get(id=ticket_id)
+    except (AttributeError, ObjectDoesNotExist, ValueError):
+        Logger.error(unicode('Ticket %d cannot be found in DB. Skipping...' % (ticket_id)))
+        return
+
+    if not _check_timeout_ticket_conformance(ticket):
+        return
+
+    action = ImplementationFactory.instance.get_singleton_of('ActionServiceBase').get_action_for_timeout(ticket)
+    if not action:
+        Logger.error(unicode('Ticket %d service %s: action not found, exiting ...' % (ticket_id, ticket.service.componentType)))
+        return
+
+    # Maybe customer fixed, closing ticket
+    if ticket.category.name.lower() == 'phishing' and phishing.is_all_down_for_ticket(ticket):
+        Logger.info(unicode('All items are down for ticket %d, closing ticket' % (ticket_id)))
+        close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False)
+        return
+
+    # Getting ip for action
+    ip_addr = _get_ip_for_action(ticket)
+    if not ip_addr:
+        Logger.error(unicode('Error while getting IP for action, exiting'))
+        ticket.status = ticket.previousStatus
+        ticket.status = 'ActionError'
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='change_status',
+            previous_value=ticket.previousStatus,
+            new_value=ticket.status
+        )
+        comment = Comment.objects.create(user=BOT_USER, comment='None or multiple ip addresses for this ticket')
+        TicketComment.objects.create(ticket=ticket, comment=comment)
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='add_comment'
+        )
+        ticket.save()
+        return
+
+    # Apply action
+    service_action_job = _apply_timeout_action(ticket, ip_addr, action)
+    if not service_action_job.result:
+        Logger.debug(unicode('Error while executing service action, exiting'))
+        return
+
+    Logger.info(unicode('All done, sending close notification to provider(s)'))
+    ticket = Ticket.objects.get(id=ticket.id)
+
+    # Closing ticket
+    close_ticket(ticket, reason=settings.CODENAMES['fixed'], service_blocked=True)
+
+
+def _check_timeout_ticket_conformance(ticket):
+
+    if not ticket.defendant or not ticket.service:
+        Logger.error(unicode('Ticket %d is invalid (no defendant/service), skipping...' % (ticket.id)))
+        return False
+
+    if ticket.status.lower() in ['closed', 'answered']:
+        Logger.error(unicode('Ticket %d is invalid (no defendant/service or not Alarm), Skipping...' % (ticket.id)))
+        return False
+
+    if ticket.category.name.lower() not in ['phishing', 'copyright']:
+        Logger.error(unicode('Ticket %d is in wrong category (%s, Skipping...' % (ticket.id, ticket.category.name)))
+        return False
+
+    if ticket.treatedBy:
+        Logger.error(unicode('Ticket is %d assigned, skipping' % (ticket.id)))
+        return False
+
+    if ticket.jobs.count():
+        Logger.error(unicode('Ticket %d has existing jobs, exiting ...' % (ticket.id)))
+        return False
+
+    return True
+
+
+def _apply_timeout_action(ticket, ip_addr, action):
+
+    Logger.info(unicode('Executing action %s for ticket %d' % (action.name, ticket.id)))
+    ticket.action = action
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='set_action',
+        action_name=action.name
+    )
+    ticket.save()
+    async_job = utils.scheduler.schedule(
+        scheduled_time=datetime.utcnow() + timedelta(seconds=3),
+        func='action.apply_action',
+        kwargs={
+            'ticket_id': ticket.id,
+            'action_id': action.id,
+            'ip_addr': ip_addr,
+            'user_id': BOT_USER.id,
+        },
+        interval=1,
+        repeat=1,
+        result_ttl=500,
+        timeout=3600,
+    )
+
+    Logger.info(unicode('Task has %s job id' % (async_job.id)))
+    job = ServiceActionJob.objects.create(ip=ip_addr, action=action, asynchronousJobId=async_job.id, creationDate=datetime.now())
+    ticket.jobs.add(job)
+
+    while not async_job.is_finished:
+        sleep(5)
+
+    return async_job
+
+
+def close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False):
+    """
+        Close ticket and add autoclosed Tag
+    """
+    # Send "case closed" email to already contacted Provider(s)
+    providers_emails = ContactedProvider.objects.filter(ticket_id=ticket.id).values_list('provider__email', flat=True).distinct()
+
+    for email in providers_emails:
+        try:
+            validate_email(email.strip())
+            _send_email(ticket, email, settings.CODENAMES['case_closed'])
+            ticket.save()
+            Logger.info(unicode('Mail sent to provider %s' % (email)))
+        except (AttributeError, TypeError, ValueError, ValidationError):
+            pass
+
+    if service_blocked:
+        template = settings.CODENAMES['service_blocked']
+    else:
+        template = settings.CODENAMES['ticket_closed']
+
+    # Send "ticket closed" email to defendant
+    _send_email(ticket, ticket.defendant.details.email, template, lang=ticket.defendant.details.lang)
+    if ticket.mailerId:
+        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
+
+    resolution = Resolution.objects.get(codename=reason)
+    ticket.resolution = resolution
+    ticket.previousStatus = ticket.status
+    ticket.status = 'Closed'
+    ticket.reportTicket.all().update(status='Archived')
+
+    tag_name = settings.TAGS['phishing_autoclosed'] if ticket.category.name.lower() == 'phishing' else settings.TAGS['copyright_autoclosed']
+    ticket.tags.add(Tag.objects.get(name=tag_name))
+    ticket.save()
+
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='change_status',
+        previous_value=ticket.previousStatus,
+        new_value=ticket.status,
+        close_reason=ticket.resolution.codename
+    )
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='add_tag',
+        tag_name=tag_name
+    )
+
+
+def _get_ip_for_action(ticket):
+    """
+        Extract and check IP address
+    """
+    # Get ticket IP(s)
+    reports = ticket.reportTicket.all()
+    ips_on_ticket = [itm.ip for rep in reports for itm in rep.reportItemRelatedReport.filter(~Q(ip=None), itemType='IP')]
+    ips_on_ticket.extend([itm.fqdnResolved for rep in reports for itm in rep.reportItemRelatedReport.filter(~Q(fqdnResolved=None), itemType__in=['FQDN', 'URL'])])
+    ips_on_ticket = list(set(ips_on_ticket))
+
+    if len(ips_on_ticket) != 1:
+        Logger.error(unicode('Multiple or no IP on this ticket'))
+        return
+
+    return ips_on_ticket[0]
+
+
+def _send_email(ticket, email, codename, lang='EN'):
+    """
+        Wrapper to send email
+    """
+    common.send_email(
+        ticket,
+        [email],
+        codename,
+        lang=lang,
+    )
 
 
 def mass_contact(ip_address=None, category=None, campaign_name=None, email_subject=None, email_body=None, user_id=None):
@@ -180,8 +392,8 @@ def __create_contact_tickets(services, campaign_name, ip_address, category, emai
             attach_new=False,
         )
         database.add_mass_contact_tag(ticket, campaign_name)
-        actions.append('create this ticket with mass contact campaign %s' % (campaign_name))
-        actions.append('change treatedBy from nobody to %s' % (user.username))
+        actions.append({'ticket': ticket, 'action': 'create_masscontact', 'campaign_name': campaign_name})
+        actions.append({'ticket': ticket, 'action': 'change_treatedby', 'new_value': user.username})
         report.ticket = ticket
         report.save()
         Logger.debug(unicode(
@@ -190,17 +402,23 @@ def __create_contact_tickets(services, campaign_name, ip_address, category, emai
 
         # Send email to defendant
         __send_mass_contact_email(ticket, email_subject, email_body)
-        actions.append('send an email to %s' % (report.defendant.details.email))
+        actions.append({'ticket': ticket, 'action': 'send_email', 'email': report.defendant.details.email})
 
         # Close ticket/report
         ticket.resolution = Resolution.objects.get(codename=settings.CODENAMES['fixed_customer'])
         ticket.previousStatus = ticket.status
         ticket.status = 'Closed'
         ticket.save()
-        actions.append('change status from %s to %s, reason : %s' % (ticket.previousStatus, ticket.status, ticket.resolution.codename))
+        actions.append({
+            'ticket': ticket,
+            'action': 'change_status',
+            'previous_value': ticket.previousStatus,
+            'new_value': ticket.status,
+            'close_reason': ticket.resolution.codename
+        })
 
         for action in actions:
-            database.log_action_on_ticket(ticket, action, user=user)
+            database.log_action_on_ticket(**action)
 
 
 def __send_mass_contact_email(ticket, email_subject, email_body):
@@ -225,7 +443,8 @@ def __send_mass_contact_email(ticket, email_subject, email_body):
         ticket,
         ticket.defendant.details.email,
         subject,
-        body
+        body,
+        'MassContact',
     )
 
 
@@ -251,7 +470,7 @@ def check_mass_contact_result(result_campaign_id=None, jobs=None):
 
     result = []
     for job_id in jobs:
-        job = utils.queue.fetch_job(job_id)
+        job = utils.default_queue.fetch_job(job_id)
         if not job:
             continue
         while job.status.lower() == 'queued':
@@ -302,33 +521,186 @@ def create_ticket_from_phishtocheck(report=None, user=None):
 
     # Create/attach to ticket
     ticket = database.search_ticket(report.defendant, report.category, report.service)
-    action = 'attach report %d from %s (%s ...) to this ticket'
+    new_ticket = False
 
     if not ticket:
         ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
-        action = 'create this ticket with report %d from %s (%s ...)'
+        new_ticket = True
+        utils.scheduler.enqueue_in(
+            timedelta(seconds=settings.GENERAL_CONFIG['phishing']['wait']),
+            'ticket.timeout',
+            ticket_id=ticket.id,
+            timeout=3600,
+        )
+
+    common.get_temp_proofs(ticket, only_urls=True)
 
     report.ticket = ticket
     report.status = 'Attached'
     report.save()
-    database.log_action_on_ticket(ticket, action % (report.id, report.provider.email, report.subject[:30]))
-    database.log_action_on_ticket(ticket, 'validate PhishToCheck report %d' % (report.id), user=user)
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='attach_report',
+        report=report,
+        new_ticket=new_ticket
+    )
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='validate_phishtocheck',
+        user=user,
+        report=report
+    )
 
     # Sending email to provider
     if settings.TAGS['no_autoack'] not in report.provider.tags.all().values_list('name', flat=True):
 
-        prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+        common.send_email(
             ticket,
+            [report.provider.email],
             settings.CODENAMES['ack_received'],
-            acknowledged_report=report.id,
+            acknowledged_report_id=report.id,
         )
-        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
-            ticket,
-            report.provider.email,
-            prefetched_email.subject,
-            prefetched_email.body
-        )
-        database.log_action_on_ticket(ticket, 'send an email to %s' % (report.provider.email))
 
-    utils.queue.enqueue('phishing.block_url_and_mail', ticket_id=ticket.id, report_id=report.id, timeout=3600)
+    utils.default_queue.enqueue('phishing.block_url_and_mail', ticket_id=ticket.id, report_id=report.id)
     return ticket
+
+
+def cancel_rq_scheduler_jobs(ticket_id=None, status='answered'):
+    """
+        Cancel all rq scheduler jobs for given `abuse.models.Ticket`
+
+        :param int ticket_id: The id of the `abuse.models.Ticket`
+        :param str status: The `abuse.models.Ticket.TICKET_STATUS' reason of the cancel
+    """
+    try:
+        ticket = Ticket.objects.get(id=ticket_id)
+    except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
+        Logger.error(unicode('Ticket %d cannot be found in DB. Skipping...' % (ticket)))
+        return
+
+    for job in utils.scheduler.get_jobs():
+        if job.func_name in ASYNC_JOB_TO_CANCEL and job.kwargs['ticket_id'] == ticket.id:
+            utils.scheduler.cancel(job.id)
+
+    for job in ticket.jobs.all():
+        if job.asynchronousJobId in utils.scheduler:
+            utils.scheduler.cancel(job.asynchronousJobId)
+            job.status = 'cancelled by %s' % status
+            job.save()
+
+
+def follow_the_sun():
+    """
+        Set tickets to alarm when user is away
+    """
+    now = int(time())
+    where = [~Q(status='Open'), ~Q(status='Reopened'), ~Q(status='Paused'), ~Q(status='Closed')]
+    where = reduce(operator.and_, where)
+
+    for user in User.objects.filter(~Q(username=BOT_USER.username)):
+        if now > mktime((user.last_login + timedelta(hours=24)).timetuple()):
+            Logger.debug(
+                unicode('user %s logged out, set alarm to True' % (user.username)),
+                extra={
+                    'user': user.username,
+                }
+            )
+            user.ticketUser.filter(where).update(alarm=True)
+        else:
+            Logger.debug(
+                str('user %s logged in, set alarm to False' % (user.username)),
+                extra={
+                    'user': user.username,
+                }
+            )
+            user.ticketUser.filter(where).update(alarm=False)
+
+
+def update_waiting():
+    """
+        Update waiting answer tickets
+    """
+    now = int(time())
+    for ticket in Ticket.objects.filter(status=WAITING):
+        try:
+            if now > int(mktime(ticket.snoozeStart.timetuple()) + ticket.snoozeDuration):
+                Logger.debug(
+                    unicode('Updating status for ticket %s ' % (ticket.id)),
+                    extra={
+                        'ticket': ticket.id,
+                    }
+                )
+                _check_auto_unassignation(ticket)
+                ticket.status = ALARM
+                ticket.snoozeStart = None
+                ticket.snoozeDuration = None
+                ticket.previousStatus = WAITING
+                ticket.reportTicket.all().update(status='Attached')
+                ticket.save()
+                database.log_action_on_ticket(
+                    ticket=ticket,
+                    action='change_status',
+                    previous_value=ticket.previousStatus,
+                    new_value=ticket.status
+                )
+
+        except (AttributeError, ValueError) as ex:
+            Logger.debug(unicode('Error while updating ticket %d : %s' % (ticket.id, ex)))
+
+
+def _check_auto_unassignation(ticket):
+
+    history = ticket.ticketHistory.filter(actionType='ChangeStatus').order_by('-date').values_list('ticketStatus', flat=True)[:3]
+    try:
+        unassigned_on_multiple_alarm = ticket.treatedBy.operator.role.modelsAuthorizations['ticket']['unassignedOnMultipleAlarm']
+        if unassigned_on_multiple_alarm and len(history) == 3 and all([STATUS_SEQUENCE[i] == history[i] for i in xrange(3)]):
+            database.log_action_on_ticket(
+                ticket=ticket,
+                action='change_treatedby',
+                previous_value=ticket.treatedBy
+            )
+            database.log_action_on_ticket(
+                ticket=ticket,
+                action='update_property',
+                property='escalated',
+                previous_value=ticket.escalated,
+                new_value=True,
+            )
+            ticket.treatedBy = None
+            ticket.escalated = True
+            Logger.debug(unicode('Unassigning ticket %d because of operator role configuration' % (ticket.id)))
+    except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
+        pass
+
+
+def update_paused():
+    """
+        Update paused tickets
+    """
+    now = int(time())
+    for ticket in Ticket.objects.filter(status=PAUSED):
+        try:
+            if now > int(mktime(ticket.pauseStart.timetuple()) + ticket.pauseDuration):
+                Logger.debug(
+                    str('Updating status for ticket %s ' % (ticket.id)),
+                    extra={
+                        'ticket': ticket.id,
+                    }
+                )
+                if ticket.previousStatus == WAITING and ticket.snoozeDuration and ticket.snoozeStart:
+                    ticket.snoozeDuration = ticket.snoozeDuration + (datetime.now() - ticket.pauseStart).seconds
+
+                ticket.status = ticket.previousStatus
+                ticket.pauseStart = None
+                ticket.pauseDuration = None
+                ticket.previousStatus = PAUSED
+                ticket.save()
+                database.log_action_on_ticket(
+                    ticket=ticket,
+                    action='change_status',
+                    previous_value=ticket.previousStatus,
+                    new_value=ticket.status
+                )
+
+        except (AttributeError, ValueError) as ex:
+            Logger.debug(unicode('Error while updating ticket %d : %s' % (ticket.id, ex)))

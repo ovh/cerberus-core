@@ -23,20 +23,18 @@
 """
 
 from django.conf import settings
-from flask import Blueprint, request
+from flask import Blueprint, g, request
 
 from api.controllers import (GeneralController, ProvidersController,
-                             TicketsController)
-from decorators import (admin_required, catch_500, json_required, jsonify,
-                        token_required, validate_body)
+                             ReportItemsController, TicketsController)
+from decorators import (admin_required, Cached, InvalidateCache,
+                        jsonify, validate_body)
 
 misc_views = Blueprint('misc_views', __name__)
 
 
 @misc_views.route('/api/auth', methods=['POST'])
 @jsonify
-@json_required
-@catch_500
 def auth():
     """
         Check user/password and returns token if valid
@@ -58,10 +56,9 @@ def auth():
 
 @misc_views.route('/api/logout', methods=['POST'])
 @jsonify
-@token_required
-@catch_500
 def logout():
-    """ Logout user
+    """
+        Logout user
     """
     code, resp = GeneralController.logout(request)
     return code, resp
@@ -69,29 +66,45 @@ def logout():
 
 @misc_views.route('/api/ping', methods=['POST'])
 @jsonify
-@token_required
-@catch_500
 def ping():
-    """ Keep alive between UX and API
+    """
+        Keep alive between UX and API
     """
     return 200, {'status': 'OK', 'code': 200}
 
 
+@misc_views.route('/api/tools/curl', methods=['GET'])
+@jsonify
+def get_url_http_headers():
+    """
+        Curl-like
+    """
+    code, resp = ReportItemsController.get_http_headers(request.args.get('url'))
+    return code, resp
+
+
+@misc_views.route('/api/tools/whois', methods=['GET'])
+@jsonify
+def get_whois():
+    """
+        Whois-like
+    """
+    code, resp = ReportItemsController.get_whois(request.args.get('item'))
+    return code, resp
+
+
 @misc_views.route('/api/notifications', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_user_notifications():
-    """ Get user notifications
     """
-    user = GeneralController.get_user(request)
-    code, resp = GeneralController.get_notifications(user)
+        Get user notifications
+    """
+    code, resp = GeneralController.get_notifications(g.user)
     return code, resp
 
 
 @misc_views.route('/api/monitor', methods=['GET'])
 @jsonify
-@catch_500
 def monitor():
     """ Get api Infos
     """
@@ -101,8 +114,7 @@ def monitor():
 
 @misc_views.route('/api/profiles', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
+@Cached(timeout=43200)
 def get_profiles():
     """ Get Abuse profiles
     """
@@ -112,44 +124,34 @@ def get_profiles():
 
 @misc_views.route('/api/search', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def search():
     """ Search on tickets and reports
 
         Filtering is possible through "filters" query string : filters=%7B"type":"reports"%7D&page=1
         JSON double encoded format
     """
-    user = GeneralController.get_user(request)
     if 'filters' in request.args:
-        code, resp = GeneralController.search(filters=request.args['filters'], user=user)
+        code, resp = GeneralController.search(filters=request.args['filters'], user=g.user)
         return code, resp
 
 
 @misc_views.route('/api/users', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
+@Cached(timeout=43200)
 def get_users_infos():
     """ Get users infos
     """
-    user = GeneralController.get_user(request)
-    if user.is_superuser:
-        code, resp = GeneralController.get_users_infos()
-    else:
-        code, resp = GeneralController.get_users_login()
+    code, resp = GeneralController.get_users_infos()
     return code, resp
 
 
 @misc_views.route('/api/users/me', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
+@Cached(timeout=43200, current_user=True)
 def get_logged_user():
     """ Get infos for logged user
     """
-    user = GeneralController.get_user(request)
-    valid, ret = GeneralController.get_users_infos(user=user.id)
+    valid, ret = GeneralController.get_users_infos(user=g.user.id)
     if not valid:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': ret}
     else:
@@ -158,9 +160,7 @@ def get_logged_user():
 
 @misc_views.route('/api/users/<user>', methods=['GET'])
 @jsonify
-@token_required
 @admin_required
-@catch_500
 def get_user(user=None):
     """ Get infos for a user
     """
@@ -170,10 +170,8 @@ def get_user(user=None):
 
 @misc_views.route('/api/users/<user>', methods=['PUT'])
 @jsonify
-@token_required
 @admin_required
-@json_required
-@catch_500
+@InvalidateCache(routes=['/api/users', '/api/users/me'], clear_for_user=True)
 def update_user(user=None):
     """ Update user infos
     """
@@ -184,8 +182,7 @@ def update_user(user=None):
 
 @misc_views.route('/api/status', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
+@Cached(timeout=43200)
 def get_all_status():
     """ Get all abuse status
     """
@@ -194,8 +191,7 @@ def get_all_status():
 
 @misc_views.route('/api/resolutions', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
+@Cached(timeout=43200)
 def get_all_ticket_resolutions():
     """ Get all abuse status
     """
@@ -204,10 +200,8 @@ def get_all_ticket_resolutions():
 
 @misc_views.route('/api/resolutions', methods=['POST'])
 @jsonify
-@token_required
 @admin_required
-@json_required
-@catch_500
+@InvalidateCache(routes=['/api/resolutions'])
 def add_ticket_resolution():
     """ Get all abuse status
     """
@@ -218,10 +212,8 @@ def add_ticket_resolution():
 
 @misc_views.route('/api/resolutions/<resolution>', methods=['PUT'])
 @jsonify
-@token_required
 @admin_required
-@json_required
-@catch_500
+@InvalidateCache(routes=['/api/resolutions'])
 def update_ticket_resolution(resolution=None):
     """ Get all abuse status
     """
@@ -232,9 +224,8 @@ def update_ticket_resolution(resolution=None):
 
 @misc_views.route('/api/resolutions/<resolution>', methods=['DELETE'])
 @jsonify
-@token_required
 @admin_required
-@catch_500
+@InvalidateCache(routes=['/api/resolutions'])
 def delete_ticket_resolution(resolution=None):
     """ Get all abuse status
     """
@@ -244,8 +235,7 @@ def delete_ticket_resolution(resolution=None):
 
 @misc_views.route('/api/status/<model>', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
+@Cached(timeout=43200)
 def get_status(model=None):
     """ Get status list for ticket or report
     """
@@ -254,32 +244,27 @@ def get_status(model=None):
 
 @misc_views.route('/api/toolbar', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
+@Cached(timeout=180, current_user=True)
 def get_toolbar():
     """ Get Abuse toolbar
     """
-    user = GeneralController.get_user(request)
-    code, resp = GeneralController.toolbar(user=user)
+    code, resp = GeneralController.toolbar(user=g.user)
     return code, resp
 
 
 @misc_views.route('/api/dashboard', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
+@Cached(timeout=3600, current_user=True)
 def get_dashboard():
     """ Get Abuse dashboard
     """
-    user = GeneralController.get_user(request)
-    code, resp = GeneralController.dashboard(user=user)
+    code, resp = GeneralController.dashboard(user=g.user)
     return code, resp
 
 
 @misc_views.route('/api/priorities/ticket', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
+@Cached(timeout=43200)
 def get_ticket_priorities():
     """ Get list of ticket priorities
     """
@@ -288,8 +273,7 @@ def get_ticket_priorities():
 
 @misc_views.route('/api/priorities/provider', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
+@Cached(timeout=43200)
 def get_providers_priorities():
     """ Get list of providers priorities
     """
@@ -298,8 +282,6 @@ def get_providers_priorities():
 
 @misc_views.route('/api/ip/reports/<ip_addr>', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_ip_report_count(ip_addr=None):
     """ Get hits for an ip
     """
@@ -309,8 +291,6 @@ def get_ip_report_count(ip_addr=None):
 
 @misc_views.route('/api/mass-contact', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_mass_contact():
     """
         List all created mass-contact campaigns
@@ -321,8 +301,6 @@ def get_mass_contact():
 
 @misc_views.route('/api/mass-contact', methods=['POST'])
 @jsonify
-@token_required
-@catch_500
 @validate_body({'ips': list, 'campaignName': unicode, 'category': unicode, 'email': {'subject': unicode, 'body': unicode}})
 def post_mass_contact():
     """
@@ -354,6 +332,16 @@ def post_mass_contact():
     :status 400: when parameters are missing or invalid
     """
     body = request.get_json()
-    user = GeneralController.get_user(request)
-    code, resp = GeneralController.post_mass_contact(body, user)
+    code, resp = GeneralController.post_mass_contact(body, g.user)
+    return code, resp
+
+
+@misc_views.route('/api/roles', methods=['GET'])
+@jsonify
+@Cached(timeout=43200)
+def get_cerberus_roles():
+    """
+        List all Cerberus `abuse.models.Role`
+    """
+    code, resp = GeneralController.get_roles()
     return code, resp

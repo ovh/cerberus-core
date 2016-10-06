@@ -25,15 +25,13 @@
 from flask import Blueprint, request
 
 from api.controllers import ReputationController
-from decorators import catch_500, jsonify, token_required
+from decorators import jsonify
 
 reputation_views = Blueprint('reputation_views', __name__)
 
 
 @reputation_views.route('/api/reputation/ip/<ip_addr>/rbl', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_ip_rbl_reputation(ip_addr=None):
     """ Get live rbl reputation for ip
     """
@@ -43,8 +41,6 @@ def get_ip_rbl_reputation(ip_addr=None):
 
 @reputation_views.route('/api/reputation/ip/<ip_addr>/internal', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_ip_internal_reputation(ip_addr=None):
     """ Get live internal reputation for ip
     """
@@ -54,8 +50,6 @@ def get_ip_internal_reputation(ip_addr=None):
 
 @reputation_views.route('/api/reputation/ip/<ip_addr>/external', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_ip_external_reputation(ip_addr=None):
     """ Get live external reputation for ip
     """
@@ -65,8 +59,6 @@ def get_ip_external_reputation(ip_addr=None):
 
 @reputation_views.route('/api/reputation/url/external', methods=['POST'])
 @jsonify
-@token_required
-@catch_500
 def get_url_external_reputation():
     """ Get live external reputation for url
     """
@@ -81,8 +73,6 @@ def get_url_external_reputation():
 
 @reputation_views.route('/api/reputation/ip/<ip_addr>/external/<source>', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_ip_external_detail(ip_addr=None, source=None):
     """ Get detail for external reputation
     """
@@ -92,8 +82,6 @@ def get_ip_external_detail(ip_addr=None, source=None):
 
 @reputation_views.route('/api/reputation/ip/<ip_addr>/tool', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_ip_tool(ip_addr=None):
     """ Get tool
     """

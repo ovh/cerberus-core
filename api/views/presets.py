@@ -22,89 +22,79 @@
     Preset views for Cerberus protected API.
 """
 
-from flask import Blueprint, request
+from flask import Blueprint, g, request
 
 from api.controllers import PresetsController
-from decorators import (admin_required, catch_500, json_required, jsonify,
-                        token_required)
+from decorators import admin_required, jsonify
 
 preset_views = Blueprint('preset_views', __name__)
 
 
 @preset_views.route('/api/presets', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_all_presets():
-    """ Get all Abuse mail temapltes
+    """
+        Get all `abuse.models.TicketWorkflowPreset` available
     """
     filters = None
     if 'filters' in request.args:
         filters = request.args['filters']
-    code, resp = PresetsController.index(filters=filters)
+    code, resp = PresetsController.index(g.user, filters=filters)
     return code, resp
 
 
 @preset_views.route('/api/presets', methods=['POST'])
 @jsonify
-@token_required
 @admin_required
-@json_required
-@catch_500
 def create_preset():
-    """ Get all Abuse mail temapltes
+    """
+        Create a `abuse.models.TicketWorkflowPreset`
     """
     body = request.get_json()
-    code, resp = PresetsController.create(body)
+    code, resp = PresetsController.create(g.user, body)
     return code, resp
 
 
 @preset_views.route('/api/presets/<preset>', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_preset(preset=None):
-    """ Get given preset info
     """
-    code, resp = PresetsController.show(preset)
+        Get given preset info
+    """
+    code, resp = PresetsController.show(g.user, preset)
     return code, resp
 
 
 @preset_views.route('/api/presets/<preset>', methods=['PUT'])
 @jsonify
-@token_required
 @admin_required
-@json_required
-@catch_500
 def update_preset(preset=None):
-    """ Get given preset info
+    """
+        Update given preset info
     """
     body = request.get_json()
-    code, resp = PresetsController.update(preset, body)
+    code, resp = PresetsController.update(g.user, preset, body)
     return code, resp
 
 
 @preset_views.route('/api/presets/<preset>', methods=['DELETE'])
 @jsonify
-@token_required
 @admin_required
-@catch_500
 def delete_preset(preset=None):
-    """ Get given preset info
     """
-    code, resp = PresetsController.delete(preset)
+        Delete given preset info
+    """
+    code, resp = PresetsController.delete(g.user, preset)
     return code, resp
 
 
 @preset_views.route('/api/presets/order', methods=['PUT'])
 @jsonify
-@token_required
 @admin_required
-@json_required
-@catch_500
 def order_presets():
-    """ Update preset order for display
+    """
+        Update preset order for display
     """
     body = request.get_json()
-    code, resp = PresetsController.update_order(body)
+    code, resp = PresetsController.update_order(g.user, body)
     return code, resp

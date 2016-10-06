@@ -22,75 +22,107 @@
     Decorators for Cerberus protected API.
 """
 
-import sys
-import traceback
-from functools import wraps
-from json import dumps
+import datetime
+import json
 
-from django.db import DatabaseError, InterfaceError, OperationalError
-from flask import Response, request
-from flask.wrappers import BadRequest
+from functools import wraps
+from time import mktime
+
+from django.conf import settings
+from flask import g, Response, request
 from voluptuous import Invalid, MultipleInvalid, Schema
-from werkzeug.contrib.cache import SimpleCache
+from werkzeug.contrib.cache import RedisCache, SimpleCache
 
 from api.controllers import GeneralController
 from utils import logger
 
 Logger = logger.get_logger(__name__)
 
-CACHE_TIMEOUT = 300
-cache = SimpleCache()
+DEFAULT_CACHE_TIMEOUT = 300
+
+Cache = None
+USE_CACHE = False
+
+if settings.API['use_cache']:
+    USE_CACHE = True
+    if settings.API['cache_engine'] == 'redis':
+        Cache = RedisCache(**settings.REDIS)
+    elif settings.API['cache_engine'] == 'memory':
+        Cache = SimpleCache()
+    else:
+        raise Exception('Unsupported cache engine %s' % settings.API['cache_engine'])
 
 Schemas = {}
 
 
 class Cached(object):
-    """ Return cached response, update if timeout
     """
-    def __init__(self, timeout=None):
-        self.timeout = timeout or CACHE_TIMEOUT
+        Return cached response, update if timeout
+    """
+    def __init__(self, timeout=None, current_user=False):
+        self.timeout = timeout or DEFAULT_CACHE_TIMEOUT
+        self.current_user = current_user
+        self.__name__ = 'cache'
 
-    def __call__(self, f):
+    def __call__(self, func):
+        @wraps(func)
         def decorator(*args, **kwargs):
-            response = cache.get(unicode(request.path) + unicode(request.environ['HTTP_X_API_TOKEN']))
+            user = g.user.id if self.current_user else None
+            route = '%s,%s,%s' % (request.path, json.dumps(request.args), user)
+            if not USE_CACHE:
+                return func(*args, **kwargs)
+            response = Cache.get(unicode(route))
             if response is None:
-                response = f(*args, **kwargs)
-                cache.set(unicode(request.path) + unicode(request.environ['HTTP_X_API_TOKEN']), response, self.timeout)
+                response = func(*args, **kwargs)
+                Cache.set(route, response, self.timeout)
+            else:
+                Logger.debug(unicode('get %s from cache, timeout %d' % (route, self.timeout)))
             return response
         return decorator
 
 
-def _reset_database_connection():
-    """ Reset connection to DB
+class InvalidateCache(object):
     """
-    from django import db
-    db.close_connection()
-
-
-def _throw_exception(exception, message):
-    """ Log exception and returns 500
+        Return cached response, update if timeout
     """
-    exception_infos = sys.exc_info()
-    exception_tb = traceback.extract_tb(exception_infos[2])
-    exception_tb = exception_tb[-1]
-    msg = "error - 'exception_type' %s - 'message' %s - 'exc_file' %s - 'exc_line' %s - 'exc_func' %s"
-    msg = msg % (type(exception).__name__, str(exception), exception_tb[0], exception_tb[1], exception_tb[2])
-    msg = msg.replace(':', '').replace('|', '')
-    Logger.debug(unicode(msg))
+    def __init__(self, routes, args=None, clear_for_user=False):
+        self.routes = routes
+        self.args = args if args else {}
+        self.clear_for_user = clear_for_user
+        self.__name__ = 'cache'
 
-    return 500, {'status': 'Internal Server Error', 'code': 500, 'message': message}
+    def __call__(self, func):
+
+        @wraps(func)
+        def decorator(*args, **kwargs):
+            response = func(*args, **kwargs)
+            if not USE_CACHE:
+                return response
+            if response[0] == 200:
+                for path in self.routes:
+                    route = '%s,%s,%s' % (path, json.dumps(self.args), None)
+                    Cache.delete(unicode(route))
+                    user = kwargs.get('user', None) if self.clear_for_user else None
+                    Logger.debug(unicode('clear %s from cache' % (route)))
+                    if user:
+                        route = '%s,%s,%s' % (path, json.dumps(self.args), user)
+                        Cache.delete(unicode(route))
+                        Logger.debug(unicode('clear %s from cache' % (route)))
+            return response
+        return decorator
 
 
-def token_required(func):
-    """ Check HTTP Token
+class TimestampJSONEncoder(json.JSONEncoder):
     """
-    @wraps(func)
-    def check_token(*args, **kwargs):
-        valid, message = GeneralController.check_token(request)
-        if not valid:
-            return 401, {'status': 'Unauthorized', 'code': 401, 'message': message}
-        return func(*args, **kwargs)
-    return check_token
+        JSONEncoder subclass that convert datetime to timestamp
+    """
+    def default(self, o):
+        # See "Date Time String Format" in the ECMA-262 specification.
+        if isinstance(o, datetime.datetime):
+            timestamp = int(mktime(o.timetuple()))
+            return timestamp
+        else:
+            return super(TimestampJSONEncoder, self).default(o)
 
 
 def admin_required(func):
@@ -98,9 +130,8 @@ def admin_required(func):
     """
     @wraps(func)
     def check_admin(*args, **kwargs):
-        user = GeneralController.get_user(request)
-        if not user.is_superuser:
-            return 403, {'status': 'Forbidden', 'code': 403}
+        if not g.user.operator.role.codename == 'admin':
+            return 403, {'status': 'Forbidden', 'code': 403, 'message': 'Forbidden'}
         return func(*args, **kwargs)
     return check_admin
 
@@ -110,51 +141,20 @@ def perm_required(func):
     """
     @wraps(func)
     def check_perm(*args, **kwargs):
-        user = GeneralController.get_user(request)
         if 'report' in kwargs:
-            code, resp = GeneralController.check_perms(method=request.method, user=user, report=kwargs['report'])
+            code, resp = GeneralController.check_perms(method=request.method, user=g.user, report=kwargs['report'])
             if code != 200:
                 return code, resp
         if 'ticket' in kwargs:
-            code, resp = GeneralController.check_perms(method=request.method, user=user, ticket=kwargs['ticket'])
+            code, resp = GeneralController.check_perms(method=request.method, user=g.user, ticket=kwargs['ticket'])
             if code != 200:
                 return code, resp
         if 'defendant' in kwargs and request.method != 'GET':
-            code, resp = GeneralController.check_perms(method=request.method, user=user, defendant=kwargs['defendant'])
+            code, resp = GeneralController.check_perms(method=request.method, user=g.user, defendant=kwargs['defendant'])
             if code != 200:
                 return code, resp
         return func(*args, **kwargs)
     return check_perm
-
-
-def catch_500(func):
-    """ Log Internal Server Error and return 500
-    """
-    @wraps(func)
-    def check_exception(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except BadRequest:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid JSON body'}
-        except (DatabaseError, InterfaceError, OperationalError) as ex:
-            _reset_database_connection()
-            return _throw_exception(ex, 'Database connection lost, please retry')
-        except Exception as ex:
-            return _throw_exception(ex, 'Internal Server Error')
-    return check_exception
-
-
-def json_required(func):
-    """ Decorator to validate JSON input
-    """
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            request.get_json()
-        except Exception:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing or invalid body'}
-        return func(*args, **kwargs)
-    return wrapper
 
 
 def jsonify(func):
@@ -163,7 +163,14 @@ def jsonify(func):
     @wraps(func)
     def decorated_function(*args, **kwargs):
         retval = func(*args, **kwargs)
-        response = Response(dumps(retval[1]), status=retval[0], content_type='application/json')
+        response = Response(
+            json.dumps(
+                retval[1],
+                cls=TimestampJSONEncoder,
+            ),
+            status=retval[0],
+            content_type='application/json'
+        )
         return response
     return decorated_function
 

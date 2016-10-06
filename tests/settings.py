@@ -32,10 +32,44 @@ CUSTOM_IMPLEMENTATIONS = (
     'default.adapters.services.action.impl.DefaultActionService',
 )
 
+CUSTOM_REPORT_WORKFLOWS = (
+    'worker.workflows.report.phishing.PhishingReportWorkflow',
+    'worker.workflows.report.copyright.CopyrightReportWorkflow',
+    'worker.workflows.report.acns.AcnsReportWorkflow',
+)
+
+CUSTOM_TICKET_ANSWER_WORKFLOWS = (
+    'worker.workflows.ticket.mailerdaemon.MailerDaemonWorkflow',
+    'worker.workflows.ticket.customeranswer.CustomerAnswerWorkflow',
+    'worker.workflows.ticket.default.DefaultAnswerWorkflow',
+)
+
+CUSTOM_SCHEDULING_ALGORITHMS = (
+    'api.controllers.scheduling.global.GlobalSchedulingAlgorithm',
+    'api.controllers.scheduling.limitedOpen.LimitedOpenSchedulingAlgorithm',
+)
+
+QUEUE = {
+    'default': {
+        'name': 'default',
+        'default_timeout': 86400,
+    },
+    'email': {
+        'name': 'email',
+        'default_timeout': 86400,
+    },
+    'kpi': {
+        'name': 'kpi',
+        'default_timeout': 1800,
+    },
+}
+
 API = {
     'host': '127.0.0.1',
     'port': 6060,
     'forwarded_host': None,
+    'use_cache': False,
+    'cache_engine': None,  # 'redis' or 'memory'
 }
 
 TAGS = {
@@ -45,6 +79,7 @@ TAGS = {
     'no_autoack': 'never_auto_ack',
     'phishing_autoblocked': 'phishing:autoblocked',
     'phishing_autoclosed': 'phishing:autoclosed',
+    'copyright_autoclosed': 'phishing:autoclosed',
     'phishing_autoreopen': 'phishing:autoreopened',
 }
 
@@ -57,8 +92,10 @@ CODENAMES = {
     'forward_acns': 'forward_acns',
     'no_more_content': 'no_more_content',
     'phishing_blocked': 'phishing_blocked',
-    'phishing_service_blocked': 'phishing_service_blocked',
+    'service_blocked': 'service_blocked',
     'ticket_closed': 'ticket_closed',
+    'not_managed_ip': 'not_managed_ip',
+    'invalid': 'invalid',
 }
 
 GENERAL_CONFIG = {
@@ -71,9 +108,17 @@ GENERAL_CONFIG = {
         'up_threshold': 0,
         'down_threshold': 75,
     },
+    'copyright': {
+        'wait': 172800,
+        'acns_patterns': ('www.acns.net/ACNS',),
+        'trusted_copyright_providers': ['supertrusted@copyrightprovider.com'],
+    },
     'magic_smtp_header': 'Test-Magic-Smtp-Header',
     'report_timeout': 30,
-    'acns_patterns': ('www.acns.net/ACNS',),
+    'mailer_daemon_patterns': [
+        'mailer-daemon',
+        '@my.provider.com'
+    ],
 }
 
 DATABASES = {
@@ -121,11 +166,9 @@ EMAIL_FETCHER = {
 }
 
 REDIS = {
-    'user': '',
     'password': '',
     'host': '127.0.0.1',
     'port': '6379',
-    'name': '',
 }
 
 LOG = {

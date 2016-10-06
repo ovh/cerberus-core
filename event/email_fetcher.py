@@ -44,16 +44,14 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 django.setup()
 
 from django.conf import settings
-from redis import Redis
-from rq import Queue as rq_queue
 
 from adapters.services.storage.abstract import StorageServiceException
 from factory.factory import ImplementationFactory
+from utils import utils
 from utils.logger import get_logger
 
 
 Logger = get_logger(os.path.basename(__file__))
-Worker = rq_queue(connection=Redis())
 
 CHARSETS = ('iso-8859-1', 'iso-8859-15', 'utf-8', 'ascii', 'utf-16', 'windows-1252', 'cp850', 'iso-8859-11')
 HOST = settings.EMAIL_FETCHER['host']
@@ -106,11 +104,10 @@ def push_task_to_worker(filename, email):
         :param str filename: The filename of the email
         :param str email: The content of the email
     """
-    Worker.enqueue(
+    utils.email_queue.enqueue(
         'report.create_from_email',
         email_content=email,
         filename=filename,
-        timeout=7200,
     )
     Logger.info(unicode('Task for email %s successfully created' % (filename)))
 
@@ -169,6 +166,8 @@ class EmailFetcher(object):
         response = {}
         _, data = self._imap_conn.uid('search', None, 'ALL')
         messages = data[0].split()
+
+        Logger.debug(unicode('Still %d emails to fetch' % (len(messages))))
 
         for message_uid in messages[:50]:
             _, data = self._imap_conn.uid('fetch', message_uid, '(RFC822)')

@@ -49,7 +49,7 @@ from rq import Queue
 from rq_scheduler import Scheduler
 from simplejson import JSONDecodeError
 
-from abuse.models import User
+from abuse.models import Role, User
 from logger import get_logger
 
 Logger = get_logger(os.path.basename(__file__))
@@ -60,19 +60,31 @@ CERBERUS_USERS = User.objects.all().values_list('username', flat=True)
 IPS_NETWORKS = {}
 BLACKLISTED_NETWORKS = []
 
-queue = Queue(connection=Redis())
-scheduler = Scheduler(connection=Redis())
-
-redis = Redis(
-    host=settings.REDIS['host'],
-    port=settings.REDIS['port'],
-    password=None,
-    db=0,
+default_queue = Queue(
+    connection=Redis(**settings.REDIS),
+    **settings.QUEUE['default']
 )
+
+email_queue = Queue(
+    connection=Redis(**settings.REDIS),
+    **settings.QUEUE['email']
+)
+
+kpi_queue = Queue(
+    connection=Redis(**settings.REDIS),
+    **settings.QUEUE['kpi']
+)
+
+scheduler = Scheduler(connection=Redis(**settings.REDIS))
+redis = Redis(**settings.REDIS)
 
 html2text.ignore_images = True
 html2text.images_to_alt = True
 html2text.ignore_links = True
+
+DNS_ERROR = {
+    '-2': 'NXDOMAIN'
+}
 
 
 class CryptoException(Exception):
@@ -119,6 +131,45 @@ class Crypto(object):
             return encrypted
         except (InvalidSignature, InvalidToken):
             raise CryptoException('unable to decrypt data')
+
+
+class RoleCache(object):
+    """
+        Class caching allowed API routes for each `abuse.models.Role`
+    """
+    def __init__(self):
+        self.routes = {}
+        self._populate()
+
+    def reset(self):
+        """
+            Reset the cache
+        """
+        self._clear()
+        self._populate()
+
+    def is_valid(self, role, method, endpoint):
+        """
+            Check if tuple (method, endpoint) for given role exists
+
+            :param str role: The `abuse.models.Role` codename
+            :param str method: The HTTP method
+            :param str endpoint: The API endpoint
+            :rtype: bool
+            :returns: if allowed or not
+        """
+        return (method, endpoint) in self.routes[role]
+
+    def _clear(self):
+
+        self.routes = {}
+
+    def _populate(self):
+
+        for role in Role.objects.all():
+            self.routes[role.codename] = []
+            for method, endpoint in role.allowedRoutes.all().values_list('method', 'endpoint'):
+                self.routes[role.codename].append((method, endpoint))
 
 
 class RequestException(Exception):
@@ -241,12 +292,13 @@ def get_ips_from_fqdn(fqdn):
         return None
 
 
-def get_reverses_for_item(item, nature='IP'):
+def get_reverses_for_item(item, nature='IP', replace_exception=False):
     """
         Try to get reverses infos for given item
 
         :param str item: Can be an IP address, a URL or a FQDN
         :param str nature: The nature of the item
+        :param bool replace_exception: Replace socket error by NXDOMAIN or TIMEOUT
         :rtype: dict
         :returns: a dict containing reverse infos
     """
@@ -267,6 +319,7 @@ def get_reverses_for_item(item, nature='IP'):
         if parsed.hostname:
             hostname = parsed.hostname
     else:
+        reverses['fqdn'] = item
         hostname = item
 
     if hostname:
@@ -274,8 +327,18 @@ def get_reverses_for_item(item, nature='IP'):
             reverses['fqdn'] = hostname
             reverses['fqdnResolved'] = socket.gethostbyname(hostname)
             reverses['fqdnResolvedReverse'] = socket.gethostbyaddr(reverses['fqdnResolved'])[0]
-        except (socket.gaierror, socket.error, socket.timeout, socket.herror, IndexError, TypeError):
+        except socket.gaierror as ex:
+            if replace_exception:
+                try:
+                    reverses['fqdnResolved'] = DNS_ERROR[str(ex.args[0])]
+                except KeyError:
+                    reverses['fqdnResolved'] = 'NXDOMAIN'
+        except (socket.error, socket.timeout, socket.herror):
+            if replace_exception:
+                reverses['fqdnResolved'] = 'TIMEOUT'
+        except (IndexError, TypeError):
             pass
+
     return reverses
 
 
@@ -402,3 +465,30 @@ def is_ipaddr_ignored(ip_str):
         if network.netmask.value & ip_addr.value == network.value:
             return True
     return False
+
+
+def is_valid_ipaddr(ip_addr):
+    """
+        Check if the `ip_addr` is a valid ipv4
+
+        :param str ip_str: The IP address
+        :rtype: bool
+        :returns: If the ip_addr is valid
+    """
+    try:
+        validate_ipv46_address(ip_addr)
+        return True
+    except ValidationError:
+        return False
+
+
+def string_to_underscore_case(string):
+    """
+        Convert a string to underscore case
+
+        :param str string: The sting to convert
+        :rtype: str
+        :returns: The converted string
+    """
+    tmp = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', tmp).lower()

@@ -25,16 +25,14 @@
 from flask import Blueprint, request
 
 from api.controllers import TagsController
-from decorators import (admin_required, catch_500, json_required, jsonify,
-                        token_required)
+from decorators import admin_required, Cached, InvalidateCache, jsonify
 
 tag_views = Blueprint('tag_views', __name__)
 
 
 @tag_views.route('/api/tags', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
+@Cached(timeout=43200)
 def get_all_tags():
     """ Returns all abuse tags
     """
@@ -47,8 +45,7 @@ def get_all_tags():
 
 @tag_views.route('/api/tags/types', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
+@Cached(timeout=43200)
 def get_tag_type():
     """ Get status list for ticket or report
     """
@@ -57,8 +54,6 @@ def get_tag_type():
 
 @tag_views.route('/api/tags/<tag>', methods=['GET'])
 @jsonify
-@token_required
-@catch_500
 def get_tag(tag=None):
     """ Return infos for a given tag
     """
@@ -68,10 +63,8 @@ def get_tag(tag=None):
 
 @tag_views.route('/api/tags', methods=['POST'])
 @jsonify
-@token_required
 @admin_required
-@json_required
-@catch_500
+@InvalidateCache(routes=['/api/tags'])
 def create_tag():
     """ Create a new tags
     """
@@ -82,10 +75,8 @@ def create_tag():
 
 @tag_views.route('/api/tags/<tag>', methods=['PUT'])
 @jsonify
-@token_required
 @admin_required
-@json_required
-@catch_500
+@InvalidateCache(routes=['/api/tags'])
 def update_tag(tag=None):
     """ Update an existing tag
     """
@@ -96,9 +87,8 @@ def update_tag(tag=None):
 
 @tag_views.route('/api/tags/<tag>', methods=['DELETE'])
 @jsonify
-@token_required
 @admin_required
-@catch_500
+@InvalidateCache(routes=['/api/tags'])
 def delete_tag(tag=None):
     """ Delete a given tag
     """

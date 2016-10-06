@@ -22,19 +22,21 @@
     Cerberus defendant manager
 """
 
+from collections import Counter
 from time import mktime, time
 
 from django.core.exceptions import FieldError
 from django.db import IntegrityError
-from django.db.models import Q, Count, ObjectDoesNotExist
+from django.db.models import ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
 
-import GeneralController
-from abuse.models import (Category, Defendant, DefendantComment, Stat, Tag,
-                          DefendantRevision, DefendantHistory)
+from abuse.models import (Category, Defendant, DefendantComment,
+                          DefendantHistory, DefendantRevision, Report, Stat,
+                          Tag, Ticket)
 from adapters.dao.customer.abstract import CustomerDaoException
 from factory.factory import ImplementationFactory
-from utils import schema
+from utils import schema, utils
+from worker import database
 
 DEFENDANT_FIELDS = [fld.name for fld in Defendant._meta.fields]
 
@@ -48,23 +50,8 @@ def show(defendant_id):
     except (ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404}
 
-    fresh_defendant_infos = None
-
     # BTW, refresh defendant infos
-    try:
-        fresh_defendant_infos = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_customer_infos(defendant.customerId)
-        schema.valid_adapter_response('CustomerDaoBase', 'get_customer_infos', fresh_defendant_infos)
-        fresh_defendant_infos.pop('customerId', None)
-        if DefendantRevision.objects.filter(**fresh_defendant_infos).count():
-            revision = DefendantRevision.objects.filter(**fresh_defendant_infos).last()
-        else:
-            revision = DefendantRevision.objects.create(**fresh_defendant_infos)
-            DefendantHistory.objects.create(defendant=defendant, revision=revision)
-        defendant.details = revision
-        defendant.save()
-        defendant = Defendant.objects.get(id=defendant_id)
-    except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
-        pass
+    utils.default_queue.enqueue('database.refresh_defendant_infos', defendant_id=defendant.id)
 
     # Flat details
     defendant_dict = model_to_dict(defendant)
@@ -105,7 +92,12 @@ def add_tag(defendant_id, body, user):
             defendt.tags.add(tag)
             defendt.save()
             for ticket in defendt.ticketDefendant.all():
-                GeneralController.log_action(ticket, user, 'add tag %s' % (tag.name))
+                database.log_action_on_ticket(
+                    ticket=ticket,
+                    action='add_tag',
+                    user=user,
+                    tag_name=tag.name
+                )
 
     except (KeyError, FieldError, IntegrityError, ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404}
@@ -126,7 +118,12 @@ def remove_tag(defendant_id, tag_id, user):
             defendt.save()
 
             for ticket in defendt.ticketDefendant.all():
-                GeneralController.log_action(ticket, user, 'remove tag %s' % (tag.name))
+                database.log_action_on_ticket(
+                    ticket=ticket,
+                    action='remove_tag',
+                    user=user,
+                    tag_name=tag.name
+                )
 
     except (ObjectDoesNotExist, FieldError, IntegrityError, ValueError):
         return 404, {'status': 'Not Found', 'code': 404}
@@ -164,19 +161,21 @@ def get_or_create(customer_id=None):
 def get_defendant_top20():
     """ Get top 20 defendant with open tickets/reports
     """
-    res = {'report': [], 'ticket': []}
-    for filtr in res.keys():
-        res[filtr] = Defendant.objects.values(
-            'id', 'customerId', 'details__email'
-        ).annotate(
-            count=Count('%sDefendant' % (filtr))
-        ).filter(
-            ~Q(**{'%sDefendant__status__in' % (filtr): ['Archived', 'Closed']})
-        ).order_by('-count')[:20]
-        for defendant in res[filtr]:
-            defendant['email'] = defendant.pop('details__email')
-        res[filtr] = [dict(r) for r in res[filtr]]
+    ticket = Ticket.objects.filter(~Q(defendant=None), ~Q(status='Closed')).values_list('defendant__id', flat=True)
+    ticket = Counter(ticket).most_common(20)
+    report = Report.objects.filter(~Q(defendant=None), ~Q(status='Archived')).values_list('defendant__id', flat=True)
+    report = Counter(report).most_common(20)
 
+    res = {'report': [], 'ticket': []}
+    for kind in res.keys():
+        for defendant_id, count in locals()[kind]:
+            defendant = Defendant.objects.get(id=defendant_id)
+            res[kind].append({
+                'id': defendant.id,
+                'customerId': defendant.customerId,
+                'email': defendant.details.email,
+                'count': count
+            })
     return 200, res
 
 

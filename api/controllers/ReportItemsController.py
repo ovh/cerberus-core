@@ -24,29 +24,26 @@
 import json
 import operator
 import re
-import socket
 import time
 from Queue import Queue
 from threading import Thread
 from urllib import unquote
-from urlparse import urlparse
 
 from django.core.exceptions import FieldError, ValidationError
 from django.core.validators import URLValidator, validate_ipv46_address
 from django.db import IntegrityError, close_old_connections
-from django.db.models import Q, ObjectDoesNotExist
+from django.db.models import ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
 
-import DefendantsController
-import GeneralController
-import TicketsController
-from abuse.models import ItemScreenshotFeedback, Report, ReportItem, Service
+from abuse.models import (ItemScreenshotFeedback, Report, ReportItem,
+                          Service, Ticket)
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.phishing.abstract import PhishingServiceException
+from api.controllers import DefendantsController, TicketsController
 from factory.factory import ImplementationFactory
 from utils import schema, utils
+from worker import database
 
-socket.setdefaulttimeout(5)
 ITEM_FIELDS = [f.name for f in ReportItem._meta.fields]
 
 DNS_ERROR = {
@@ -135,11 +132,11 @@ def __format_item_response(item, now, queue):
 
         diff = False
         if isinstance(val, list):
-            if item[key] not in val:
+            if item.get(key) and item[key] not in val:
                 current_item_infos[key] = [v for v in val if v != item[key]][0]
                 diff = True
         else:
-            if item[key] != val:
+            if item.get(key) and item[key] != val:
                 diff = True
         if diff:
             current_item_infos['date'] = now
@@ -191,38 +188,11 @@ def __check_item_status(item):
         'rawItem': item['rawItem'],
     }
 
-    hostname = None
-    if item['itemType'] == 'IP':
-        current_item_infos['ip'] = item['rawItem']
-        try:
-            current_item_infos['ipReverse'] = socket.gethostbyaddr(item['ip'])[0]
-            current_item_infos['ipReverseResolved'] = socket.gethostbyname_ex(current_item_infos['ipReverse'])[2]
-        except (IndexError, socket.error, socket.gaierror, socket.herror, socket.timeout, TypeError):
-            pass
-
-    elif item['itemType'] == 'URL':
-        current_item_infos['url'] = item['rawItem']
-        parsed = urlparse(item['rawItem'])
-        hostname = parsed.hostname
-
-    elif item['itemType'] == 'FQDN':
-        current_item_infos['fqdn'] = item['rawItem']
-        hostname = item['rawItem']
-
-    if hostname:
-        try:
-            current_item_infos['fqdn'] = hostname
-            current_item_infos['fqdnResolved'] = socket.gethostbyname_ex(hostname)[2]
-            current_item_infos['fqdnResolvedReverse'] = socket.gethostbyaddr(current_item_infos['fqdnResolved'])[0]
-        except socket.gaierror as ex:
-            try:
-                current_item_infos['fqdnResolved'] = DNS_ERROR[str(ex.args[0])]
-            except KeyError:
-                current_item_infos['fqdnResolved'] = 'NXDOMAIN'
-        except (socket.error, socket.timeout, socket.herror):
-            current_item_infos['fqdnResolved'] = 'TIMEOUT'
-        except (IndexError, TypeError):
-            pass
+    current_item_infos.update(utils.get_reverses_for_item(
+        item['rawItem'],
+        nature=item['itemType'],
+        replace_exception=True,
+    ))
 
     return current_item_infos
 
@@ -268,7 +238,11 @@ def create(body, user):
             return code, resp
         item, created = ReportItem.objects.get_or_create(**resp)
         if resp['report'].ticket:
-            GeneralController.log_action(resp['report'].ticket, user, 'add item')
+            database.log_action_on_ticket(
+                ticket=resp['report'].ticket,
+                action='add_item',
+                user=user
+            )
     except (AttributeError, FieldError, IntegrityError, KeyError, ObjectDoesNotExist) as ex:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
     if not created:
@@ -292,7 +266,11 @@ def update(item_id, body, user):
         ReportItem.objects.filter(pk=item.pk).update(**resp)
         item = ReportItem.objects.get(pk=item.pk)
         if resp['report'].ticket:
-            GeneralController.log_action(resp['report'].ticket, user, 'update item')
+            database.log_action_on_ticket(
+                ticket=resp['report'].ticket,
+                action='update_item',
+                user=user
+            )
     except (AttributeError, FieldError, IntegrityError, KeyError, ObjectDoesNotExist):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
     return show(item_id)
@@ -312,7 +290,11 @@ def __get_item_infos(body, user):
     if code != 200:
         return code, resp
 
-    update_item_infos(item_infos)
+    item_infos.update(utils.get_reverses_for_item(
+        item_infos['rawItem'],
+        nature=item_infos['itemType']
+    ))
+
     code, resp = update_item_report_and_ticket(item_infos, resp['customerId'], resp['service'], user)
     if code != 200:
         return code, resp
@@ -328,7 +310,11 @@ def delete_from_report(item_id, rep, user):
         ReportItem.objects.filter(report=rep, rawItem=item.rawItem).delete()
         report = Report.objects.get(id=rep)
         if report.ticket:
-            GeneralController.log_action(report.ticket, user, 'delete item')
+            database.log_action_on_ticket(
+                ticket=report.ticket,
+                action='delete_item',
+                user=user
+            )
         return 200, {'status': 'OK', 'code': 200, 'message': 'Item successfully removed'}
     except (ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404, 'message': 'Item not found'}
@@ -351,58 +337,46 @@ def get_defendant_from_item(item):
         Get defendant/service for given item
     """
     customer_id = None
-    item['rawItem'] = item['rawItem'].strip()
-    item['rawItem'] = item['rawItem'].replace(' ', '')
-    reg = re.compile(re.escape('hxxpx'), re.IGNORECASE)
-    item['rawItem'] = reg.sub('https', item['rawItem'])
-    reg = re.compile(re.escape('hxxp'), re.IGNORECASE)
-    item['rawItem'] = reg.sub('http', item['rawItem'])
-    item['rawItem'] = item['rawItem'].replace('[.]', '.')
+    item['rawItem'] = _get_deobfuscate_item(item['rawItem'])
 
     try:
-        ip_addr, hostname = get_item_ip_hostname(item)
+        ip_addr, hostname, url = _get_item_ip_hostname_url(item)
         if not ip_addr and not hostname:
             return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Unable to get infos for this item'}
     except ValidationError:
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid item'}
 
-    for i in reversed(range(2, 4)):
-
-        sub_host = None
-        if hostname:
-            sub_host = '.'.join(hostname.split('.')[-i:])
-
+    for param in {'urls': [url]}, {'ips': [ip_addr], 'fqdn': [hostname]}:
         try:
-            services = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_services_from_items(
-                ips=[ip_addr],
-                urls=[sub_host],
-                fqdn=[sub_host],
-            )
+            services = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_services_from_items(**param)
             schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
+            if services:
+                break
         except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
             return 503, {'status': 'Service unavailable', 'code': 503, 'message': 'Unknown exception while identifying defendant'}
 
-        if services:
-            try:
-                customer_id = services[0]['defendant']['customerId']
-                service = services[0]['service']
-                break
-            except (IndexError, KeyError):
-                return 500, {'status': 'Internal Server Error', 'code': 500, 'message': 'Unable to parse CustomerDaoBase response'}
+    if services:
+        try:
+            customer_id = services[0]['defendant']['customerId']
+            service = services[0]['service']
+        except (IndexError, KeyError):
+            return 500, {'status': 'Internal Server Error', 'code': 500, 'message': 'Unable to parse CustomerDaoBase response'}
+
     if not customer_id:
         return 404, {'status': 'No defendant found for this item', 'code': 404}
 
     return 200, {'customerId': customer_id, 'service': service}
 
 
-def get_item_ip_hostname(item):
+def _get_item_ip_hostname_url(item):
     """ Get item infos
     """
-    ip_addr = hostname = None
+    ip_addr = hostname = url = None
     try:
         validate = URLValidator()
         validate(item['rawItem'])
         item['itemType'] = 'URL'
+        url = item['rawItem']
     except ValidationError:
         try:
             validate_ipv46_address(item['rawItem'])
@@ -424,36 +398,7 @@ def get_item_ip_hostname(item):
         if ips:
             ip_addr = ips[0]
 
-    return ip_addr, hostname
-
-
-def update_item_infos(item):
-    """ Update Reverse IP, resolved etc ...
-    """
-    hostname = None
-    if item['itemType'] == 'IP':
-        item['ip'] = item['rawItem']
-        try:
-            item['ipReverse'] = socket.gethostbyaddr(item['ip'])[0]
-            item['ipReverseResolved'] = socket.gethostbyname(item['ipReverse'])
-        except (IndexError, socket.error, socket.gaierror, socket.herror, socket.timeout, TypeError):
-            pass
-
-    elif item['itemType'] == 'URL':
-        item['url'] = item['rawItem']
-        parsed = urlparse(item['rawItem'])
-        hostname = parsed.hostname
-
-    elif item['itemType'] == 'FQDN':
-        hostname = item['rawItem']
-
-    if hostname:
-        try:
-            item['fqdn'] = hostname
-            item['fqdnResolved'] = socket.gethostbyname(hostname)
-            item['fqdnResolvedReverse'] = socket.gethostbyaddr(item['fqdnResolved'])[0]
-        except (IndexError, socket.error, socket.gaierror, socket.herror, socket.timeout, TypeError):
-            pass
+    return ip_addr, hostname, url
 
 
 def update_item_report_and_ticket(item, customer_id, service, user):
@@ -508,3 +453,80 @@ def get_screenshot(item_id, report_id):
         return 200, results
     except (PhishingServiceException, schema.InvalidFormatError, schema.SchemaNotFound):
         return 502, {'status': 'Proxy Error', 'code': 502, 'message': 'Error while loading screenshots'}
+
+
+def get_http_headers(url):
+    """
+        Get HTTP headers for given url
+    """
+    if not url:
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing url'}
+
+    url = _get_deobfuscate_item(url)
+    try:
+        validate = URLValidator()
+        validate(url)
+    except ValidationError:
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Not a valid URL'}
+
+    try:
+        response = ImplementationFactory.instance.get_singleton_of('PhishingServiceBase').get_http_headers(url)
+        schema.valid_adapter_response('PhishingServiceBase', 'get_http_headers', response)
+        return 200, response
+    except (PhishingServiceException, schema.InvalidFormatError, schema.SchemaNotFound) as ex:
+        return 502, {'status': 'Proxy Error', 'code': 502, 'message': str(ex)}
+
+
+def _get_deobfuscate_item(item):
+
+    item = item.strip()
+    item = item.replace(' ', '')
+    reg = re.compile(re.escape('hxxpx'), re.IGNORECASE)
+    item = reg.sub('https', item)
+    reg = re.compile(re.escape('hxxp'), re.IGNORECASE)
+    item = reg.sub('http', item)
+    item = item.replace('[.]', '.')
+    return item
+
+
+def get_whois(item):
+    """
+        Whois-like services based on utils/ips.py
+    """
+    try:
+        item = {'rawItem': _get_deobfuscate_item(item)}
+    except AttributeError:
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid item'}
+
+    try:
+        ip_addr, _, _ = _get_item_ip_hostname_url(item)
+        if not ip_addr:
+            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Unable to get infos for this item'}
+    except ValidationError:
+        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid item'}
+
+    return 200, {'ipCategory': utils.get_ip_network(ip_addr)}
+
+
+def unblock_item(item_id, report_id=None, ticket_id=None):
+    """
+        Unblock given `abuse.models.ReportItem`
+    """
+    try:
+        item = ReportItem.objects.get(id=item_id)
+        if report_id:
+            report = Report.objects.get(id=report_id)
+            if item.report.id != report.id:
+                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Given item not attached to given report'}
+        if ticket_id:
+            ticket = Ticket.objects.get(id=ticket_id)
+            if item.report.id not in ticket.reportTicket.all().values_list('id', flat=True):
+                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Given item not attached to given ticket'}
+    except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
+        return 404, {'status': 'Not Found', 'code': 404}
+
+    utils.default_queue.enqueue(
+        'phishing.unblock_url',
+        url=item.rawItem,
+    )
+    return 200, {'status': 'OK', 'code': 200, 'message': 'Unblocking jobs successfully updated'}

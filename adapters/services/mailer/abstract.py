@@ -25,8 +25,33 @@
 import abc
 from collections import namedtuple
 
-Email = namedtuple('Email', ['sender', 'recipient', 'created', 'subject', 'body'])
-PrefetchedEmail = namedtuple('PrefetchedEmail', ['sender', 'recipients', 'subject', 'body'])  # 'recipients' is a list
+from abuse.models import MailTemplate
+
+Email = namedtuple(
+    'Email',
+    [
+        'sender',       # str
+        'recipient',    # str
+        'created',      # str
+        'subject',      # str
+        'body',         # str
+        'category',     # Category : 'Defendant', 'Plaintiff' or 'Other'  -> EMAIL_VALID_CATEGORIES
+        'attachments'   # List of {'filename'; .... 'content_type': 'text/plain'}
+    ]
+)
+
+PrefetchedEmail = namedtuple(
+    'PrefetchedEmail',
+    [
+        'sender',       # str
+        'recipients',   # list
+        'subject',      # str
+        'body',         # str
+        'category',     # Category : 'Defendant', 'Plaintiff' or 'Other'  -> EMAIL_VALID_CATEGORIES
+    ]
+)
+
+EMAIL_VALID_CATEGORIES = [t[0] for t in MailTemplate.RECIPIENT_TYPE]
 
 
 class MailerServiceException(Exception):
@@ -49,16 +74,18 @@ class MailerServiceBase(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def send_email(self, ticket, recipient, subject, body, sender=None):
+    def send_email(self, ticket, recipient, subject, body, category, sender=None, attachments=None):
         """
             Send a email.
 
-            :param Ticket ticket: A Cerberus ticket instance.
+            :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
             :param str recipient: The recipient of the email
             :param str subject: The subject of the email
             :param str body: The body of the email
+            :param str category: `adapters.services.mailer.abstract.EMAIL_VALID_CATEGORIES`
             :param str sender: Eventually the sender of the email (From)
-            :raises MailerServiceException: if any error occur
+            :param list attachments: The `worker.parsing.parsed.ParsedEmail.attachments` list : [{'content': ..., 'content_type': ... ,'filename': ...}]
+            :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'send_email'" % (cls))
@@ -68,24 +95,39 @@ class MailerServiceBase(object):
         """
             Get all emails for the given ticket
 
-            :param Ticket ticket: A Cerberus ticket instance.
-            :return: A list of Email object
+            :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
+            :return: A list of `adapters.services.mailer.abstract.Email` object
             :rtype: list
-            :raises MailerServiceException: if any error occur
+            :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'get_emails'" % (cls))
 
     @abc.abstractmethod
-    def attach_external_answer(self, ticket, sender, subject, body):
+    def is_email_ticket_answer(self, email):
+        """
+            Returns if the email is an answer to a `abuse.models.Ticket`
+
+            :param `worker.parsing.parser.ParsedEmail` email: The parsed email
+            :return: a list of tuple (`abuse.models.Ticket`, `adapters.services.mailer.abstract.EMAIL_VALID_CATEGORIES`, recipient)
+            :rtype: list
+        """
+        cls = self.__class__.__name__
+        raise NotImplementedError("'%s' object does not implement the method 'is_email_answer'" % (cls))
+
+    @abc.abstractmethod
+    def attach_external_answer(self, ticket, sender, recipient, subject, body, category, attachments=None):
         """
             Usefull if an answer for a ticket come from Phone/CRM/API/CustomerUX/Other mailbox ...
 
-            :param Ticket ticket: A Cerberus ticket instance.
+            :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
             :param str sender: The sender of the email
+            :param str recipient: The recipient of the answer
             :param str subject: The subject of the email
             :param str body: The body of the email
-            :raises MailerServiceException: if any error occur
+            :param str category: `adapters.services.mailer.abstract.EMAIL_VALID_CATEGORIES`
+            :param list attachments: The `worker.parsing.parsed.ParsedEmail.attachments` list : [{'content': ..., 'content_type': ... ,'filename': ...}]
+            :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'attach_external_answer'" % (cls))
@@ -95,13 +137,13 @@ class MailerServiceBase(object):
         """
             Try to fill email template with ticket meta
 
-            :param Ticket ticket: A Cerberus ticket instance.
+            :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
             :param str template: The codename of the template
             :param str lang: The langage to use
             :param int acknowledged_report: Eventually add a report body to the email body (e.g for acknowledgment)
             :return: The prefetched email
-            :rtype: PrefetchedEmail
-            :raises MailerServiceException: if any error occur
+            :rtype: `adapters.services.mailer.abstract.PrefetchedEmail`
+            :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'prefetch_email_from_template'" % (cls))
@@ -111,8 +153,8 @@ class MailerServiceBase(object):
         """
             Usefull for archive/index/notify/send summary to customer
 
-            :param Ticket ticket: A Cerberus ticket instance.
-            :raises MailerServiceException: if any error occur
+            :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
+            :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'close_thread'" % (cls))

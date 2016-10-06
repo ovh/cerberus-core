@@ -17,25 +17,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+    Parsing template for abuse@cloudflare.com
+"""
 
-import inspect
-import os
-import sys
-
-CURRENTDIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-PARENTDIR = os.path.dirname(CURRENTDIR)
-sys.path.insert(0, PARENTDIR)
-
-import regexp
+from worker.parsing import regexp
 
 TEMPLATE = {
     'email': 'abuse@cloudflare.com',
     'regexp': {
         'urls': {
-            'pattern': r'Reported URLs\s*:\s*\n*' + regexp.URL,
+            'pattern': r'Reported\s*URLs\s*:\s*\n*' + regexp.URL,
         },
         'ips': {
-            'pattern': r'The actual IP address hosting (?:.*) is\s*' + regexp.IPV4,
+            'pattern': r'The\s*actual\s*IP\s*address\s*hosting\s*(?:.*)\s*is\s*|The\s*actual\s*host\s*for\s*(?:.*)\s*is\s*' + regexp.IPV4,
         },
         'category': {
             'pattern': r'((.|\n|\r|\t)*)',

@@ -28,14 +28,14 @@ from urllib import unquote
 
 from django.core.exceptions import FieldError
 from django.db import IntegrityError
-from django.db.models import Q, ObjectDoesNotExist, ProtectedError
+from django.db.models import ObjectDoesNotExist, ProtectedError, Q
 from django.forms.models import model_to_dict
 
 from abuse.models import MailTemplate, Ticket
 from adapters.services.mailer.abstract import MailerServiceException
 from factory.factory import ImplementationFactory
 
-LANGUAGES = [language[0] for language in MailTemplate.LANG]
+LANGUAGES = [language[0] for language in MailTemplate.TEMPLATE_LANG]
 RECIPIENTS_TYPE = [r[0] for r in MailTemplate.RECIPIENT_TYPE]
 
 
@@ -149,6 +149,9 @@ def get_prefetch_template(ticket_id, template_id, lang=None, ack_report=None):
         mail_template = MailTemplate.objects.get(id=template_id)
     except (ObjectDoesNotExist, ValueError):
         return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket or email template not found'}
+
+    if not lang and mail_template.recipientType != 'Defendant':
+        lang = 'EN'
 
     try:
         prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(

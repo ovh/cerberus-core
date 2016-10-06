@@ -28,6 +28,7 @@ from django.conf import settings
 from django.db.models import ObjectDoesNotExist
 from rq import get_current_job
 
+import common
 import database
 from abuse.models import (ServiceActionJob, ContactedProvider, Resolution, Ticket,
                           User)
@@ -74,15 +75,22 @@ def apply_if_no_reply(ticket_id=None, action_id=None, ip_addr=None, resolution_i
     ticket.snoozeDuration = None
     ticket.snoozeStart = None
 
+    close_reason = None
     if close and resolution_id:
         __close_ticket(ticket, resolution_id)
-        msg = 'change status from %s to %s, reason : %s' % (ticket.previousStatus, ticket.status, ticket.resolution.codename)
+        close_reason = ticket.resolution.codename
     else:
         ticket.status = 'Alarm'
-        msg = 'change status from %s to %s' % (ticket.previousStatus, ticket.status)
 
-    database.log_action_on_ticket(ticket, msg, user=user)
     ticket.save()
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='change_status',
+        user=user,
+        previous_value=ticket.previousStatus,
+        new_value=ticket.status,
+        close_reason=close_reason
+    )
     Logger.info(unicode('Ticket %d processed. Next !' % (ticket_id)))
 
 
@@ -111,9 +119,14 @@ def apply_then_close(ticket_id=None, action_id=None, ip_addr=None, resolution_id
     ticket = Ticket.objects.get(id=ticket_id)
     user = User.objects.get(id=user_id)
     __close_ticket(ticket, resolution_id)
-    msg = 'change status from %s to %s, reason : %s' % (ticket.previousStatus, ticket.status, ticket.resolution.codename)
-    database.log_action_on_ticket(ticket, msg, user=user)
-    ticket.save()
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='change_status',
+        user=user,
+        previous_value=ticket.previousStatus,
+        new_value=ticket.status,
+        close_reason=ticket.resolution.codename
+    )
     ticket.resolution_id = resolution_id
     ticket.save()
 
@@ -147,6 +160,20 @@ def apply_action(ticket_id=None, action_id=None, ip_addr=None, user_id=None):
         Logger.error(unicode('Ticket %d or user %d cannot be found in DB. Skipping...' % (ticket_id, user_id)))
         return False
 
+    if ticket.status in ['Closed', 'Answered']:
+        __cancel_by_status(ticket)
+        ticket.previousStatus = ticket.status
+        ticket.status = 'ActionError'
+        ticket.save()
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='change_status',
+            user=user,
+            previous_value=ticket.previousStatus,
+            new_value=ticket.status,
+        )
+        return False
+
     # Call action service
     try:
         result = ImplementationFactory.instance.get_singleton_of(
@@ -165,7 +192,13 @@ def apply_action(ticket_id=None, action_id=None, ip_addr=None, user_id=None):
         ticket.previousStatus = ticket.status
         ticket.status = 'ActionError'
         ticket.save()
-        database.log_action_on_ticket(ticket, 'change status from %s to %s' % (ticket.previousStatus, ticket.status))
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='change_status',
+            user=user,
+            previous_value=ticket.previousStatus,
+            new_value=ticket.status,
+        )
         return False
 
 
@@ -181,22 +214,16 @@ def __close_ticket(ticket, resolution_id):
     providers_emails = ContactedProvider.objects.filter(ticket_id=ticket.id).values_list('provider__email', flat=True).distinct()
     providers_emails = list(set(providers_emails))
 
-    prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+    common.send_email(
         ticket,
-        settings.CODENAMES['case_closed'],
+        providers_emails,
+        settings.CODENAMES['case_closed']
     )
-
-    for email in providers_emails:
-        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
-            ticket,
-            email,
-            prefetched_email.subject,
-            prefetched_email.body
-        )
 
     # Close ticket
     if ticket.mailerId:
         ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
+
     ticket.previousStatus = ticket.status
     ticket.status = 'Closed'
     ticket.resolution_id = resolution_id

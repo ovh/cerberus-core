@@ -23,6 +23,7 @@
     Worker for Cerberus
 """
 
+import argparse
 import inspect
 import os
 import sys
@@ -35,6 +36,8 @@ import django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 django.setup()
 
+from django.conf import settings
+from redis import StrictRedis
 from rq import Connection, Queue, Worker
 
 from utils.logger import get_logger
@@ -43,11 +46,16 @@ Logger = get_logger(os.path.basename('worker'))
 
 
 def main():
-    """ Main
     """
-    with Connection():
-        qs = map(Queue, sys.argv[1:]) or [Queue()]
+        Init workers
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--queues', nargs='+', type=unicode, dest='queues', required=True)
+    args = parser.parse_args()
 
+    with Connection(connection=StrictRedis(**settings.REDIS)):
+
+        qs = map(Queue, args.queues) or [Queue()]
         worker = Worker(qs)
         worker.work()
 
