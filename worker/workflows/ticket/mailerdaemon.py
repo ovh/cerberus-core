@@ -24,7 +24,7 @@
 
 from django.conf import settings
 
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from worker import database
 from worker.workflows.ticket.abstract import TicketAnswerWorkflowBase
 

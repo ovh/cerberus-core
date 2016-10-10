@@ -31,7 +31,8 @@ from mock import patch
 from abuse.models import (ServiceAction, ContactedProvider, Report, Provider,
                           Resolution, Ticket, User, UrlStatus)
 from adapters.services.phishing.abstract import PingResponse
-from factory.factory import ImplementationFactory, ReportWorkflowFactory
+from factory.implementation import ImplementationFactory
+from factory.reportworkflow import ReportWorkflowFactory
 from tests import GlobalTestCase
 
 SAMPLES_DIRECTORY = 'tests/samples'

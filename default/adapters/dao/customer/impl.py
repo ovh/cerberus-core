@@ -67,7 +67,7 @@ class DefaultCustomerDao(CustomerDaoBase):
             :param list fqdn: List of fqdn
             :return: The result of the parsing of given items
             :rtype: dict
-            :raises CustomerDaoException: if any error occur
+            :raises `adapters.dao.customer.abstract.CustomerDaoException`: if any error occur
         """
         response = []
         if ips:  # Totally absurd example, just keep managed IPs
@@ -86,7 +86,7 @@ class DefaultCustomerDao(CustomerDaoBase):
             :param str customer_id: The reference to the customer
             :return: A `adapters.dao.customer.abstract.DefendantClass` instance
             :rtype: `adapters.dao.customer.abstract.DefendantClass`
-            :raises CustomerDaoException: if any error occur
+            :raises `adapters.dao.customer.abstract.CustomerDaoException`: if any error occur
         """
         if customer_id == JOHN_DOE['customerId']:
             return DefendantClass(**JOHN_DOE)
@@ -101,7 +101,7 @@ class DefaultCustomerDao(CustomerDaoBase):
             :param str service_id: The reference to the service
             :return: A `adapters.dao.customer.abstract.ServiceClass` instance
             :rtype: `adapters.dao.customer.abstract.ServiceClass`
-            :raises CustomerDaoException: if any error occur
+            :raises `adapters.dao.customer.abstract.CustomerDaoException`: if any error occur
         """
         if service_id == DEFAULT_SERVICE['serviceId']:
             return ServiceClass(**DEFAULT_SERVICE)
@@ -130,7 +130,7 @@ class DefaultCustomerDao(CustomerDaoBase):
             :param str customer_id: The reference to the customer
             :return: The list of services
             :rtype: list
-            :raises CustomerDaoException: if any error occur
+            :raises `adapters.dao.customer.abstract.CustomerDaoException`: if any error occur
         """
         response = [{
             'zone': 'EMEA',

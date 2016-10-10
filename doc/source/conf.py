@@ -25,7 +25,7 @@ import django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 django.setup()
 
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the

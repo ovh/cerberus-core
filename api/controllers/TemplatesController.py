@@ -33,7 +33,7 @@ from django.forms.models import model_to_dict
 
 from abuse.models import MailTemplate, Ticket
 from adapters.services.mailer.abstract import MailerServiceException
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 
 LANGUAGES = [language[0] for language in MailTemplate.TEMPLATE_LANG]
 RECIPIENTS_TYPE = [r[0] for r in MailTemplate.RECIPIENT_TYPE]

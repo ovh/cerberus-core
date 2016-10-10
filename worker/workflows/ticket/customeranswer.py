@@ -22,7 +22,7 @@
     Defined Customer Answer workflow
 """
 
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from utils import utils
 from worker import database
 from worker.workflows.ticket.abstract import TicketAnswerWorkflowBase

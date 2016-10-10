@@ -46,7 +46,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from flask import Flask, g, jsonify, request
 
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from utils import logger, utils
 
 

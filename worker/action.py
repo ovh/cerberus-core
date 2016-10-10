@@ -33,7 +33,7 @@ import database
 from abuse.models import (ServiceActionJob, ContactedProvider, Resolution, Ticket,
                           User)
 from adapters.services.action.abstract import ActionServiceException
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from worker import Logger
 
 

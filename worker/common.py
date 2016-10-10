@@ -29,7 +29,7 @@ from django.core.validators import validate_email
 
 import database
 from abuse.models import Proof, Resolution, User
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from utils import utils
 from parsing import regexp
 

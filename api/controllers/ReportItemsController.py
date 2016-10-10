@@ -40,7 +40,7 @@ from abuse.models import (ItemScreenshotFeedback, Report, ReportItem,
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.phishing.abstract import PhishingServiceException
 from api.controllers import DefendantsController, TicketsController
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from utils import schema, utils
 from worker import database
 

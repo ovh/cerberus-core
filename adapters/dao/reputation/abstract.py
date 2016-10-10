@@ -61,7 +61,7 @@ class ReputationDaoBase(object):
             :param str ip_addr: The IP address.
             :return: Check against different RBL providers
             :rtype: list
-            :raises ReputationDaoException: if any error occur
+            :raises `adapters.dao.reputation.abstract.ReputationDaoException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'get_ip_rbl_reputations'" % (cls))
@@ -84,7 +84,7 @@ class ReputationDaoBase(object):
             :param str ip_addr: The IP address.
             :return: Check against different external providers
             :rtype: list
-            :raises ReputationDaoException: if any error occur
+            :raises `adapters.dao.reputation.abstract.ReputationDaoException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'get_ip_external_reputations'" % (cls))
@@ -113,7 +113,7 @@ class ReputationDaoBase(object):
             :param str short_name: The short_name of the provider
             :return: Details for provider
             :rtype: list
-            :raises ReputationDaoException: if any error occur
+            :raises `adapters.dao.reputation.abstract.ReputationDaoException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'get_ip_external_details'" % (cls))
@@ -136,7 +136,7 @@ class ReputationDaoBase(object):
             :param str url: The URL.
             :return: Check against different external providers
             :rtype: list
-            :raises ReputationDaoException: if any error occur
+            :raises `adapters.dao.reputation.abstract.ReputationDaoException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'get_url_external_reputations'" % (cls))
@@ -161,7 +161,7 @@ class ReputationDaoBase(object):
             :param str ip_addr: The IP address.
             :return: Check against different internal providers
             :rtype: list
-            :raises ReputationDaoException: if any error occur
+            :raises `adapters.dao.reputation.abstract.ReputationDaoException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'get_ip_internal_reputations'" % (cls))

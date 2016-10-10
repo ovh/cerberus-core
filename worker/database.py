@@ -39,7 +39,7 @@ from abuse.models import (Category, DefendantRevision, Defendant, EmailFilterTag
 
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.kpi.abstract import KPIServiceException
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from parsing import regexp
 from utils import schema, utils
 from worker import Logger

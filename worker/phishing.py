@@ -34,7 +34,7 @@ import database
 
 from abuse.models import Proof, Report, Tag, Ticket, User
 from adapters.services.phishing.abstract import PhishingServiceException
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from worker import Logger
 
 BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])

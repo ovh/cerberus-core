@@ -62,7 +62,7 @@ class PhishingServiceBase(object):
             :return: A PingResponse object containing these infos:
                 direct_status, proxied_status, http_code, score (0 for 'UP' to 100 for 'DOWN') and is_phishing (computed by your solution)
             :rtype: PingResponse
-            :raises PhishingServiceException: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'ping_url'" % (cls))
@@ -102,7 +102,7 @@ class PhishingServiceBase(object):
             :param int limit: Limit the number of screenshots returned
             :return: A list containing screenshots infos
             :rtype: list
-            :raises PhishingServiceException: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'get_screenshots'" % (cls))
@@ -137,7 +137,7 @@ class PhishingServiceBase(object):
             :param str screenshot_id : The uuid of the screenshot
             :return: Details about screenshot
             :rtype: dict
-            :raises PhishingServiceException: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'is_screenshot_viewed'" % (cls))
@@ -149,7 +149,7 @@ class PhishingServiceBase(object):
 
             :param str screenshot_id: The uuid of the screenshot
             :param bool isphishing: Yes or not it is a phishing url
-            :raises PhishingServiceException: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'post_feedback'" % (cls))
@@ -161,7 +161,7 @@ class PhishingServiceBase(object):
 
             :param str url: The URL to block
             :param `abuse.models.Report` report: The associated report
-            :raises PhishingServiceException: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'block_url'" % (cls))
@@ -172,7 +172,7 @@ class PhishingServiceBase(object):
             Unblock a phishing url
 
             :param str url: The URL to block
-            :raises PhishingServiceException: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'unblock_url'" % (cls))
@@ -200,7 +200,7 @@ class PhishingServiceBase(object):
             :param str url: The URL to block
             :return: Details about headers
             :rtype: dict
-            :raises PhishingServiceException: if any error occur
+            :raises `adapters.services.phishing.abstract.PhishingServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'get_http_headers'" % (cls))

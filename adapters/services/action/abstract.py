@@ -55,7 +55,7 @@ class ActionServiceBase(object):
             :param int action: The id of the Cerberus `abuse.models.ServiceAction`
             :param str ip_addr: The IP address
             :param in user: The id of the Cerberus User
-            :raises ActionServiceException: if any error occur
+            :raises `adapters.services.action.abstract.ActionServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'apply_action_on_service'" % (cls))
@@ -68,7 +68,7 @@ class ActionServiceBase(object):
             :param `abuse.models.Ticket` ticket: A Cerberus `abuse.models.Ticket` instance
             :rtype: `abuse.models.ServiceAction`
             :returns: The `abuse.models.ServiceAction` to apply
-            :raises ActionServiceException: if any error occur
+            :raises `adapters.services.action.abstract.ActionServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'get_action_for_timeout'" % (cls))

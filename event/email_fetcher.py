@@ -46,7 +46,7 @@ django.setup()
 from django.conf import settings
 
 from adapters.services.storage.abstract import StorageServiceException
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from utils import utils
 from utils.logger import get_logger
 

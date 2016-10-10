@@ -28,7 +28,7 @@ from django.conf import settings
 
 from abuse.models import Proof, Resolution, Ticket
 
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from worker.workflows.report.abstract import ReportWorkflowBase
 from worker.parsing import regexp
 

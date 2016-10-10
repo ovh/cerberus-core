@@ -39,11 +39,11 @@ class DefaultActionService(ActionServiceBase):
         """
             Apply given action on service
 
-            :param int ticket: The id of the Cerberus `Ticket`
-            :param int action: The id of the Cerberus `ServiceAction`
+            :param int ticket: The id of the Cerberus `abuse.models.Ticket`
+            :param int action: The id of the Cerberus `abuse.models.ServiceAction`
             :param str ip_addr: The IP address
-            :param in user: The id of the Cerberus `User`
-            :raises ActionServiceException: if any error occur
+            :param int user: The id of the Cerberus `User`
+            :raises `adapters.services.action.abstract.ActionServiceException`: if any error occur
         """
         if not isinstance(ticket, Ticket):
             try:
@@ -64,7 +64,7 @@ class DefaultActionService(ActionServiceBase):
         """
             Returns action to apply when ticket timeout
 
-            :param `Ticket` ticket: A Cerberus `ticket` instance
+            :param `abuse.models.Ticket` ticket: A Cerberus Ticket instance
             :rtype: `abuse.models.ServiceAction`
             :returns: The `abuse.models.ServiceAction` to apply
         """

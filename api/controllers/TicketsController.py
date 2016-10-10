@@ -51,8 +51,8 @@ from adapters.services.search.abstract import SearchServiceException
 from adapters.services.storage.abstract import StorageServiceException
 from api.controllers import (DefendantsController, GeneralController,
                              ProvidersController)
-from factory.factory import (ImplementationFactory,
-                             TicketSchedulingAlgorithmFactory)
+from factory.implementation import ImplementationFactory
+from factory.ticketscheduling import TicketSchedulingAlgorithmFactory
 from utils import utils
 from worker import database
 from worker.parsing import regexp

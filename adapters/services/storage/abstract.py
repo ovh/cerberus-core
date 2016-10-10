@@ -67,7 +67,7 @@ class StorageServiceBase(object):
             :param str object_name: Unique object name to be read
             :rtype: raw
             :return:  Content of the object
-            :raises StorageServiceException: if any error occur (ie: object cannot be found)
+            :raises `adapters.services.storage.abstract.StorageServiceException`: if any error occur (ie: object cannot be found)
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'read'" % (cls))
@@ -81,7 +81,7 @@ class StorageServiceBase(object):
             :param raw data: Associated data (might be binary content)
             :rtype: bool
             :return: `True` if everything went ok, `False` otherwise
-            :raises StorageServiceException: if any error occur
+            :raises `adapters.services.storage.abstract.StorageServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'write'" % (cls))
@@ -92,7 +92,7 @@ class StorageServiceBase(object):
             Triggered when an object must be removed.
 
             :param str object_name: Unique object name that must be removed
-            :raises StorageServiceException: if any error occur
+            :raises `adapters.services.storage.abstract.StorageServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'delete'" % (cls))

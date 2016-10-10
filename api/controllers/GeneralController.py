@@ -46,7 +46,7 @@ from django.forms.models import model_to_dict
 from abuse.models import (AbusePermission, Category, MassContact,
                           MassContactResult, Profile, Report, ReportItem,
                           Resolution, Tag, Ticket, Operator, Role)
-from factory.factory import TicketSchedulingAlgorithmFactory
+from factory.ticketscheduling import TicketSchedulingAlgorithmFactory
 from utils import logger, utils
 from worker import database
 

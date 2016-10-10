@@ -29,7 +29,7 @@ from mock import patch
 
 from abuse.models import (ContactedProvider, Defendant, Report, User, Stat,
                           ReportThreshold, DefendantHistory)
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from tests import GlobalTestCase
 
 SAMPLES_DIRECTORY = 'tests/samples'

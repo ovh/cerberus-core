@@ -47,7 +47,7 @@ from adapters.services.storage.abstract import StorageServiceException
 from api.controllers import (DefendantsController, GeneralController,
                              ProvidersController, ReportItemsController,
                              TicketsController)
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from utils import utils
 from worker import database
 

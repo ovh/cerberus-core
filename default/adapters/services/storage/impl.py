@@ -39,7 +39,7 @@ class FilesystemStorageService(StorageServiceBase):
             Constructor
 
             :param str context: Root directory where files are stored
-            :raises StorageServiceException: If root directory creation failed
+            :raises `adapters.services.storage.abstract.StorageServiceException`: If root directory creation failed
         """
         self._root_dir = context
 
@@ -63,7 +63,7 @@ class FilesystemStorageService(StorageServiceBase):
             :param str filename: file to read
             :rtype: raw
             :return:  Content of the file
-            :raises StorageServiceException: if file does not exist
+            :raises `adapters.services.storage.abstract.StorageServiceException`: if file does not exist
         """
         target = os.path.join(self._root_dir, filename)
 
@@ -84,7 +84,7 @@ class FilesystemStorageService(StorageServiceBase):
             :param raw data: Associated data (might be binary content)
             :rtype: bool
             :return: `True` if everything went ok, `False` otherwise
-            :raises StorageServiceException: if any error occur
+            :raises `adapters.services.storage.abstract.StorageServiceException`: if any error occur
         """
         try:
             target = os.path.join(self._root_dir, filename)
@@ -106,7 +106,7 @@ class FilesystemStorageService(StorageServiceBase):
             Remove an existing file.
 
             :param str filename: Name of the file to remove
-            :raises StorageServiceException: if any error occur
+            :raises `adapters.services.storage.abstract.StorageServiceException`: if any error occur
         """
         try:
             target = os.path.join(self._root_dir, filename)

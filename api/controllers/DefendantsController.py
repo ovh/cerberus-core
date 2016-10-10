@@ -34,7 +34,7 @@ from abuse.models import (Category, Defendant, DefendantComment,
                           DefendantHistory, DefendantRevision, Report, Stat,
                           Tag, Ticket)
 from adapters.dao.customer.abstract import CustomerDaoException
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from utils import schema, utils
 from worker import database
 

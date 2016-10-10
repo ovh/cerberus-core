@@ -38,8 +38,9 @@ from abuse.models import (AttachedDocument, Defendant, Proof, Report,
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.mailer.abstract import MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
-from factory.factory import (ImplementationFactory, ReportWorkflowFactory,
-                             TicketAnswerWorkflowFactory)
+from factory.implementation import ImplementationFactory
+from factory.reportworkflow import ReportWorkflowFactory
+from factory.ticketanswerworkflow import TicketAnswerWorkflowFactory
 from parsing.parser import EmailParser
 from utils import pglocks, schema, utils
 from worker import Logger
@@ -58,9 +59,9 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         :param str filename: The name of the raw email file
         :param str lang: Langage to use if send_ack is True
         :param bool send_ack: If an acknowledgment have to be sent to provider
-        :raises CustomerDaoException: if exception while identifying defendants from items
-        :raises MailerServiceException: if exception while updating ticket's emails
-        :raises StorageServiceException: if exception while accessing storage
+        :raises `adapters.dao.customer.abstract.CustomerDaoException`: if exception while identifying defendants from items
+        :raises `adapters.services.mailer.abstract.MailerServiceException: if exception while updating ticket's emails
+        :raises `adapters.services.storage.abstract.StorageServiceException: if exception while accessing storage
     """
     # This function use a lock/commit_on_succes on db when creating reports
     #

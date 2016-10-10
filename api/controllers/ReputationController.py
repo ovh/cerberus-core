@@ -26,7 +26,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator, validate_ipv4_address
 
 from adapters.dao.reputation.abstract import ReputationDaoException
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 
 
 def get_ip_rbl_reputation(ip_addr):

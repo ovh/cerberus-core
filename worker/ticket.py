@@ -46,7 +46,7 @@ from abuse.models import (Category, Comment, ContactedProvider,
                           Resolution, Tag, Ticket, TicketComment,
                           ServiceActionJob, User)
 from adapters.dao.customer.abstract import CustomerDaoException
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from utils import pglocks, schema, utils
 from worker import Logger
 
