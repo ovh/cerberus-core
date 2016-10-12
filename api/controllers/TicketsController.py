@@ -788,8 +788,6 @@ def add_proof(ticket_id, body, user):
 
     for param in body:
         try:
-            for email in re.findall(regexp.EMAIL, param['content']):  # Remove potentially sensitive emails
-                param['content'] = param['content'].replace(email, 'email-removed@provider.com')
             ticket.proof.create(**param)
             ticket.save()
             database.log_action_on_ticket(
