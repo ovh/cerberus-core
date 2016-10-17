@@ -98,7 +98,7 @@ class InvalidateCache(object):
             response = func(*args, **kwargs)
             if not USE_CACHE:
                 return response
-            if response[0] == 200:
+            if response[0] in (200, 201):
                 for path in self.routes:
                     route = '%s,%s,%s' % (path, json.dumps(self.args), None)
                     Cache.delete(unicode(route))
