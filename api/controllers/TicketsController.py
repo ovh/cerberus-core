@@ -55,7 +55,6 @@ from factory.implementation import ImplementationFactory
 from factory.ticketscheduling import TicketSchedulingAlgorithmFactory
 from utils import utils
 from worker import database
-from worker.parsing import regexp
 
 
 IP_CIDR_RE = re.compile(r"(?<!\d\.)(?<!\d)(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}(?!\d|(?:\.\d))")
