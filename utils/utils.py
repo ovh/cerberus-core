@@ -333,10 +333,10 @@ def get_reverses_for_item(item, nature='IP', replace_exception=False):
                     reverses['fqdnResolved'] = DNS_ERROR[str(ex.args[0])]
                 except KeyError:
                     reverses['fqdnResolved'] = 'NXDOMAIN'
-        except (socket.error, socket.timeout, socket.herror):
+        except socket.timeout:
             if replace_exception:
                 reverses['fqdnResolved'] = 'TIMEOUT'
-        except (IndexError, TypeError):
+        except (IndexError, TypeError, socket.error, socket.herror):
             pass
 
     return reverses
