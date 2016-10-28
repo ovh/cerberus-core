@@ -523,10 +523,10 @@ def unblock_item(item_id, report_id=None, ticket_id=None):
             if item.report.id not in ticket.reportTicket.all().values_list('id', flat=True):
                 return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Given item not attached to given ticket'}
     except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        return 404, {'status': 'Not Found', 'code': 404, 'Item not found'}
 
     utils.default_queue.enqueue(
         'phishing.unblock_url',
         url=item.rawItem,
     )
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Unblocking jobs successfully updated'}
+    return 200, {'status': 'OK', 'code': 200, 'message': 'Unblocking job successfully scheduled'}
