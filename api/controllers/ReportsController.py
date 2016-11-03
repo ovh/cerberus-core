@@ -39,6 +39,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import FieldDoesNotExist, ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
 from netaddr import AddrConversionError, AddrFormatError, IPNetwork
+from werkzeug.exceptions import BadRequest, Forbidden
 
 from abuse.models import (AbusePermission, AttachedDocument, Defendant,
                           Plaintiff, Report, ReportItem, Service, Tag, Ticket)
@@ -495,28 +496,22 @@ def get_attachment(report_id, attachment_id):
     return 200, resp
 
 
-@transaction.commit_manually
+@transaction.atomic
 def bulk_add(body, user, method):
     """ Update multiple reports
     """
     if not body.get('reports') or not body.get('properties'):
-        transaction.rollback()
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing reports or properties in body'}
 
     try:
         reports = Report.objects.filter(id__in=list(body['reports']))
     except (TypeError, ValueError):
-        transaction.rollback()
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid report(s) id'}
 
     for report in reports:
-        code, resp = GeneralController.check_perms(method=method, user=user, report=report.id)
-        if code != 200:
-            transaction.rollback()
-            return code, resp
+        GeneralController.check_perms(method=method, user=user, report=report.id)
 
     if 'status' in body['properties'] and body['properties']['status'].lower() not in STATUS:
-        transaction.rollback()
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Status not supported'}
 
     # Update tags
@@ -525,7 +520,6 @@ def bulk_add(body, user, method):
             for tag in body['properties']['tags']:
                 code, resp = add_tag(report.id, tag)
                 if code != 200:
-                    transaction.rollback()
                     return code, resp
 
     valid_fields = ['category', 'status', 'ticket']
@@ -535,32 +529,25 @@ def bulk_add(body, user, method):
     for report in reports:
         code, resp = update(report.id, properties, user)
         if code != 200:
-            transaction.rollback()
             return code, resp
 
-    transaction.commit()
     return 200, {'status': 'OK', 'code': 200, 'message': 'Report(s) successfully updated'}
 
 
-@transaction.commit_manually
+@transaction.atomic
 def bulk_delete(body, user, method):
     """ Delete infos from multiple tickets
     """
     if not body.get('reports') or not body.get('properties'):
-        transaction.rollback()
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing reports or properties in body'}
 
     try:
         reports = Report.objects.filter(id__in=list(body['reports']))
     except (TypeError, ValueError):
-        transaction.rollback()
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid report(s) id'}
 
     for report in reports:
-        code, resp = GeneralController.check_perms(method=method, user=user, ticket=report.id)
-        if code != 200:
-            transaction.rollback()
-            return code, resp
+        GeneralController.check_perms(method=method, user=user, ticket=report.id)
 
     # Update tags
     try:
@@ -569,13 +556,10 @@ def bulk_delete(body, user, method):
                 for tag in body['properties']['tags']:
                     code, resp = remove_tag(report.id, tag['id'])
                     if code != 200:
-                        transaction.rollback()
                         return code, resp
     except (KeyError, TypeError, ValueError):
-        transaction.rollback()
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid or missing tag(s) id'}
 
-    transaction.commit()
     return 200, {'status': 'OK', 'code': 200, 'message': 'Report(s) successfully updated'}
 
 

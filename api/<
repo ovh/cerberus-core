@@ -99,15 +99,16 @@ class InvalidateCache(object):
             response = func(*args, **kwargs)
             if not USE_CACHE:
                 return response
-            for path in self.routes:
-                route = '%s,%s,%s' % (path, json.dumps(self.args), None)
-                Cache.delete(unicode(route))
-                user = kwargs.get('user', None) if self.clear_for_user else None
-                Logger.debug(unicode('clear %s from cache' % (route)))
-                if user:
-                    route = '%s,%s,%s' % (path, json.dumps(self.args), user)
+            if response[0] in (200, 201):
+                for path in self.routes:
+                    route = '%s,%s,%s' % (path, json.dumps(self.args), None)
                     Cache.delete(unicode(route))
+                    user = kwargs.get('user', None) if self.clear_for_user else None
                     Logger.debug(unicode('clear %s from cache' % (route)))
+                    if user:
+                        route = '%s,%s,%s' % (path, json.dumps(self.args), user)
+                        Cache.delete(unicode(route))
+                        Logger.debug(unicode('clear %s from cache' % (route)))
             return response
         return decorator
 
@@ -149,13 +150,13 @@ def perm_required(func):
             )
         if 'ticket' in kwargs:
             GeneralController.check_perms(
-                method=request.method,
+                method=request.method, 
                 user=g.user,
                 ticket=kwargs['ticket']
             )
         if 'defendant' in kwargs and request.method != 'GET':
             GeneralController.check_perms(
-                method=request.method,
+                method=request.method, 
                 user=g.user,
                 defendant=kwargs['defendant']
             )

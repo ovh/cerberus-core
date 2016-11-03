@@ -23,9 +23,11 @@
 """
 
 from flask import Blueprint, g, request
+from voluptuous import Optional
 
 from api.controllers import CategoriesController
-from decorators import admin_required, Cached, InvalidateCache, jsonify
+from decorators import (admin_required, Cached, InvalidateCache,
+                        jsonify, validate_body)
 
 category_views = Blueprint('category_views', __name__)
 
@@ -98,6 +100,11 @@ def get_category(category=None):
 @jsonify
 @admin_required
 @InvalidateCache(routes=['/api/categories'])
+@validate_body({
+    'description': unicode,
+    'name': unicode,
+    'label': unicode
+})
 def create_category():
     """
     Create a new category
@@ -118,6 +125,11 @@ def create_category():
 @jsonify
 @admin_required
 @InvalidateCache(routes=['/api/categories'])
+@validate_body({
+    'description': unicode,
+    Optional('name'): unicode,
+    'label': unicode
+})
 def update_category(category=None):
     """
     Update given `category`

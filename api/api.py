@@ -31,6 +31,7 @@ import time
 import traceback
 
 from datetime import datetime
+from time import mktime
 
 CURRENTDIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 PARENTDIR = os.path.dirname(CURRENTDIR)
@@ -44,7 +45,9 @@ django.setup()
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from flask import Flask, g, jsonify, request
+from flask import Flask, g, jsonify, request, Response
+from werkzeug.exceptions import (BadRequest, default_exceptions, Forbidden,
+                                 HTTPException, Unauthorized)
 
 from factory.implementation import ImplementationFactory
 from utils import logger, utils
@@ -52,6 +55,71 @@ from utils import logger, utils
 
 CRYPTO = utils.Crypto()
 RoleCache = utils.RoleCache()
+UNAUTHENTICATED_ENDPOINTS = (
+    'misc_views.auth',
+    'misc_views.monitor'
+)
+
+
+class JSONExceptionHandler(object):
+
+    def __init__(self, app=None):
+        if app:
+            self.init_app(app)
+
+    def std_handler(self, error):
+        response = jsonify(
+            code=error.code,
+            status=error.name,
+            message=error.description
+        )
+        response.status_code = error.code if isinstance(error, HTTPException) else 500
+        return response
+
+    def init_app(self, app):
+        self.app = app
+        self.register(HTTPException)
+        for code, v in default_exceptions.iteritems():
+            self.register(code)
+
+    def register(self, exception_or_code, handler=None):
+        self.app.errorhandler(exception_or_code)(handler or self.std_handler)
+
+
+class TimestampJSONEncoder(json.JSONEncoder):
+    """
+        JSONEncoder subclass that convert datetime to timestamp
+    """
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            timestamp = int(mktime(obj.timetuple()))
+            return timestamp
+        else:
+            return super(TimestampJSONEncoder, self).default(obj)
+
+
+class CerberusResponse(Response):  # pylint: disable=too-many-ancestors
+    """
+        This class wraps FlasK/Werkzeug Response to handle Json
+    """
+    @classmethod
+    def force_type(cls, rv, environ=None):
+        if isinstance(rv, dict) or isinstance(rv, list):
+            rv = Response(
+                json.dumps(
+                    rv,
+                    cls=TimestampJSONEncoder,
+                ),
+                content_type='application/json'
+            )
+        return super(CerberusResponse, cls).force_type(rv, environ)
+
+
+class CerberusApp(Flask):
+    """
+        Thi class set Flask Response to `api.api.CerberusResponse`
+    """
+    response_class = CerberusResponse
 
 
 def create_app():
@@ -71,7 +139,8 @@ def create_app():
     from views.tickets import ticket_views
     from views.thresholds import threshold_views
 
-    app = Flask(__name__)
+    app = CerberusApp(__name__)
+    JSONExceptionHandler(app)
     app.register_blueprint(category_views)
     app.register_blueprint(defendant_views)
     app.register_blueprint(email_templates_views)
@@ -103,30 +172,27 @@ def create_app():
             Check if there is a body for POST, PUT and PATCH methods
         """
         # Check json body
-        if request.method in ['POST', 'PUT', 'PATCH']:
+        if request.method in ('POST', 'PUT', 'PATCH'):
             try:
                 request.get_json()
             except Exception:
-                return jsonify({'status': 'Bad Request', 'code': 400, 'message': 'Missing or invalid body'}), 400
+                raise BadRequest('Missing or invalid body')
 
     @app.before_request
     def check_token():
         """
             Get login from HTTP header
         """
-        if request.method == 'OPTIONS':
-            return
-
-        if request.endpoint in ['misc_views.auth', 'misc_views.monitor']:
+        if request.method == 'OPTIONS' or request.endpoint in UNAUTHENTICATED_ENDPOINTS:
             return
 
         valid, message = _check_headers()
         if not valid:
-            return jsonify({'status': 'Unauthorized', 'code': 401, 'message': message}), 401
+            return Unauthorized(message)
 
         valid, message = _check_allowed_routes()
         if not valid:
-            return jsonify({'status': 'Forbidden', 'code': 403, 'message': message}), 403
+            return Forbidden(message)
 
     def _check_headers():
 
@@ -148,7 +214,8 @@ def create_app():
                 user.last_login = datetime.now()
                 user.save()
                 return True, None
-        except (utils.CryptoException, jwt.ExpiredSignature, jwt.DecodeError, User.DoesNotExist, KeyError):
+        except (utils.CryptoException, jwt.ExpiredSignature, jwt.DecodeError,
+                User.DoesNotExist, KeyError):
             return False, 'Unable to authenticate'
 
     def _check_allowed_routes():
@@ -203,12 +270,18 @@ def create_app():
         _reset_database_connection()
         exception_infos = sys.exc_info()
         exception_tb = traceback.extract_tb(exception_infos[2])[-1]
-        msg = "error - 'exception_type' %s - 'message' %s - 'exc_file' %s - 'exc_line' %s - 'exc_func' %s"
-        msg = msg % (type(exception).__name__, str(exception), exception_tb[0], exception_tb[1], exception_tb[2])
+        msg = "error - 'exc_type' {} - 'msg' {} - 'exc_file' {} - 'exc_line' {} - 'exc_func' {}"
+        msg = msg.format(
+            type(exception).__name__,
+            str(exception),
+            exception_tb[0],
+            exception_tb[1],
+            exception_tb[2]
+        )
         msg = msg.replace(':', '').replace('|', '')
         Logger.debug(unicode(msg))
 
-        return jsonify({'status': 'Internal Server Error', 'code': 500, 'message': 'Internal Server Error'}), 500
+        return {'message': 'Internal Server Error'}, 500
 
     def _reset_database_connection():
         """

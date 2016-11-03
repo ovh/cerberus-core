@@ -460,21 +460,23 @@ def get_http_headers(url):
         Get HTTP headers for given url
     """
     if not url:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing url'}
+        return {'message': 'Missing url'}, 400
 
     url = _get_deobfuscate_item(url)
     try:
         validate = URLValidator()
         validate(url)
     except ValidationError:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Not a valid URL'}
+        return {'message': 'Not a valid URL'}, 400
 
     try:
-        response = ImplementationFactory.instance.get_singleton_of('PhishingServiceBase').get_http_headers(url)
+        response = ImplementationFactory.instance.get_singleton_of(
+            'PhishingServiceBase'
+        ).get_http_headers(url)
         schema.valid_adapter_response('PhishingServiceBase', 'get_http_headers', response)
-        return 200, response
+        return response
     except (PhishingServiceException, schema.InvalidFormatError, schema.SchemaNotFound) as ex:
-        return 502, {'status': 'Proxy Error', 'code': 502, 'message': str(ex)}
+        return {'message': str(ex)}, 502
 
 
 def _get_deobfuscate_item(item):
@@ -496,16 +498,16 @@ def get_whois(item):
     try:
         item = {'rawItem': _get_deobfuscate_item(item)}
     except AttributeError:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid item'}
+        return {'message': 'Invalid item'}, 400
 
     try:
         ip_addr, _, _ = _get_item_ip_hostname_url(item)
         if not ip_addr:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Unable to get infos for this item'}
+            return {'message': 'Unable to get infos for this item'}, 400
     except ValidationError:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid item'}
+        return {'message': 'Invalid item'}, 400
 
-    return 200, {'ipCategory': utils.get_ip_network(ip_addr)}
+    return {'ipCategory': utils.get_ip_network(ip_addr)}
 
 
 def unblock_item(item_id, report_id=None, ticket_id=None):

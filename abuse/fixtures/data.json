@@ -1575,8 +1575,26 @@
 },
 {
   "fields": {
+    "endpoint": "ticket_views.unblock_ticket_item",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 138
+},
+{
+  "fields": {
+    "endpoint": "report_views.unblock_report_item",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 139
+},
+{
+  "fields": {
     "codename": "run_level_1",
     "allowedRoutes": [
+      139,
+      138,
       133,
       130,
       137,
@@ -1685,6 +1703,8 @@
   "fields": {
     "codename": "run_level_3",
     "allowedRoutes": [
+      139,
+      138,
       133,
       132,
       131,
@@ -1833,6 +1853,8 @@
   "fields": {
     "codename": "admin",
     "allowedRoutes": [
+      139,
+      138,
       133,
       132,
       131,

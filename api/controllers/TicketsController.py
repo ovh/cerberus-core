@@ -440,9 +440,7 @@ def create(report, user):
     except (KeyError, ObjectDoesNotExist):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid or missing report id'}
 
-    code, resp = GeneralController.check_perms(method='POST', user=user, report=report.id)
-    if code != 200:
-        return code, resp
+    GeneralController.check_perms(method='POST', user=user, report=report.id)
 
     # Retrieve foreign model from body
     defendant = None
@@ -1105,9 +1103,7 @@ def __check_bulk_conformance(body, user, method):
         return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid ticket(s) id'}
 
     for ticket in tickets:
-        code, resp = GeneralController.check_perms(method=method, user=user, ticket=ticket.id)
-        if code != 200:
-            return code, resp
+        GeneralController.check_perms(method=method, user=user, ticket=ticket.id)
 
     return 200, tickets
 
