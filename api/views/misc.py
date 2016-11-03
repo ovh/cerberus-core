@@ -24,6 +24,7 @@
 
 from django.conf import settings
 from flask import Blueprint, g, request
+from voluptuous import Any, Optional
 from werkzeug.exceptions import BadRequest, Unauthorized
 
 from api.controllers import (GeneralController, ProvidersController,
@@ -148,6 +149,17 @@ def get_user(user=None):
 @misc_views.route('/api/users/<user>', methods=['PUT'])
 @admin_required
 @InvalidateCache(routes=['/api/users', '/api/users/me'], clear_for_user=True)
+@validate_body({
+    Optional('id'): int,
+    Optional('email'): unicode,
+    'username': unicode,
+    'role': unicode,
+    'profiles': [{
+        'access': bool,
+        'category': unicode,
+        'profile': Any(None, unicode),
+    }]
+})
 def update_user(user=None):
     """ Update user infos
     """

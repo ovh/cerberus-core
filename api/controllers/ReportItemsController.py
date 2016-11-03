@@ -34,6 +34,7 @@ from django.core.validators import URLValidator, validate_ipv46_address
 from django.db import IntegrityError, close_old_connections
 from django.db.models import ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
+from werkzeug.exceptions import BadRequest
 
 from abuse.models import (ItemScreenshotFeedback, Report, ReportItem,
                           Service, Ticket)
@@ -55,11 +56,11 @@ def get_items_infos(**kwargs):
     """ Get items informations
     """
     filters = {}
-    if 'filters' in kwargs:
+    if kwargs.get('filters'):
         try:
             filters = json.loads(unquote(unquote(kwargs['filters'])))
         except (ValueError, SyntaxError, TypeError) as ex:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex)}
+            raise BadRequest(str(ex))
 
     try:
         limit = int(filters['paginate']['resultsPerPage'])
@@ -81,19 +82,39 @@ def get_items_infos(**kwargs):
                     for key, val in i.iteritems():
                         field = key + '__icontains'
                         where.append(reduce(operator.or_, [Q(**{field: val[0]})]))
-        except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex)}
+        except (AttributeError, KeyError, IndexError, FieldError,
+                SyntaxError, TypeError, ValueError) as ex:
+            raise BadRequest(str(ex))
 
     where = reduce(operator.and_, where)
 
     # If backend is PostgreSQL, a simple distinct('rawItem') do the job
     try:
-        count = ReportItem.objects.filter(where, report__in=kwargs['reps']).values_list('rawItem', flat=True).distinct().count()
-        raw_items = ReportItem.objects.filter(where, report__in=kwargs['reps']).values_list('rawItem', flat=True).distinct()
+        count = ReportItem.objects.filter(
+            where,
+            report__in=kwargs['reps']
+        ).values_list(
+            'rawItem',
+            flat=True
+        ).distinct().count()
+        raw_items = ReportItem.objects.filter(
+            where,
+            report__in=kwargs['reps']
+        ).values_list(
+            'rawItem',
+            flat=True
+        ).distinct()
         raw_items = raw_items[(offset - 1) * limit:limit * offset]
-        items = [ReportItem.objects.filter(where, report__in=kwargs['reps'], rawItem=raw).last() for raw in raw_items]
-    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex)}
+        items = []
+        for raw in raw_items:
+            items.append(ReportItem.objects.filter(
+                where,
+                report__in=kwargs['reps'],
+                rawItem=raw
+            ).last())
+    except (AttributeError, KeyError, IndexError, FieldError,
+            SyntaxError, TypeError, ValueError) as ex:
+        raise BadRequest(str(ex))
 
     items = [{f.name: f.value_from_object(i) for f in ReportItem._meta.fields} for i in items]
     queue = Queue()
@@ -111,7 +132,7 @@ def get_items_infos(**kwargs):
     resp = {'items': [queue.get() for _ in xrange(len(items))]}
     resp['itemsCount'] = count
 
-    return 200, resp
+    return resp
 
 
 def __format_item_response(item, now, queue):
@@ -201,10 +222,7 @@ def get_items_report(**kwargs):
     """ Get report items
     """
     rep = kwargs['rep']
-    if 'filters' in kwargs:
-        return get_items_infos(reps=[rep], filters=kwargs['filters'])
-    else:
-        return get_items_infos(reps=[rep])
+    return get_items_infos(reps=[rep], filters=kwargs.get('filters'))
 
 
 def get_items_ticket(**kwargs):
@@ -212,10 +230,7 @@ def get_items_ticket(**kwargs):
     """
     ticket = kwargs['ticket']
     reps = Report.objects.filter(ticket=ticket).values_list('id', flat=True)
-    if 'filters' in kwargs:
-        return get_items_infos(reps=reps, filters=kwargs['filters'])
-    else:
-        return get_items_infos(reps=reps)
+    return get_items_infos(reps=reps, filters=kwargs.get('filters'))
 
 
 def show(item_id):

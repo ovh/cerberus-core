@@ -298,40 +298,38 @@ def update_user(user_id, body):
     except ObjectDoesNotExist:
         raise NotFound('User not found')
 
-    if 'profiles' in body:
-        try:
-            _update_permissions(user, body['profiles'])
-        except ObjectDoesNotExist:
-            raise BadRequest('Invalid category or profile')
+    try:
+        _update_permissions(user, body['profiles'])
+    except ObjectDoesNotExist:
+        raise BadRequest('Invalid category or profile')
 
-        # Unassigned tickets no more allowed
-        cats = AbusePermission.objects.filter(
-            user=user
-        ).values_list(
-            'category',
-            flat=True
-        ).distinct()
-        for ticket in Ticket.objects.filter(treatedBy=user):
-            if ticket.category_id not in cats:
-                database.log_action_on_ticket(
-                    ticket=ticket,
-                    action='change_treatedby',
-                    new_value=user.username
-                )
-                ticket.treatedBy = None
-                ticket.save()
-        body.pop('profiles', None)
+    # Unassigned tickets no more allowed
+    cats = AbusePermission.objects.filter(
+        user=user
+    ).values_list(
+        'category',
+        flat=True
+    ).distinct()
+    for ticket in Ticket.objects.filter(treatedBy=user):
+        if ticket.category_id not in cats:
+            database.log_action_on_ticket(
+                ticket=ticket,
+                action='change_treatedby',
+                new_value=user.username
+            )
+            ticket.treatedBy = None
+            ticket.save()
+    body.pop('profiles', None)
 
     try:
         body.pop('id', None)
-        if 'role' in body:
-            if not Operator.objects.filter(user=user).exists():
-                role = Role.objects.get(codename=body['role'])
-                Operator.objects.create(user=user, role=role)
-            elif body['role'] != user.operator.role.codename:
-                user.operator.role = Role.objects.get(codename=body['role'])
-                user.operator.save()
-            body.pop('role')
+        if not Operator.objects.filter(user=user).exists():
+            role = Role.objects.get(codename=body['role'])
+            Operator.objects.create(user=user, role=role)
+        elif body['role'] != user.operator.role.codename:
+            user.operator.role = Role.objects.get(codename=body['role'])
+            user.operator.save()
+        body.pop('role')
         User.objects.filter(pk=user.pk).update(**body)
     except (KeyError, ValueError, FieldError, FieldDoesNotExist,
             IntegrityError, ObjectDoesNotExist):
@@ -488,7 +486,7 @@ def search(**kwargs):
         ),
         user=user
     )
-    code2, ticks, nb_ticks = TicketsController.index(
+    ticks, nb_ticks = TicketsController.index(
         filters=json.dumps(
             custom_filters['ticket']['filters']
         ),
@@ -501,7 +499,7 @@ def search(**kwargs):
         'ticketsCount': nb_ticks,
         'reportsCount': nb_reps
     }
-    return response, max((code1, code2))
+    return response
 
 
 def toolbar(**kwargs):
