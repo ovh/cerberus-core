@@ -178,13 +178,10 @@ def show(user, preset_id):
 
 
 @transaction.atomic
-def create(user, body):
+def create(body):
     """
         Create a new preset
     """
-    if not all(key in body for key in ('templates', 'action', 'name')):
-        raise BadRequest('Missing params in body, expecting templates, action and name')
-
     try:
         body['codename'] = body['name'].strip().lower().replace(' ', '_')
         existing = TicketWorkflowPreset.objects.filter(
@@ -198,13 +195,12 @@ def create(user, body):
     except (AttributeError, FieldError, ValueError) as ex:
         raise BadRequest(ex)
 
-    if body.get('action'):
-        try:
-            preset.config = __get_preset_config(body)
-        except (AttributeError, KeyError, ObjectDoesNotExist, TypeError, ValueError):
-            raise BadRequest('Invalid or missing params in action')
+    try:
+        preset.config = __get_preset_config(body)
+    except (AttributeError, KeyError, ObjectDoesNotExist, TypeError, ValueError):
+        raise BadRequest('Invalid or missing params in action')
 
-    if body.get('templates'):
+    if body.get('templates') is not None:
         for template_id in body['templates']:
             try:
                 template = MailTemplate.objects.get(id=template_id)
@@ -212,14 +208,13 @@ def create(user, body):
             except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
                 raise BadRequest('Invalid template id')
 
-    if body.get('roles'):
-        preset.roles.clear()
-        for role_codename in body['roles']:
-            try:
-                role = Role.objects.get(codename=role_codename)
-                preset.roles.add(role)
-            except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
-                raise BadRequest('Invalid role codename')
+    preset.roles.clear()
+    for role_codename in body['roles']:
+        try:
+            role = Role.objects.get(codename=role_codename)
+            preset.roles.add(role)
+        except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
+            raise BadRequest('Invalid role codename')
 
     preset.save()
     return {'message': 'Preset successfully updated'}
@@ -230,9 +225,6 @@ def update(user, preset_id, body):
     """
         Update preset
     """
-    if not all(key in body and body.get(key) for key in ('codename', 'name')):
-        raise BadRequest('Missing params in body, expecting codename and name')
-
     try:
         preset = TicketWorkflowPreset.objects.get(id=preset_id, roles=user.operator.role)
     except (ObjectDoesNotExist, ValueError):
@@ -256,14 +248,13 @@ def update(user, preset_id, body):
             except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
                 raise BadRequest('Invalid template id')
 
-    if body.get('roles') is not None:
-        preset.roles.clear()
-        for role_codename in body['roles']:
-            try:
-                role = Role.objects.get(codename=role_codename)
-                preset.roles.add(role)
-            except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
-                raise BadRequest('Invalid role codename')
+    preset.roles.clear()
+    for role_codename in body['roles']:
+        try:
+            role = Role.objects.get(codename=role_codename)
+            preset.roles.add(role)
+        except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
+            raise BadRequest('Invalid role codename')
 
     preset.name = body['name']
     preset.save()

@@ -23,9 +23,10 @@
 """
 
 from flask import Blueprint, g, request
+from voluptuous import Any, Optional
 
 from api.controllers import PresetsController
-from decorators import admin_required
+from decorators import admin_required, validate_body
 
 preset_views = Blueprint('preset_views', __name__)
 
@@ -40,12 +41,25 @@ def get_all_presets():
 
 @preset_views.route('/api/presets', methods=['POST'])
 @admin_required
+@validate_body({
+    'name': unicode,
+    'templates': Any(None, [int]),
+    'roles': [unicode],
+    'action': {
+        'codename': unicode,
+        'params': {
+            Optional('resolution'): int,
+            Optional('snoozeDuration'): int,
+            Optional('pauseDuration'): int,
+        }
+    }
+})
 def create_preset():
     """
         Create a `abuse.models.TicketWorkflowPreset`
     """
     body = request.get_json()
-    return PresetsController.create(g.user, body)
+    return PresetsController.create(body)
 
 
 @preset_views.route('/api/presets/<preset>', methods=['GET'])
@@ -58,6 +72,25 @@ def get_preset(preset=None):
 
 @preset_views.route('/api/presets/<preset>', methods=['PUT'])
 @admin_required
+@validate_body({
+    Optional('id'): int,
+    Optional('config'): int,
+    Optional('groupId'): Any(None, int),
+    Optional('orderId'): Any(None, int),
+    Optional('codename'): unicode,
+    'name': unicode,
+    'templates': Any(None, [int]),
+    'roles': [unicode],
+    'action': {
+        Optional('id'): int,
+        'codename': unicode,
+        'params': {
+            Optional('resolution'): int,
+            Optional('snoozeDuration'): int,
+            Optional('pauseDuration'): int,
+        }
+    }
+})
 def update_preset(preset=None):
     """
         Update given preset info

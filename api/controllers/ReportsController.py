@@ -42,10 +42,12 @@ from netaddr import AddrConversionError, AddrFormatError, IPNetwork
 from werkzeug.exceptions import (BadRequest, Forbidden, InternalServerError,
                                  NotFound)
 
-from abuse.models import (AbusePermission, AttachedDocument, Defendant,
-                          Plaintiff, Report, ReportItem, Service, Tag, Ticket)
+from abuse.models import (AbusePermission, Defendant, Plaintiff,
+                          Report, ReportItem, Service, Tag, Ticket)
 from adapters.services.search.abstract import SearchServiceException
 from adapters.services.storage.abstract import StorageServiceException
+from api.constants import (IP_CIDR_RE, REPORT_STATUS, REPORT_FILTER_MAPPING,
+                           REPORT_FIELDS, REPORT_ATTACHMENT_FIELDS)
 from api.controllers import (DefendantsController, GeneralController,
                              ProvidersController, ReportItemsController,
                              TicketsController)
@@ -53,28 +55,9 @@ from factory.implementation import ImplementationFactory
 from utils import utils
 from worker import database
 
-IP_CIDR_RE = re.compile(r"(?<!\d\.)(?<!\d)(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}(?!\d|(?:\.\d))")
-STATUS = [status[0].lower() for status in Report.REPORT_STATUS]
 html2text.ignore_images = True
 html2text.images_to_alt = True
 html2text.ignore_links = True
-
-# Mapping JSON fields name to django syntax
-FILTER_MAPPING = (
-    ('reportTag', 'tags__name'),
-    ('providerEmail', 'provider__email'),
-    ('providerTag', 'provider__tags__name'),
-    ('defendantCustomerId', 'defendant__customerId'),
-    ('defendantCountry', 'defendant__details__country'),
-    ('defendantEmail', 'defendant__details__email'),
-    ('defendantTag', 'defendant__tags__name'),
-    ('itemRawItem', 'reportItemRelatedReport__rawItem'),
-    ('itemIpReverse', 'reportItemRelatedReport__ipReverse'),
-    ('itemFqdnResolved', 'reportItemRelatedReport__fqdnResolved'),
-)
-
-ATTACHMENT_FIELDS = [fld.name for fld in AttachedDocument._meta.fields]
-REPORT_FIELDS = [fld.name for fld in Report._meta.fields]
 
 
 def index(**kwargs):
@@ -152,13 +135,13 @@ def __generate_request_filters(filters, user):
         if 'in' in keys:
             for i in filters['where']['in']:
                 for key, val in i.iteritems():
-                    field = reduce(lambda a, kv: a.replace(*kv), FILTER_MAPPING, key)
+                    field = reduce(lambda a, kv: a.replace(*kv), REPORT_FILTER_MAPPING, key)
                     where.append(reduce(operator.or_, [Q(**{field: i}) for i in val]))
         if 'like' in keys:
             like = []
             for i in filters['where']['like']:
                 for key, val in i.iteritems():
-                    field = reduce(lambda a, kv: a.replace(*kv), FILTER_MAPPING, key)
+                    field = reduce(lambda a, kv: a.replace(*kv), REPORT_FILTER_MAPPING, key)
                     field = field + '__icontains'
                     like.append(Q(**{field: val[0]}))
             if len(like):
@@ -314,7 +297,7 @@ def _update_status(body, report, user):
     """
         Update report status
     """
-    if body['status'].lower() not in STATUS:
+    if body['status'].lower() not in REPORT_STATUS:
         raise BadRequest('Invalid status')
 
     # Detach report if requested status is "New"
@@ -465,7 +448,7 @@ def get_all_attachments(**kwargs):
 
     try:
         nb_record_filtered = report.attachments.count()
-        attached = report.attachments.all().values(*ATTACHMENT_FIELDS)
+        attached = report.attachments.all().values(*REPORT_ATTACHMENT_FIELDS)
         attached = attached[(offset - 1) * limit:limit * offset]
         len(attached)  # Force django to evaluate query now
     except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
@@ -516,7 +499,8 @@ def bulk_add(body, user, method):
     for report in reports:
         GeneralController.check_perms(method=method, user=user, report=report.id)
 
-    if 'status' in body['properties'] and body['properties']['status'].lower() not in STATUS:
+    if body['properties'].get('status') and \
+            body['properties']['status'].lower() not in REPORT_STATUS:
         raise BadRequest('Status not supported')
 
     # Update tags

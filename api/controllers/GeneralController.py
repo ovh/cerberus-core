@@ -47,79 +47,17 @@ from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 from abuse.models import (AbusePermission, Category, MassContact,
                           MassContactResult, Profile, Report,
                           Resolution, Tag, Ticket, Operator, Role)
+from api.constants import (GENERAL_CHECK_PERM_DEFENDANT_LEVEL, GENERAL_SEARCH_MAPPING,
+                           GENERAL_SEARCH_TICKET_FIELDS, GENERAL_SEARCH_REPORT_FIELDS,
+                           GENERAL_TOOLBAR_ALL_STATUS, GENERAL_TOOLBAR_SLEEPING_STATUS,
+                           GENERAL_TOOLBAR_TODO_STATUS, GENERAL_DASHBOARD_STATUS,
+                           GENERAL_MASS_CONTACT_REQUIRED)
 from factory.ticketscheduling import TicketSchedulingAlgorithmFactory
 from utils import logger, utils
 from worker import database
 
 Logger = logger.get_logger(__name__)
 CRYPTO = utils.Crypto()
-
-DASHBOARD_STATUS = {
-    'idle': ('Open', 'Reopened'),
-    'waiting': ('WaitingAnswer', 'Paused'),
-    'pending': ('Answered', 'Alarm'),
-}
-
-CHECK_PERM_DEFENDANT_LEVEL = ('Beginner', 'Advanced', 'Expert')
-MASS_CONTACT_REQUIRED = ('{{ service }}', '{{ publicId }}', '{% if lang ==')
-
-SEARCH_EXTRA_FIELDS = [
-    'defendantTag',
-    'providerTag',
-    'defendant',
-    'defendantCountry',
-    'providerEmail',
-    'item',
-    'fulltext'
-]
-SEARCH_REPORT_FIELDS = list(set(
-    [
-        f.name
-        for f in Report._meta.fields
-    ] + SEARCH_EXTRA_FIELDS + ['reportTag']
-))
-SEARCH_TICKET_FIELDS = list(set(
-    [
-        f.name
-        for f in Ticket._meta.fields
-    ] + SEARCH_EXTRA_FIELDS + ['ticketTag', 'attachedReportsCount', 'ticketIds']
-))
-
-SEARCH_MAPPING = {
-    'defendant': ['defendantEmail', 'defendantCustomerId'],
-    'item': ['itemFqdnResolved', 'itemIpReverse', 'itemRawItem'],
-    'ticketIds': ['id', 'publicId'],
-}
-
-TOOLBAR_TODO_STATUS = (
-    'ActionError',
-    'Alarm',
-    'Open',
-    'Reopened'
-)
-
-TOOLBAR_TODO_COUNT_STATUS = (
-    'ActionError',
-    'Answered',
-    'Alarm',
-    'Reopened',
-    'Open'
-)
-
-TOOLBAR_SLEEPING_STATUS = (
-    'Paused',
-    'WaitingAnswer'
-)
-
-TOOLBAR_ALL_STATUS = (
-    'ActionError',
-    'Answered',
-    'Alarm',
-    'Reopened',
-    'Open',
-    'Paused',
-    'WaitingAnswer'
-)
 
 
 def auth(body):
@@ -232,7 +170,7 @@ def check_perms(**kwargs):
 
     perm_count = AbusePermission.objects.filter(
         user=user.id,
-        profile__name__in=CHECK_PERM_DEFENDANT_LEVEL
+        profile__name__in=GENERAL_CHECK_PERM_DEFENDANT_LEVEL
     ).count()
     if 'defendant' in kwargs and kwargs['method'] != 'GET' and not perm_count:
         raise Forbidden('Forbidden')
@@ -430,13 +368,40 @@ def search(**kwargs):
         except (ValueError, SyntaxError):
             raise BadRequest('Unable to decode JSON')
 
+    custom_filters = _get_enhanced_search_filters(filters)
+
+    from api.controllers import ReportsController, TicketsController
+    reps, nb_reps = ReportsController.index(
+        filters=json.dumps(
+            custom_filters['report']['filters']
+        ),
+        user=user
+    )
+    ticks, nb_ticks = TicketsController.index(
+        filters=json.dumps(
+            custom_filters['ticket']['filters']
+        ),
+        user=user
+    )
+
+    response = {
+        'tickets': ticks,
+        'reports': reps,
+        'ticketsCount': nb_ticks,
+        'reportsCount': nb_reps
+    }
+    return response
+
+
+def _get_enhanced_search_filters(filters):
+
     custom_filters = {
         'ticket': {
-            'fields': SEARCH_TICKET_FIELDS,
+            'fields': GENERAL_SEARCH_TICKET_FIELDS,
             'filters': deepcopy(filters),
         },
         'report': {
-            'fields': SEARCH_REPORT_FIELDS,
+            'fields': GENERAL_SEARCH_REPORT_FIELDS,
             'filters': deepcopy(filters),
         },
     }
@@ -467,8 +432,8 @@ def search(**kwargs):
             new_where = deepcopy(values['filters']['where'])
             for key, val in values['filters']['where'].iteritems():
                 for field in values['filters']['where'][key]:
-                    if field.keys()[0] in SEARCH_MAPPING:
-                        for new_field in SEARCH_MAPPING[field.keys()[0]]:
+                    if field.keys()[0] in GENERAL_SEARCH_MAPPING:
+                        for new_field in GENERAL_SEARCH_MAPPING[field.keys()[0]]:
                             new_where[key].append({new_field: field[field.keys()[0]]})
                         new_where[key].remove(field)
                     elif 'ticketTag' in field:
@@ -479,27 +444,7 @@ def search(**kwargs):
                         new_where[key].remove(field)
             values['filters']['where'] = new_where
 
-    from api.controllers import ReportsController, TicketsController
-    reps, nb_reps = ReportsController.index(
-        filters=json.dumps(
-            custom_filters['report']['filters']
-        ),
-        user=user
-    )
-    ticks, nb_ticks = TicketsController.index(
-        filters=json.dumps(
-            custom_filters['ticket']['filters']
-        ),
-        user=user
-    )
-
-    response = {
-        'tickets': ticks,
-        'reports': reps,
-        'ticketsCount': nb_ticks,
-        'reportsCount': nb_reps
-    }
-    return response
+    return custom_filters
 
 
 def toolbar(**kwargs):
@@ -557,10 +502,10 @@ def _get_toolbar_count(where, user):
     ).values('status').annotate(count=Count('status'))
 
     mapping = (
-        ('myTicketsCount', TOOLBAR_ALL_STATUS),
+        ('myTicketsCount', GENERAL_TOOLBAR_ALL_STATUS),
         ('myTicketsAnsweredCount', ('Answered',)),
-        ('myTicketsTodoCount', TOOLBAR_TODO_STATUS),
-        ('myTicketsSleepingCount', TOOLBAR_SLEEPING_STATUS),
+        ('myTicketsTodoCount', GENERAL_TOOLBAR_TODO_STATUS),
+        ('myTicketsSleepingCount', GENERAL_TOOLBAR_SLEEPING_STATUS),
     )
 
     for key, status in mapping:
@@ -625,7 +570,7 @@ def dashboard(**kwargs):
     resp['ticketsByStatus'] = {k['status']: k['count'] for k in res}
     resp['ticketsByCategory'] = {}
 
-    for name, sts in DASHBOARD_STATUS.iteritems():
+    for name, sts in GENERAL_DASHBOARD_STATUS.iteritems():
         req = Ticket.objects.filter(
             category__in=categories,
             status__in=sts
@@ -727,8 +672,9 @@ def post_mass_contact(body, user):
 
     # Check mustache (required for worker)
     for key, val in body['email'].iteritems():
-        if not all([mustache in val for mustache in MASS_CONTACT_REQUIRED]):
-            message = '%s templating elements required in %s' % (str(MASS_CONTACT_REQUIRED), key)
+        if not all([mustache in val for mustache in GENERAL_MASS_CONTACT_REQUIRED]):
+            message = '%s templating elements ' \
+                      'required in %s' % (str(GENERAL_MASS_CONTACT_REQUIRED), key)
             raise BadRequest(message)
 
     __create_jobs(campaign_name, ips, category, body, user)

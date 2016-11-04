@@ -23,9 +23,72 @@
 
 import re
 
-from abuse.models import Report, Ticket
+from abuse.models import AttachedDocument, Report, Ticket
 
-# TICKET
+# GeneralController
+#
+
+GENERAL_DASHBOARD_STATUS = {
+    'idle': ('Open', 'Reopened'),
+    'waiting': ('WaitingAnswer', 'Paused'),
+    'pending': ('Answered', 'Alarm'),
+}
+
+GENERAL_CHECK_PERM_DEFENDANT_LEVEL = ('Beginner', 'Advanced', 'Expert')
+GENERAL_MASS_CONTACT_REQUIRED = ('{{ service }}', '{{ publicId }}', '{% if lang ==')
+
+GENERAL_SEARCH_EXTRA_FIELDS = [
+    'defendantTag',
+    'providerTag',
+    'defendant',
+    'defendantCountry',
+    'providerEmail',
+    'item',
+    'fulltext'
+]
+GENERAL_SEARCH_REPORT_FIELDS = list(set(
+    [
+        f.name
+        for f in Report._meta.fields
+    ] + GENERAL_SEARCH_EXTRA_FIELDS + ['reportTag']
+))
+GENERAL_SEARCH_TICKET_FIELDS = list(set(
+    [
+        f.name
+        for f in Ticket._meta.fields
+    ] + GENERAL_SEARCH_EXTRA_FIELDS + ['ticketTag', 'attachedReportsCount', 'ticketIds']
+))
+
+GENERAL_SEARCH_MAPPING = {
+    'defendant': ['defendantEmail', 'defendantCustomerId'],
+    'item': ['itemFqdnResolved', 'itemIpReverse', 'itemRawItem'],
+    'ticketIds': ['id', 'publicId'],
+}
+
+GENERAL_TOOLBAR_TODO_STATUS = (
+    'ActionError',
+    'Alarm',
+    'Open',
+    'Reopened'
+)
+
+GENERAL_TOOLBAR_SLEEPING_STATUS = (
+    'Paused',
+    'WaitingAnswer'
+)
+
+GENERAL_TOOLBAR_ALL_STATUS = (
+    'ActionError',
+    'Answered',
+    'Alarm',
+    'Reopened',
+    'Open',
+    'Paused',
+    'WaitingAnswer'
+)
+
+# TicketsController
+#
 
 TICKET_FIELDS = [fld.name for fld in Ticket._meta.fields]
 TICKET_STATUS = [status[0].lower() for status in Ticket.TICKET_STATUS]
@@ -92,6 +155,29 @@ TICKET_MODIFICATION_INVALID_FIELDS = (
     'modificationDate'
 )
 
+# ReportsController
+#
+
+REPORT_STATUS = [status[0].lower() for status in Report.REPORT_STATUS]
+
+# Mapping JSON fields name to django syntax
+REPORT_FILTER_MAPPING = (
+    ('reportTag', 'tags__name'),
+    ('providerEmail', 'provider__email'),
+    ('providerTag', 'provider__tags__name'),
+    ('defendantCustomerId', 'defendant__customerId'),
+    ('defendantCountry', 'defendant__details__country'),
+    ('defendantEmail', 'defendant__details__email'),
+    ('defendantTag', 'defendant__tags__name'),
+    ('itemRawItem', 'reportItemRelatedReport__rawItem'),
+    ('itemIpReverse', 'reportItemRelatedReport__ipReverse'),
+    ('itemFqdnResolved', 'reportItemRelatedReport__fqdnResolved'),
+)
+
+REPORT_ATTACHMENT_FIELDS = [fld.name for fld in AttachedDocument._meta.fields]
+REPORT_FIELDS = [fld.name for fld in Report._meta.fields]
+
 # MISC
+#
 
 IP_CIDR_RE = re.compile(r"(?<!\d\.)(?<!\d)(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}(?!\d|(?:\.\d))")
