@@ -899,12 +899,10 @@ def update_status(ticket, status, body, user):
         resp = {'message': 'Ticket closed'}
 
         if ticket.mailerId:
-            try:
-                ImplementationFactory.instance.get_singleton_of(
-                    'MailerServiceBase'
-                ).close_thread(ticket)
-            except MailerServiceException:
-                raise InternalServerError('Unable to close thread')
+            utils.default_queue.enqueue(
+                'ticket.close_emails_thread',
+                ticket_id=ticket.id,
+            )
 
         resp = {'message': 'Ticket closed'}
         ticket.previousStatus = ticket.status
@@ -919,7 +917,11 @@ def update_status(ticket, status, body, user):
             status=status
         )
 
-        if user.abusepermission_set.filter(category=ticket.category, profile__name='Beginner').count():
+        is_user_beginner = user.abusepermission_set.filter(
+            category=ticket.category,
+            profile__name='Beginner'
+        ).count()
+        if is_user_beginner:
             ticket.moderation = True
 
         action = {

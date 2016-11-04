@@ -136,7 +136,10 @@ def timeout(ticket_id=None):
             previous_value=ticket.previousStatus,
             new_value=ticket.status
         )
-        comment = Comment.objects.create(user=BOT_USER, comment='None or multiple ip addresses for this ticket')
+        comment = Comment.objects.create(
+            user=BOT_USER,
+            comment='None or multiple ip addresses for this ticket'
+        )
         TicketComment.objects.create(ticket=ticket, comment=comment)
         database.log_action_on_ticket(
             ticket=ticket,
@@ -209,7 +212,12 @@ def _apply_timeout_action(ticket, ip_addr, action):
     )
 
     Logger.info(unicode('Task has %s job id' % (async_job.id)))
-    job = ServiceActionJob.objects.create(ip=ip_addr, action=action, asynchronousJobId=async_job.id, creationDate=datetime.now())
+    job = ServiceActionJob.objects.create(
+        ip=ip_addr,
+        action=action,
+        asynchronousJobId=async_job.id,
+        creationDate=datetime.now()
+    )
     ticket.jobs.add(job)
 
     while not async_job.is_finished:
@@ -223,7 +231,12 @@ def close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_bl
         Close ticket and add autoclosed Tag
     """
     # Send "case closed" email to already contacted Provider(s)
-    providers_emails = ContactedProvider.objects.filter(ticket_id=ticket.id).values_list('provider__email', flat=True).distinct()
+    providers_emails = ContactedProvider.objects.filter(
+        ticket_id=ticket.id
+    ).values_list(
+        'provider__email',
+        flat=True
+    ).distinct()
 
     for email in providers_emails:
         try:
@@ -587,6 +600,20 @@ def cancel_rq_scheduler_jobs(ticket_id=None, status='answered'):
             utils.scheduler.cancel(job.asynchronousJobId)
             job.status = 'cancelled by %s' % status
             job.save()
+
+
+def close_emails_thread(ticket_id=None):
+    """
+    """
+    try:
+        ticket = Ticket.objects.get(id=ticket_id)
+    except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
+        Logger.error(unicode('Ticket %d cannot be found in DB. Skipping...' % (ticket)))
+        return
+
+    ImplementationFactory.instance.get_singleton_of(
+        'MailerServiceBase'
+    ).close_thread(ticket)
 
 
 def follow_the_sun():
