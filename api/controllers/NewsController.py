@@ -30,6 +30,7 @@ from django.core.exceptions import FieldError
 from django.db import IntegrityError
 from django.db.models import ObjectDoesNotExist, ProtectedError
 from django.forms.models import model_to_dict
+from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
 from abuse.models import News
 
@@ -38,11 +39,11 @@ def index(**kwargs):
     """ Get all news
     """
     filters = {}
-    if 'filters' in kwargs:
+    if kwargs.get('filters'):
         try:
             filters = json.loads(unquote(unquote(kwargs['filters'])))
         except (ValueError, SyntaxError, TypeError) as ex:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex)}
+            raise BadRequest(str(ex))
 
     try:
         limit = int(filters['paginate']['resultsPerPage'])
@@ -53,11 +54,13 @@ def index(**kwargs):
 
     try:
         nb_record_filtered = News.objects.count()
-        news_list = News.objects.filter().order_by('-date').values(*[f.name for f in News._meta.fields])
+        news_list = News.objects.filter().order_by(
+            '-date'
+        ).values(*[f.name for f in News._meta.fields])
         news_list = news_list[(offset - 1) * limit:limit * offset]
         len(news_list)  # Force django to evaluate query now
     except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex)}
+        raise BadRequest(str(ex))
 
     for news in news_list:
         if news.get('author', None):
@@ -68,7 +71,7 @@ def index(**kwargs):
     resp = {'news': list(news_list)}
     resp['newsCount'] = nb_record_filtered
 
-    return 200, resp
+    return resp
 
 
 def show(news_id):
@@ -81,11 +84,11 @@ def show(news_id):
         if news.get('date', None):
             news['date'] = time.mktime(news['date'].timetuple())
     except (IndexError, ValueError):
-        return 400, {'status': 'Bad request', 'code': 400, 'message': 'Not a valid news id'}
+        return BadRequest('Not a valid news id')
     except ObjectDoesNotExist:
-        return 400, {'status': 'Bad request', 'code': 400, 'message': 'Author not found'}
+        return NotFound('Author not found')
 
-    return 200, news
+    return news
 
 
 def create(body, user):
@@ -96,9 +99,9 @@ def create(body, user):
         body['author'] = user
         news, created = News.objects.get_or_create(**body)
     except (KeyError, FieldError, IntegrityError):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
+        raise BadRequest('Invalid fields in body')
     if not created:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'News already exists'}
+        raise BadRequest('News already exists')
     return show(news.id)
 
 
@@ -111,14 +114,14 @@ def update(news_id, body, user):
         else:
             news = News.objects.get(id=news_id, author__id=user.id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        return NotFound('News not found')
     try:
         body = {k: v for k, v in body.iteritems() if k not in ['author', 'date', 'tags']}
         News.objects.filter(pk=news.pk).update(**body)
         news = News.objects.get(pk=news.pk)
     except (KeyError, FieldError, IntegrityError):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
-    return 200, model_to_dict(news)
+        raise BadRequest('Invalid fields in body')
+    return model_to_dict(news)
 
 
 def destroy(news_id):
@@ -127,9 +130,9 @@ def destroy(news_id):
     try:
         news = News.objects.get(id=news_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        return NotFound('News not found')
     try:
         news.delete()
-        return 200, {'status': 'OK', 'code': 200, 'message': 'News successfully removed'}
+        return {'message': 'News successfully removed'}
     except ProtectedError:
-        return 403, {'status': 'Forbidden', 'message': 'News still referenced in reports/tickets', 'code': 403}
+        raise Forbidden('News still referenced in reports/tickets')

@@ -25,59 +25,46 @@
 from flask import Blueprint, g, request
 
 from api.controllers import NewsController
-from decorators import admin_required, jsonify
+from decorators import admin_required
 
 news_views = Blueprint('news_views', __name__)
 
 
 @news_views.route('/api/news', methods=['GET'])
-@jsonify
 def get_all_news():
     """ Get abuse news
 
         Filtering is possible through "filters" query string, JSON double encoded format
     """
-    if 'filters' in request.args:
-        code, resp = NewsController.index(filters=request.args['filters'])
-    else:
-        code, resp = NewsController.index()
-    return code, resp
+    return NewsController.index(filters=request.args.get('filters'))
 
 
 @news_views.route('/api/news/<news>', methods=['GET'])
-@jsonify
 def get_news(news=None):
     """ Get given news
     """
-    code, resp = NewsController.show(news)
-    return code, resp
+    return NewsController.show(news)
 
 
 @news_views.route('/api/news', methods=['POST'])
-@jsonify
 def create_news():
     """ Post a news
     """
     body = request.get_json()
-    code, resp = NewsController.create(body, g.user)
-    return code, resp
+    return NewsController.create(body, g.user)
 
 
 @news_views.route('/api/news/<news>', methods=['PUT'])
-@jsonify
 def update_news(news=None):
     """ Update given news
     """
     body = request.get_json()
-    code, resp = NewsController.update(news, body, g.user)
-    return code, resp
+    return NewsController.update(news, body, g.user)
 
 
 @news_views.route('/api/news/<news>', methods=['DELETE'])
-@jsonify
 @admin_required
 def delete_news(news=None):
     """ Delete given news
     """
-    code, resp = NewsController.destroy(news)
-    return code, resp
+    return NewsController.destroy(news)

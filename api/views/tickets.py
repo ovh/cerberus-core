@@ -30,7 +30,7 @@ from werkzeug.exceptions import BadRequest
 from api.controllers import (CommentsController, TicketsController,
                              PresetsController, ReportItemsController,
                              TemplatesController)
-from decorators import jsonify, perm_required
+from decorators import perm_required
 
 ticket_views = Blueprint('ticket_views', __name__)
 
@@ -88,27 +88,23 @@ def get_ticket_items(ticket=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/items/<item>', methods=['PUT', 'DELETE'])
-@jsonify
 @perm_required
 def update_ticket_item(ticket=None, item=None):
     """ Delete an item
     """
     if request.method == 'PUT':
         body = request.get_json()
-        code, resp = ReportItemsController.update(item, body, g.user)
+        return ReportItemsController.update(item, body, g.user)
     else:
-        code, resp = ReportItemsController.delete_from_ticket(item, ticket)
-    return code, resp
+        return ReportItemsController.delete_from_ticket(item, ticket)
 
 
 @ticket_views.route('/api/tickets/<ticket>/items/<item>/unblock', methods=['POST'])
-@jsonify
 @perm_required
 def unblock_ticket_item(ticket=None, item=None):
     """ Unblock an item
     """
-    code, resp = ReportItemsController.unblock_item(item_id=item, ticket_id=ticket)
-    return code, resp
+    return ReportItemsController.unblock_item(item_id=item, ticket_id=ticket)
 
 
 @ticket_views.route('/api/tickets/<ticket>/proof', methods=['GET', 'POST'])
@@ -212,23 +208,19 @@ def update_status(ticket=None, status=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/templates/<template>', methods=['GET'])
-@jsonify
 @perm_required
 def get_ticket_prefetched_template(ticket=None, template=None):
     """ Get a template prefetched with ticket infos
     """
-    code, resp = TemplatesController.get_prefetch_template(ticket, template)
-    return code, resp
+    return TemplatesController.get_prefetch_template(ticket, template)
 
 
 @ticket_views.route('/api/tickets/<ticket>/presets/<preset>', methods=['GET'])
-@jsonify
 @perm_required
 def get_ticket_prefetched_preset(ticket=None, preset=None):
     """ Get a template prefetched with ticket infos
     """
-    code, resp = PresetsController.get_prefetch_preset(g.user, ticket, preset)
-    return code, resp
+    return PresetsController.get_prefetch_preset(g.user, ticket, preset)
 
 
 @ticket_views.route('/api/tickets/<ticket>/tags', methods=['POST'])
@@ -302,29 +294,33 @@ def cancel_job(ticket=None, job=None):
 
 
 @ticket_views.route('/api/tickets/<ticket>/comments', methods=['POST'])
-@jsonify
 @perm_required
 def add_comment(ticket=None):
     """ Add comment to ticket
     """
     body = request.get_json()
-    code, resp = CommentsController.create(body, ticket_id=ticket, user_id=g.user.id)
-    return code, resp
+    return CommentsController.create(body, ticket_id=ticket, user_id=g.user.id)
 
 
 @ticket_views.route('/api/tickets/<ticket>/comments/<comment>', methods=['PUT', 'DELETE'])
-@jsonify
 @perm_required
 def update_or_delete_comment(ticket=None, comment=None):
     """ Update or delete ticket comments
     """
     if request.method == 'PUT':
         body = request.get_json()
-        code, resp = CommentsController.update(body, comment_id=comment, ticket_id=ticket, user_id=g.user.id)
+        return CommentsController.update(
+            body,
+            comment_id=comment,
+            ticket_id=ticket,
+            user_id=g.user.id
+        )
     else:
-        code, resp = CommentsController.delete(comment_id=comment, ticket_id=ticket, user_id=g.user.id)
-
-    return code, resp
+        return CommentsController.delete(
+            comment_id=comment,
+            ticket_id=ticket,
+            user_id=g.user.id
+        )
 
 
 @ticket_views.route('/api/tickets/<ticket>/providers', methods=['GET'])

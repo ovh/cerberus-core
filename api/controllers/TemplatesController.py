@@ -30,6 +30,8 @@ from django.core.exceptions import FieldError
 from django.db import IntegrityError
 from django.db.models import ObjectDoesNotExist, ProtectedError, Q
 from django.forms.models import model_to_dict
+from werkzeug.exceptions import (BadRequest, Forbidden, NotFound,
+                                 InternalServerError)
 
 from abuse.models import MailTemplate, Ticket
 from adapters.services.mailer.abstract import MailerServiceException
@@ -55,18 +57,20 @@ def index(**kwargs):
         try:
             filters = json.loads(unquote(unquote(kwargs['filters'])))
         except (ValueError, SyntaxError, TypeError) as ex:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+            raise BadRequest(str(ex.message))
     try:
         where = generate_request_filter(filters)
-    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+    except (AttributeError, KeyError, IndexError, FieldError,
+            SyntaxError, TypeError, ValueError) as ex:
+        raise BadRequest(str(ex.message))
 
     try:
         templates = MailTemplate.objects.filter(where).order_by('name')
-    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+    except (AttributeError, KeyError, IndexError, FieldError,
+            SyntaxError, TypeError, ValueError) as ex:
+        raise BadRequest(str(ex.message))
 
-    return 200, [model_to_dict(t) for t in templates]
+    return [model_to_dict(t) for t in templates]
 
 
 def generate_request_filter(filters):
@@ -82,7 +86,7 @@ def generate_request_filter(filters):
                         where.append(reduce(operator.or_, [Q(**{key: i}) for i in val]))
             where = reduce(operator.and_, where)
         except (AttributeError, KeyError, FieldError, SyntaxError, ValueError) as ex:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+            raise BadRequest(str(ex.message))
     else:
         where = reduce(operator.and_, where)
     return where
@@ -95,8 +99,8 @@ def show(template_id):
     try:
         template = MailTemplate.objects.get(id=template_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
-    return 200, model_to_dict(template)
+        raise NotFound('Template not found')
+    return model_to_dict(template)
 
 
 def create(body):
@@ -106,8 +110,8 @@ def create(body):
         body['codename'] = body['name'].strip().lower().replace(' ', '_')
         template, _ = MailTemplate.objects.get_or_create(**body)
     except (KeyError, FieldError, IntegrityError):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
-    return 201, model_to_dict(template)
+        raise BadRequest('Invalid fields in body')
+    return model_to_dict(template)
 
 
 def update(template_id, body):
@@ -116,13 +120,13 @@ def update(template_id, body):
     try:
         template = MailTemplate.objects.get(id=template_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Template not found')
     try:
         MailTemplate.objects.filter(pk=template.pk).update(**body)
         template = MailTemplate.objects.get(pk=template.pk)
     except (FieldError, IntegrityError):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
-    return 200, model_to_dict(template)
+        raise BadRequest('Invalid fields in body')
+    return model_to_dict(template)
 
 
 def destroy(template_id):
@@ -132,12 +136,12 @@ def destroy(template_id):
     try:
         template = MailTemplate.objects.get(id=template_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Template not found')
     try:
         template.delete()
-        return 200, {'status': 'OK', 'code': 200, 'message': 'Email template successfully removed'}
+        return {'message': 'Email template successfully removed'}
     except ProtectedError:
-        return 403, {'status': 'Mail template still referenced in reports/tickets', 'code': 403}
+        raise Forbidden('Mail template still referenced in reports/tickets')
 
 
 def get_prefetch_template(ticket_id, template_id, lang=None, ack_report=None):
@@ -148,7 +152,7 @@ def get_prefetch_template(ticket_id, template_id, lang=None, ack_report=None):
         ticket = Ticket.objects.get(id=ticket_id)
         mail_template = MailTemplate.objects.get(id=template_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket or email template not found'}
+        raise NotFound('Ticket or email template not found')
 
     if not lang and mail_template.recipientType != 'Defendant':
         lang = 'EN'
@@ -161,22 +165,22 @@ def get_prefetch_template(ticket_id, template_id, lang=None, ack_report=None):
             acknowledged_report=ack_report,
         )
     except MailerServiceException as ex:
-        return 500, {'status': 'Internal Server Error', 'code': 500, 'message': str(ex)}
+        raise InternalServerError(str(ex))
 
     mail_template = model_to_dict(mail_template)
     mail_template['to'] = prefetched_email.recipients
     mail_template['subject'] = prefetched_email.subject
     mail_template['body'] = prefetched_email.body
-    return 200, mail_template
+    return mail_template
 
 
 def get_recipients_type():
     """ Get MailTemplate supported recipeints type
     """
-    return 200, RECIPIENTS_TYPE
+    return RECIPIENTS_TYPE
 
 
 def get_supported_languages():
     """ Get Application supported languages
     """
-    return 200, LANGUAGES
+    return LANGUAGES

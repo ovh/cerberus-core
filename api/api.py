@@ -188,11 +188,11 @@ def create_app():
 
         valid, message = _check_headers()
         if not valid:
-            return Unauthorized(message)
+            raise Unauthorized(message)
 
         valid, message = _check_allowed_routes()
         if not valid:
-            return Forbidden(message)
+            raise Forbidden(message)
 
     def _check_headers():
 

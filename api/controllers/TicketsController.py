@@ -262,7 +262,7 @@ def show(ticket_id, user):
     if ticket.treatedBy:
         ticket_dict['treatedBy'] = ticket.treatedBy.username
     if ticket.defendant:
-        ticket_dict['defendant'] = DefendantsController.show(ticket.defendant.id)[1]
+        ticket_dict['defendant'] = DefendantsController.show(ticket.defendant.id)
     if ticket.action:
         ticket_dict['action'] = model_to_dict(ServiceAction.objects.get(id=ticket.action.id))
     if ticket.service:
@@ -371,15 +371,14 @@ def assign_if_not(ticket, user):
     return assigned
 
 
-def create(report, user):
+def create(body, user):
     """ Create a ticket from a report or attach it
         if ticket with same defendant/category already exists
     """
-    if not all(k in report.keys() for k in ('id', 'status')) or report['status'].lower() not in ('new', 'attached'):
-        raise BadRequest('Can not create a ticket with this status')
-
     try:
-        report = Report.objects.get(id=report['id'])
+        if body['status'].lower() not in ('new', 'attached'):
+            raise BadRequest('Can not create a ticket with this status')
+        report = Report.objects.get(id=body['id'])
     except (KeyError, ObjectDoesNotExist):
         raise BadRequest('Invalid or missing report id')
 
@@ -429,10 +428,10 @@ def create(report, user):
         new_ticket=new_ticket
     )
 
-    database.set_ticket_higher_priority(ticket)
     report.status = 'Attached'
     report.ticket = ticket
     report.save()
+    database.set_ticket_higher_priority(ticket)
 
     # If new report, try to attach existing reports with status "New" to this new created ticket
     if ticket:
@@ -446,7 +445,7 @@ def create(report, user):
             )
 
     resp = show(ticket.id, user)
-    return resp, 201
+    return resp
 
 
 def update(ticket, body, user, bulk=False):
@@ -480,7 +479,8 @@ def update(ticket, body, user, bulk=False):
     if not ticket.escalated and body.get('escalated'):
         body['treatedBy'] = None
 
-    if 'treatedBy' in body and ticket.treatedBy and ticket.protected and ticket.treatedBy.username != body['treatedBy']:
+    if 'treatedBy' in body and ticket.treatedBy and \
+       ticket.protected and ticket.treatedBy.username != body['treatedBy']:
         raise BadRequest('Ticket is protected')
 
     # remove invalid fields
@@ -706,7 +706,7 @@ def get_providers(ticket_id):
         raise NotFound('Ticket not found')
 
     emails = ticket.reportTicket.all().values_list('provider__pk', flat=True).distinct()
-    providers = [ProvidersController.show(email)[1] for email in emails]
+    providers = [ProvidersController.show(email) for email in emails]
 
     for prov in providers:
         prov['contacted'] = ContactedProvider.objects.filter(

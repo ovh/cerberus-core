@@ -25,76 +25,61 @@
 from flask import Blueprint, g, request
 
 from api.controllers import PresetsController
-from decorators import admin_required, jsonify
+from decorators import admin_required
 
 preset_views = Blueprint('preset_views', __name__)
 
 
 @preset_views.route('/api/presets', methods=['GET'])
-@jsonify
 def get_all_presets():
     """
         Get all `abuse.models.TicketWorkflowPreset` available
     """
-    filters = None
-    if 'filters' in request.args:
-        filters = request.args['filters']
-    code, resp = PresetsController.index(g.user, filters=filters)
-    return code, resp
+    return PresetsController.index(g.user, filters=request.args.get('filters'))
 
 
 @preset_views.route('/api/presets', methods=['POST'])
-@jsonify
 @admin_required
 def create_preset():
     """
         Create a `abuse.models.TicketWorkflowPreset`
     """
     body = request.get_json()
-    code, resp = PresetsController.create(g.user, body)
-    return code, resp
+    return PresetsController.create(g.user, body)
 
 
 @preset_views.route('/api/presets/<preset>', methods=['GET'])
-@jsonify
 def get_preset(preset=None):
     """
         Get given preset info
     """
-    code, resp = PresetsController.show(g.user, preset)
-    return code, resp
+    return PresetsController.show(g.user, preset)
 
 
 @preset_views.route('/api/presets/<preset>', methods=['PUT'])
-@jsonify
 @admin_required
 def update_preset(preset=None):
     """
         Update given preset info
     """
     body = request.get_json()
-    code, resp = PresetsController.update(g.user, preset, body)
-    return code, resp
+    return PresetsController.update(g.user, preset, body)
 
 
 @preset_views.route('/api/presets/<preset>', methods=['DELETE'])
-@jsonify
 @admin_required
 def delete_preset(preset=None):
     """
         Delete given preset info
     """
-    code, resp = PresetsController.delete(g.user, preset)
-    return code, resp
+    return PresetsController.delete(g.user, preset)
 
 
 @preset_views.route('/api/presets/order', methods=['PUT'])
-@jsonify
 @admin_required
 def order_presets():
     """
         Update preset order for display
     """
     body = request.get_json()
-    code, resp = PresetsController.update_order(g.user, body)
-    return code, resp
+    return PresetsController.update_order(g.user, body)

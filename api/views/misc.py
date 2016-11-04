@@ -197,7 +197,10 @@ def add_ticket_resolution():
 @misc_views.route('/api/resolutions/<resolution>', methods=['PUT'])
 @admin_required
 @InvalidateCache(routes=['/api/resolutions'])
-@validate_body({'codename': unicode})
+@validate_body({
+    Optional('id'): int,
+    'codename': unicode
+})
 def update_ticket_resolution(resolution=None):
     """ Get all abuse status
     """

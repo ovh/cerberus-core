@@ -29,7 +29,7 @@ from functools import wraps
 from time import mktime
 
 from django.conf import settings
-from flask import g, Response, request
+from flask import g, request
 from voluptuous import Invalid, MultipleInvalid, Schema
 from werkzeug.contrib.cache import RedisCache, SimpleCache
 from werkzeug.exceptions import BadRequest, Forbidden
@@ -161,24 +161,6 @@ def perm_required(func):
             )
         return func(*args, **kwargs)
     return check_perm
-
-
-def jsonify(func):
-    """ Make Json response
-    """
-    @wraps(func)
-    def decorated_function(*args, **kwargs):
-        retval = func(*args, **kwargs)
-        response = Response(
-            json.dumps(
-                retval[1],
-                cls=TimestampJSONEncoder,
-            ),
-            status=retval[0],
-            content_type='application/json'
-        )
-        return response
-    return decorated_function
 
 
 def validate_body(schema_desc):

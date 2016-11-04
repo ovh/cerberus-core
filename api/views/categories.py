@@ -27,13 +27,12 @@ from voluptuous import Optional
 
 from api.controllers import CategoriesController
 from decorators import (admin_required, Cached, InvalidateCache,
-                        jsonify, validate_body)
+                        validate_body)
 
 category_views = Blueprint('category_views', __name__)
 
 
 @category_views.route('/api/categories', methods=['GET'])
-@jsonify
 @Cached(timeout=43200)
 def get_all_categories():
     """
@@ -60,12 +59,10 @@ def get_all_categories():
         }
        ]
     """
-    code, resp = CategoriesController.index()
-    return code, resp
+    return CategoriesController.index()
 
 
 @category_views.route('/api/categories/<category>', methods=['GET'])
-@jsonify
 def get_category(category=None):
     """
     Returns the description of given `category`
@@ -92,12 +89,10 @@ def get_category(category=None):
 
     :status 404: category not found
     """
-    code, resp = CategoriesController.show(category)
-    return code, resp
+    return CategoriesController.show(category)
 
 
 @category_views.route('/api/categories', methods=['POST'])
-@jsonify
 @admin_required
 @InvalidateCache(routes=['/api/categories'])
 @validate_body({
@@ -117,12 +112,10 @@ def create_category():
     :status 400: when parameters are missing or invalid
     """
     body = request.get_json()
-    code, resp = CategoriesController.create(body)
-    return code, resp
+    return CategoriesController.create(body)
 
 
 @category_views.route('/api/categories/<category>', methods=['PUT'])
-@jsonify
 @admin_required
 @InvalidateCache(routes=['/api/categories'])
 @validate_body({
@@ -156,12 +149,10 @@ def update_category(category=None):
     :status 404: when the given `category` was not found
     """
     body = request.get_json()
-    code, resp = CategoriesController.update(category, body)
-    return code, resp
+    return CategoriesController.update(category, body)
 
 
 @category_views.route('/api/categories/<category>', methods=['DELETE'])
-@jsonify
 @admin_required
 @InvalidateCache(routes=['/api/categories'])
 def delete_category(category=None):
@@ -178,12 +169,10 @@ def delete_category(category=None):
     :status 403: when `category` is still referenced by a ticket/report
     :status 404: when the given `category` was not found
     """
-    code, resp = CategoriesController.destroy(category)
-    return code, resp
+    return CategoriesController.destroy(category)
 
 
 @category_views.route('/api/my-categories', methods=['GET'])
-@jsonify
 def get_user_categories():
     """
     Get allowed categories for logged user
@@ -213,5 +202,4 @@ def get_user_categories():
     :status 404: category not found
 
     """
-    code, resp = CategoriesController.index(user=g.user)
-    return code, resp
+    return CategoriesController.index(user=g.user)

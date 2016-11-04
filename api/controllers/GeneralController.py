@@ -364,7 +364,7 @@ def get_profiles():
 def get_users_login():
     """ Get login for all users
     """
-    return 200, list(User.objects.all().values('username'))
+    return list(User.objects.all().values('username'))
 
 
 def get_ticket_resolutions():
@@ -424,7 +424,7 @@ def search(**kwargs):
     filters = {}
     user = kwargs['user']
 
-    if 'filters' in kwargs:
+    if kwargs.get('filters'):
         try:
             filters = json.loads(unquote(unquote(kwargs['filters'])))
         except (ValueError, SyntaxError):
@@ -480,7 +480,7 @@ def search(**kwargs):
             values['filters']['where'] = new_where
 
     from api.controllers import ReportsController, TicketsController
-    code1, reps, nb_reps = ReportsController.index(
+    reps, nb_reps = ReportsController.index(
         filters=json.dumps(
             custom_filters['report']['filters']
         ),

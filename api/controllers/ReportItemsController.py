@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-""" Cerberus reports manager
+""" Cerberus report items manager
 """
 
 import json
@@ -34,7 +34,7 @@ from django.core.validators import URLValidator, validate_ipv46_address
 from django.db import IntegrityError, close_old_connections
 from django.db.models import ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
-from werkzeug.exceptions import BadRequest
+from werkzeug.exceptions import BadRequest, InternalServerError, NotFound
 
 from abuse.models import (ItemScreenshotFeedback, Report, ReportItem,
                           Service, Ticket)
@@ -239,8 +239,8 @@ def show(item_id):
     try:
         item = ReportItem.objects.get(id=item_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
-    return 200, model_to_dict(item)
+        raise NotFound('Item not found')
+    return model_to_dict(item)
 
 
 def create(body, user):
@@ -248,9 +248,7 @@ def create(body, user):
         Create a new report item
     """
     try:
-        code, resp = __get_item_infos(body, user)
-        if code != 200:
-            return code, resp
+        resp = __get_item_infos(body, user)
         item, created = ReportItem.objects.get_or_create(**resp)
         if resp['report'].ticket:
             database.log_action_on_ticket(
@@ -259,9 +257,9 @@ def create(body, user):
                 user=user
             )
     except (AttributeError, FieldError, IntegrityError, KeyError, ObjectDoesNotExist) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+        raise BadRequest(str(ex.message))
     if not created:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Report items already exists'}
+        raise BadRequest('Report items already exists')
     return show(item.id)
 
 
@@ -272,12 +270,10 @@ def update(item_id, body, user):
     try:
         item = ReportItem.objects.get(id=item_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Item not found')
 
     try:
-        code, resp = __get_item_infos(body, user)
-        if code != 200:
-            return code, resp
+        resp = __get_item_infos(body, user)
         ReportItem.objects.filter(pk=item.pk).update(**resp)
         item = ReportItem.objects.get(pk=item.pk)
         if resp['report'].ticket:
@@ -287,7 +283,7 @@ def update(item_id, body, user):
                 user=user
             )
     except (AttributeError, FieldError, IntegrityError, KeyError, ObjectDoesNotExist):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
+        raise BadRequest('Invalid fields in body')
     return show(item_id)
 
 
@@ -301,20 +297,16 @@ def __get_item_infos(body, user):
     item_infos.pop('date', None)
 
     item_infos['report'] = Report.objects.get(id=item_infos['report'])
-    code, resp = get_defendant_from_item(item_infos)
-    if code != 200:
-        return code, resp
+    resp = get_defendant_from_item(item_infos)
 
     item_infos.update(utils.get_reverses_for_item(
         item_infos['rawItem'],
         nature=item_infos['itemType']
     ))
 
-    code, resp = update_item_report_and_ticket(item_infos, resp['customerId'], resp['service'], user)
-    if code != 200:
-        return code, resp
+    update_item_report_and_ticket(item_infos, resp['customerId'], resp['service'], user)
 
-    return 200, item_infos
+    return item_infos
 
 
 def delete_from_report(item_id, rep, user):
@@ -330,9 +322,9 @@ def delete_from_report(item_id, rep, user):
                 action='delete_item',
                 user=user
             )
-        return 200, {'status': 'OK', 'code': 200, 'message': 'Item successfully removed'}
+        return {'message': 'Item successfully removed'}
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Item not found'}
+        raise NotFound('Item not found')
 
 
 def delete_from_ticket(item_id, ticket):
@@ -342,9 +334,9 @@ def delete_from_ticket(item_id, ticket):
         reps = Report.objects.filter(ticket=ticket)
         item = ReportItem.objects.get(id=item_id)
         ReportItem.objects.filter(report__in=reps, rawItem=item.rawItem).delete()
-        return 200, {'status': 'OK', 'code': 200, 'message': 'Item successfully removed'}
+        return {'message': 'Item successfully removed'}
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Item not found'}
+        raise NotFound('Item not found')
 
 
 def get_defendant_from_item(item):
@@ -357,30 +349,32 @@ def get_defendant_from_item(item):
     try:
         ip_addr, hostname, url = _get_item_ip_hostname_url(item)
         if not ip_addr and not hostname:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Unable to get infos for this item'}
+            raise BadRequest('Unable to get infos for this item')
     except ValidationError:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid item'}
+        raise BadRequest('Invalid item')
 
     for param in {'urls': [url]}, {'ips': [ip_addr], 'fqdn': [hostname]}:
         try:
-            services = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_services_from_items(**param)
+            services = ImplementationFactory.instance.get_singleton_of(
+                'CustomerDaoBase'
+            ).get_services_from_items(**param)
             schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
             if services:
                 break
         except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
-            return 503, {'status': 'Service unavailable', 'code': 503, 'message': 'Unknown exception while identifying defendant'}
+            raise InternalServerError('Unknown exception while identifying defendant')
 
     if services:
         try:
             customer_id = services[0]['defendant']['customerId']
             service = services[0]['service']
         except (IndexError, KeyError):
-            return 500, {'status': 'Internal Server Error', 'code': 500, 'message': 'Unable to parse CustomerDaoBase response'}
+            raise InternalServerError('Unable to parse CustomerDaoBase response')
 
     if not customer_id:
-        return 404, {'status': 'No defendant found for this item', 'code': 404}
+        raise NotFound('No defendant found for this item')
 
-    return 200, {'customerId': customer_id, 'service': service}
+    return {'customerId': customer_id, 'service': service}
 
 
 def _get_item_ip_hostname_url(item):
@@ -420,12 +414,14 @@ def update_item_report_and_ticket(item, customer_id, service, user):
     """ Eventually update report and ticket with item infos
     """
     if item['report'].defendant and customer_id != item['report'].defendant.customerId:
-        message = 'Resolved customerId for this item (%s) does not match report customerId' % (customer_id)
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': message}
+        message = 'Resolved customerId for this item (%s) does not ' \
+                  'match report customerId' % (customer_id)
+        raise BadRequest(message)
 
     if item['report'].service and service['name'] != item['report'].service.name:
-        message = 'Resolved service for this item (%s) does not match report service' % (customer_id)
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': message}
+        message = 'Resolved service for this item (%s) does not ' \
+                  'match report service' % (customer_id)
+        raise BadRequest(message)
 
     if not item['report'].defendant:
         defendant = DefendantsController.get_or_create(customer_id=customer_id)
@@ -436,15 +432,22 @@ def update_item_report_and_ticket(item, customer_id, service, user):
             item['report'].save()
 
             if item['report'].ticket and not item['report'].ticket.defendant:
-                TicketsController.update(item['report'].ticket.id, {'defendant': {'customerId': customer_id}}, user)
+                TicketsController.update(
+                    item['report'].ticket.id,
+                    {'defendant': {'customerId': customer_id}},
+                    user
+                )
                 item['report'].ticket.service = service_obj
                 item['report'].ticket.defendant = defendant
                 item['report'].ticket.save()
-                item['report'].ticket.reportTicket.all().update(service=service_obj, defendant=defendant)
+                item['report'].ticket.reportTicket.all().update(
+                    service=service_obj,
+                    defendant=defendant
+                )
         else:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Please retry later'}
+            raise BadRequest('Please retry later')
 
-    return 200, {'status': 'OK', 'code': 200}
+    return {'message' 'Item successfully updated'}
 
 
 def get_screenshot(item_id, report_id):
@@ -454,20 +457,22 @@ def get_screenshot(item_id, report_id):
     try:
         item = ReportItem.objects.get(id=item_id, report__id=report_id)
         if item.itemType != 'URL':
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Item is not an URL'}
+            raise BadRequest('Item is not an URL')
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Item not found'}
+        raise NotFound('Item not found')
 
     try:
-        screenshots = ImplementationFactory.instance.get_singleton_of('PhishingServiceBase').get_screenshots(item.rawItem)
+        screenshots = ImplementationFactory.instance.get_singleton_of(
+            'PhishingServiceBase'
+        ).get_screenshots(item.rawItem)
         schema.valid_adapter_response('PhishingServiceBase', 'get_screenshots', screenshots)
         results = {
             'rawItem': item.rawItem,
             'screenshots': screenshots,
         }
-        return 200, results
+        return results
     except (PhishingServiceException, schema.InvalidFormatError, schema.SchemaNotFound):
-        return 502, {'status': 'Proxy Error', 'code': 502, 'message': 'Error while loading screenshots'}
+        raise InternalServerError('Error while loading screenshots')
 
 
 def get_http_headers(url):
@@ -475,14 +480,14 @@ def get_http_headers(url):
         Get HTTP headers for given url
     """
     if not url:
-        return {'message': 'Missing url'}, 400
+        raise BadRequest('Missing url')
 
     url = _get_deobfuscate_item(url)
     try:
         validate = URLValidator()
         validate(url)
     except ValidationError:
-        return {'message': 'Not a valid URL'}, 400
+        raise BadRequest('Not a valid URL')
 
     try:
         response = ImplementationFactory.instance.get_singleton_of(
@@ -491,7 +496,7 @@ def get_http_headers(url):
         schema.valid_adapter_response('PhishingServiceBase', 'get_http_headers', response)
         return response
     except (PhishingServiceException, schema.InvalidFormatError, schema.SchemaNotFound) as ex:
-        return {'message': str(ex)}, 502
+        raise InternalServerError(str(ex))
 
 
 def _get_deobfuscate_item(item):
@@ -513,14 +518,14 @@ def get_whois(item):
     try:
         item = {'rawItem': _get_deobfuscate_item(item)}
     except AttributeError:
-        return {'message': 'Invalid item'}, 400
+        raise BadRequest('Invalid item')
 
     try:
         ip_addr, _, _ = _get_item_ip_hostname_url(item)
         if not ip_addr:
-            return {'message': 'Unable to get infos for this item'}, 400
+            raise BadRequest('Unable to get infos for this item')
     except ValidationError:
-        return {'message': 'Invalid item'}, 400
+        raise BadRequest('Invalid item')
 
     return {'ipCategory': utils.get_ip_network(ip_addr)}
 
@@ -534,16 +539,16 @@ def unblock_item(item_id, report_id=None, ticket_id=None):
         if report_id:
             report = Report.objects.get(id=report_id)
             if item.report.id != report.id:
-                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Given item not attached to given report'}
+                raise BadRequest('Given item not attached to given report')
         if ticket_id:
             ticket = Ticket.objects.get(id=ticket_id)
             if item.report.id not in ticket.reportTicket.all().values_list('id', flat=True):
-                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Given item not attached to given ticket'}
+                raise BadRequest('Given item not attached to given ticket')
     except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Item not found'}
+        raise NotFound('Item not found')
 
     utils.default_queue.enqueue(
         'phishing.unblock_url',
         url=item.rawItem,
     )
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Unblocking job successfully scheduled'}
+    return {'message': 'Unblocking job successfully scheduled'}
