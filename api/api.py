@@ -119,7 +119,7 @@ class CerberusResponse(Response):  # pylint: disable=too-many-ancestors
 
 class CerberusApp(Flask):
     """
-        Thi class set Flask Response to `api.api.CerberusResponse`
+        This class set Flask Response to `api.api.CerberusResponse`
     """
     response_class = CerberusResponse
 
