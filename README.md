@@ -133,7 +133,7 @@ You can see full cerberus models's relationship in `doc/source/models.png`.
 
 ### General settings ###
 
-For security purpose, most of setting values must be defined as VARENV. So, to configure the tool, you just have to export following environment variables:
+Default secrets are defined as VARENV. To configure the tool, you have to export following environment variables:
 
  * EMAIL_STORAGE_DIR: The folder where to store fetched and sent emails
  * MAGIC_SMTP_HEADER: King of tag in SMTP header defining e-mail source (see next section)
@@ -152,7 +152,7 @@ For security purpose, most of setting values must be defined as VARENV. So, to c
  * PG_HOST: The IP address of PostgreSQL db
  * PG_PORT: The TCP port of PostgreSQL db
 
-In `settings.py` you can see how this different varenv are used + other settings description. **Really, you should edit this file.**
+In `config/settings.py` you can see how this different varenv are used + other settings description. **Really, you should edit this file.**
 
 ### A "trusted" email ? ###
 
@@ -171,7 +171,7 @@ Everything you have to do is opening the file utils/ips.py and add your CIDRs (o
 
 ### Implementing your own core functions ###
 
-You'll maybe see in the file `settings.py`, there is a way to provide your implementation(s).
+You'll maybe see in the file `config/settings.py`, there is a way to provide your implementation(s).
 By default, a very basic implementation is provided for each adapter. (see abstract documentation)
 
 Required adapters implementations are:

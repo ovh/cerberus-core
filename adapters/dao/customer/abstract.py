@@ -19,7 +19,7 @@
 
 
 """
-    Defined Customer DAO abstract Class and related Defendant/Service class
+    Defines Customer DAO abstract Class and related Defendant/Service class
 """
 
 import abc

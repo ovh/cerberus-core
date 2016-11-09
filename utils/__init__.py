@@ -23,8 +23,9 @@
 
 import netaddr
 
+from django.conf import settings
+
 import ips
-import settings
 import utils
 
 for key, val in ips.IPS_NETWORKS.iteritems():

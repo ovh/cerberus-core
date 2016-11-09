@@ -19,7 +19,7 @@
 
 
 """
-    Defined Reputation DAO abstract Class
+    Defines Reputation DAO abstract Class
 """
 
 import abc

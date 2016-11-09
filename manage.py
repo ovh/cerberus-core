@@ -34,7 +34,14 @@ if __name__ == "__main__":
         unittest.TestLoader.sortTestMethodsUsing = lambda _, x, y: cmp(y, x)
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.settings")
     else:
-        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+        from django.conf import global_settings, settings
+        from ovh import settings as custom_settings
+
+        for attr in dir(custom_settings):
+            if not callable(getattr(custom_settings, attr)) and not attr.startswith("__"):
+                setattr(global_settings, attr, getattr(custom_settings, attr))
+
+        settings.configure()
 
     import django
     django.setup()

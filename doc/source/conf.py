@@ -21,9 +21,24 @@ PARENTDIR = os.path.dirname(CURRENTDIR)
 PARENTDIR = os.path.dirname(PARENTDIR)
 sys.path.insert(0, PARENTDIR)
 
+# Init settings
+
 import django
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
-django.setup()
+from django.conf import ImproperlyConfigured
+
+try:
+    django.setup()
+    from django.conf import settings
+except ImproperlyConfigured:
+    from django.conf import global_settings, settings
+    from config import settings as custom_settings
+
+    for attr in dir(custom_settings):
+        if not callable(getattr(custom_settings, attr)) and not attr.startswith("__"):
+            setattr(global_settings, attr, getattr(custom_settings, attr))
+
+    settings.configure()
+    django.setup()
 
 from factory.implementation import ImplementationFactory
 
