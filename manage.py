@@ -35,7 +35,7 @@ if __name__ == "__main__":
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.settings")
     else:
         from django.conf import global_settings, settings
-        from ovh import settings as custom_settings
+        from config import settings as custom_settings
 
         for attr in dir(custom_settings):
             if not callable(getattr(custom_settings, attr)) and not attr.startswith("__"):
