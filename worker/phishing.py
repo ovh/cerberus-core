@@ -219,19 +219,24 @@ def unblock_url(url=None):
     ImplementationFactory.instance.get_singleton_of('PhishingServiceBase').unblock_url(url)
 
 
-def is_all_down_for_ticket(ticket, last=5):
+def is_all_down_for_ticket(ticket, last=5, url_only=False):
     """
         Check if all items for a ticket are down
 
         :param `Ticket` ticket : A Cerberus `abuse.models.Ticket` instance
         :param int last: Check for the 'last' entries
+        :param bool url_only: Check only report containing URL
         :rtype: bool
         :returns: if all items are down
     """
     results = []
     # Check if there are still items up
     for report in ticket.reportTicket.all():
-        results.append(check_if_all_down(report=report, last=last))
+        if url_only:
+            if report.reportItemRelatedReport.filter(itemType='URL').exists():
+                results.append(check_if_all_down(report=report, last=last))
+        else:
+            results.append(check_if_all_down(report=report, last=last))
 
     return bool(all(results))
 
