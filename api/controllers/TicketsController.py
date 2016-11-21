@@ -1538,15 +1538,13 @@ def get_emails(ticket_id):
     except (ObjectDoesNotExist, ValueError):
         raise NotFound('Ticket not found')
 
-    ticket_reports_id = ticket.reportTicket.all().values_list('id')
-
     try:
         emails = ImplementationFactory.instance.get_singleton_of(
             'MailerServiceBase'
         ).get_emails(ticket)
         response = []
         for email in emails:
-            attachments = _get_email_attachments(email, ticket_reports_id)
+            attachments = _get_email_attachments(email, ticket)
             response.append({
                 'body': email.body,
                 'created': email.created,
@@ -1561,21 +1559,21 @@ def get_emails(ticket_id):
         raise InternalServerError(str(ex))
 
 
-def _get_email_attachments(email, ticket_reports_id):
+def _get_email_attachments(email, ticket):
 
     attachments = []
     if not email.attachments:
         return attachments
 
     for attach in email.attachments:
-        attach_obj = AttachedDocument.objects.filter(
-            report__in=ticket_reports_id,
-            name=attach['filename'],
-            filetype=attach['content_type'],
-        ).last()
-        if attach_obj:
+        try:
+            attach_obj = ticket.attachments.filter(
+                name=attach['filename'],
+                filetype=attach['content_type']
+            ).last()
             attachments.append(model_to_dict(attach_obj))
-
+        except ObjectDoesNotExist:
+            continue
     return attachments
 
 
