@@ -110,8 +110,10 @@ class DefaultMailerService(MailerServiceBase):
         except (AttributeError, TypeError, ValueError, ValidationError):
             raise MailerServiceException('Invalid email')
 
-        if category not in EMAIL_VALID_CATEGORIES:
-            raise MailerServiceException('Invalid email category %s' % category)
+        if category:
+            category = category.title()
+            if category not in EMAIL_VALID_CATEGORIES:
+                raise MailerServiceException('Invalid email category %s' % category)
 
         # Save contacted provider
         ticket_providers = list(set(ticket.reportTicket.all().values_list('provider__email', flat=True).distinct()))
@@ -183,8 +185,10 @@ class DefaultMailerService(MailerServiceBase):
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
                 raise MailerServiceException('Ticket %s cannot be found in DB. Skipping...' % (str(ticket)))
 
-        if category not in EMAIL_VALID_CATEGORIES:
-            raise MailerServiceException('Invalid email category %s' % category)
+        if category:
+            category = category.title()
+            if category not in EMAIL_VALID_CATEGORIES:
+                raise MailerServiceException('Invalid email category %s' % category)
 
         self.__check_ticket_emails(ticket)
         self.__update_emails_db(ticket.publicId, sender, recipient, subject, body, category, int(time()))

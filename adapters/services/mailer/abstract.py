@@ -51,7 +51,7 @@ PrefetchedEmail = namedtuple(
     ]
 )
 
-EMAIL_VALID_CATEGORIES = [t[0] for t in MailTemplate.RECIPIENT_TYPE]
+EMAIL_VALID_CATEGORIES = [t[0].title() for t in MailTemplate.RECIPIENT_TYPE]
 
 
 class MailerServiceException(Exception):
