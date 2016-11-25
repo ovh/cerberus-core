@@ -98,6 +98,7 @@ TICKET_FILTER_MAPPING = (
     ('ticketsTag', 'tags__name'),
     ('reportsTag', 'reportTicket__tags__name'),
     ('treatedBy', 'treatedBy__username'),
+    ('starredBy', 'starredBy__user__username'),
     ('defendantCustomerId', 'defendant__customerId'),
     ('defendantCountry', 'defendant__details__country'),
     ('defendantEmail', 'defendant__details__email'),

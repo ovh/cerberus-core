@@ -511,6 +511,10 @@ def _get_toolbar_count(where, user):
     for key, status in mapping:
         resp[key] = sum([t['count'] if t['status'] in status else 0 for t in res])
 
+    # Starred
+    resp['myTicketsStarredCount'] = user.starredTickets.count()
+
+    # Escalated
     resp['escalatedCount'] = Ticket.objects.filter(
         where,
         escalated=True

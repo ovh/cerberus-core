@@ -625,3 +625,14 @@ class MassContactResult(models.Model):
     matchingCount = models.IntegerField(null=False, default=0)  # Defendant found, report created
     notMatchingCount = models.IntegerField(null=False, default=0)  # No defendant found
     failedCount = models.IntegerField(null=False, default=0)  # Rq job failed
+
+
+class StarredTicket(models.Model):
+    """
+        Association of `abuse.models.User` and `abuse.models.Ticket`
+    """
+    user = models.ForeignKey(User, null=False, related_name='starredTickets')
+    ticket = models.ForeignKey(Ticket, null=False, related_name='starredBy')
+
+    class Meta:
+        unique_together = ("ticket", "user")
