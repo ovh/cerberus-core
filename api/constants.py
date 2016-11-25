@@ -56,7 +56,7 @@ GENERAL_SEARCH_TICKET_FIELDS = list(set(
     [
         f.name
         for f in Ticket._meta.fields
-    ] + GENERAL_SEARCH_EXTRA_FIELDS + ['ticketTag', 'attachedReportsCount', 'ticketIds']
+    ] + GENERAL_SEARCH_EXTRA_FIELDS + ['ticketTag', 'attachedReportsCount', 'ticketIds', 'starredBy']
 ))
 
 GENERAL_SEARCH_MAPPING = {

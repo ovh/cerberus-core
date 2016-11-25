@@ -352,3 +352,16 @@ def get_ticket_attachment(ticket=None, attachment=None):
         mimetype=resp['filetype'],
         as_attachment=True
     )
+
+
+@ticket_views.route('/api/tickets/<ticket>/star', methods=['POST', 'DELETE'])
+@perm_required
+def ticket_star_management(ticket=None):
+    """
+        Star/Unstar given `abuse.models.Ticket` for given `abuse.models.User`
+
+    :status 200: when category is successfully created
+    :status 400: when parameters are missing or invalid
+    :status 404: when ticket is not found
+    """
+    return TicketsController.star_ticket_management(ticket, g.user, method=request.method)

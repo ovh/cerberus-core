@@ -1591,8 +1591,35 @@
 },
 {
   "fields": {
+    "endpoint": "ticket_views.get_ticket_attachment",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 140
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.ticket_star_management",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 141
+},
+{
+  "fields": {
+    "endpoint": "ticket_views.ticket_star_management",
+    "method": "DELETE"
+  },
+  "model": "abuse.apiroute",
+  "pk": 142
+},
+{
+  "fields": {
     "codename": "run_level_1",
     "allowedRoutes": [
+      142,
+      141,
+      140,
       139,
       138,
       133,
@@ -1703,6 +1730,9 @@
   "fields": {
     "codename": "run_level_3",
     "allowedRoutes": [
+      142,
+      141,
+      140,
       139,
       138,
       133,

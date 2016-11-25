@@ -45,7 +45,7 @@ from werkzeug.exceptions import (BadRequest, Forbidden, InternalServerError,
 from abuse.models import (AbusePermission, ContactedProvider, Defendant,
                           History, Proof, Report, Resolution, Service,
                           ServiceAction, ServiceActionJob, Tag, Ticket,
-                          TicketComment, AttachedDocument)
+                          TicketComment, AttachedDocument, StarredTicket)
 from adapters.services.action.abstract import ActionServiceException
 from adapters.services.mailer.abstract import EMAIL_VALID_CATEGORIES, MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
@@ -68,6 +68,7 @@ def index(**kwargs):
     """
 
     # Parse filters from request
+    user = kwargs['user']
     filters = {}
     if kwargs.get('filters'):
         try:
@@ -83,7 +84,7 @@ def index(**kwargs):
 
     # Generate Django filter based on parsed filters
     try:
-        where = __generate_request_filters(filters, kwargs['user'], kwargs.get('treated_by'))
+        where = __generate_request_filters(filters, user, kwargs.get('treated_by'))
     except (AttributeError, KeyError, IndexError, FieldError,
             SyntaxError, TypeError, ValueError) as ex:
         raise BadRequest(str(ex.message))
@@ -119,7 +120,7 @@ def index(**kwargs):
             SyntaxError, TypeError, ValueError) as ex:
         raise BadRequest(str(ex.message))
 
-    __format_ticket_response(tickets)
+    __format_ticket_response(tickets, user)
     return list(tickets), nb_record_filtered
 
 
@@ -185,13 +186,10 @@ def __generate_request_filters(filters, user=None, treated_by=None):
     return where
 
 
-def __format_ticket_response(tickets):
+def __format_ticket_response(tickets, user):
     """ Convert datetime object and add flat foreign key
     """
     for ticket in tickets:
-        for key, val in ticket.iteritems():
-            if isinstance(val, datetime):
-                ticket[key] = time.mktime(val.timetuple())
 
         # Flat foreign models
         if ticket.get('defendant'):
@@ -206,6 +204,10 @@ def __format_ticket_response(tickets):
             tags = Ticket.objects.get(id=ticket['id']).tags.all()
             ticket['tags'] = [model_to_dict(tag) for tag in tags]
         ticket['commentsCount'] = TicketComment.objects.filter(ticket=ticket['id']).count()
+        ticket['starredByMe'] = StarredTicket.objects.filter(
+            ticket_id=ticket['id'],
+            user=user
+        ).exists()
 
 
 def _add_search_filters(filters, query):
@@ -253,11 +255,6 @@ def show(ticket_id, user):
     except (IndexError, ObjectDoesNotExist, ValueError):
         raise NotFound('Ticket not found')
 
-    # Convert dates
-    for key, val in ticket_dict.iteritems():
-        if isinstance(val, datetime):
-            ticket_dict[key] = time.mktime(val.timetuple())
-
     # Add related infos
     if ticket.treatedBy:
         ticket_dict['treatedBy'] = ticket.treatedBy.username
@@ -271,12 +268,14 @@ def show(ticket_id, user):
         ticket_dict['jobs'] = []
         for job in ticket.jobs.all():
             info = model_to_dict(job)
-            for key, val in info.iteritems():
-                if isinstance(val, datetime):
-                    info[key] = int(time.mktime(val.timetuple()))
             ticket_dict['jobs'].append(info)
 
     ticket_reports_id = ticket.reportTicket.all().values_list('id', flat=True).distinct()
+
+    ticket_dict['starredByMe'] = StarredTicket.objects.filter(
+        ticket=ticket,
+        user=user
+    ).exists()
 
     ticket_dict['comments'] = __get_ticket_comments(ticket)
     ticket_dict['history'] = __get_ticket_history(ticket)
@@ -1475,9 +1474,6 @@ def get_jobs_status(ticket_id):
     jobs = ticket.jobs.all().order_by('creationDate')
     for job in jobs:
         info = model_to_dict(job)
-        for key, val in info.iteritems():
-            if isinstance(val, datetime):
-                info[key] = int(time.mktime(val.timetuple()))
         if info.get('action'):
             info['action'] = model_to_dict(ServiceAction.objects.get(id=info['action']))
         resp.append(info)
@@ -1520,7 +1516,7 @@ def get_todo_tickets(**kwargs):
             user=user,
             filters=filters
         )
-        __format_ticket_response(tickets)
+        __format_ticket_response(tickets, user)
     except (ObjectDoesNotExist, KeyError):
         tickets = []
         nb_record = 0
@@ -1726,3 +1722,31 @@ def get_attachment(ticket_id, attachment_id):
         raise NotFound('Raw attachment not found')
 
     return resp
+
+
+def star_ticket_management(ticket_id, user, method='POST'):
+    """
+        Star/Unstar given `abuse.models.Ticket` for given `abuse.models.User`
+    """
+    try:
+        ticket = Ticket.objects.get(id=ticket_id)
+    except (ObjectDoesNotExist, ValueError):
+        raise NotFound('Ticket not found')
+
+    try:
+        if method == 'POST':
+            StarredTicket.objects.create(
+                user=user,
+                ticket=ticket
+            )
+            return {'message': 'Ticket successfully starred'}
+        elif method == 'DELETE':
+            StarredTicket.objects.filter(
+                user=user,
+                ticket=ticket
+            ).delete()
+            return {'message': 'Ticket successfully unstarred'}
+        else:
+            raise BadRequest('Unsupported operation')
+    except IntegrityError:
+        raise BadRequest('You have already starred this ticket')

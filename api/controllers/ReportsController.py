@@ -160,9 +160,6 @@ def __format_report_response(reports):
     """ Convert datetime object and add flat foreign key
     """
     for rep in reports:
-        for key, val in rep.iteritems():
-            if isinstance(val, datetime):
-                rep[key] = time.mktime(val.timetuple())
 
         # Flat foreign models
         if rep.get('defendant'):
@@ -223,11 +220,6 @@ def show(report_id):
         report = Report.objects.filter(id=report_id).values(*REPORT_FIELDS)[0]
     except (IndexError, ValueError):
         raise NotFound('Report not found')
-
-    # Convert date
-    for key, val in report.iteritems():
-        if isinstance(val, datetime):
-            report[key] = time.mktime(val.timetuple())
 
     # Add related infos
     if report.get('plaintiff'):
