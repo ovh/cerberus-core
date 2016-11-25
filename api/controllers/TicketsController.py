@@ -1565,15 +1565,15 @@ def _get_email_attachments(email, ticket):
     if not email.attachments:
         return attachments
 
-    for attach in email.attachments:
-        try:
-            attach_obj = ticket.attachments.filter(
-                name=attach['filename'],
-                filetype=attach['content_type']
-            ).last()
-            attachments.append(model_to_dict(attach_obj))
-        except ObjectDoesNotExist:
-            continue
+    filters = [{'name': a['filename'], 'filetype': a['content_type']} for a in email.attachments]
+    filters.extend([{'name': a['name'].replace('_', ' '), 'filetype': a['filetype']} for a in filters])
+
+    for attach in filters:
+        for att in ticket.attachments.filter(**attach):
+            desc = model_to_dict(att)
+            if desc not in attachments:
+                attachments.append(desc)
+
     return attachments
 
 
