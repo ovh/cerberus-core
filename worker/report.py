@@ -326,7 +326,7 @@ def _save_attachments(filename, attachments, reports=None, tickets=None):
         :param list reports: A list of `abuse.models.Report` instance
         :param list tickets: A list of `abuse.models.Ticket` instance
     """
-    for attachment in attachments[:50]:  # Slice 50 to avoid denial of service
+    for attachment in attachments[:20]:  # Slice 20 to avoid denial of service
 
         storage_filename = filename + '-attach-'
         storage_filename = storage_filename.encode('utf-8')

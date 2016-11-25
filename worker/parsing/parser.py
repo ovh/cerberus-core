@@ -41,6 +41,7 @@ from email.utils import mktime_tz, parsedate_tz
 from bs4 import BeautifulSoup
 from django.conf import settings
 from django.db.models import ObjectDoesNotExist
+from django.utils.text import slugify
 
 CURRENTDIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 PARENTDIR = os.path.dirname(CURRENTDIR)
@@ -442,7 +443,7 @@ def parse_attachment(part):
             if extension:
                 filename += extension
 
-    attachment['filename'] = utils.decode_every_charset_in_the_world(filename)
+    attachment['filename'] = slugify(utils.decode_every_charset_in_the_world(filename))
     return attachment
 
 
