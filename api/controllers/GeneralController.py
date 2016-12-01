@@ -469,7 +469,7 @@ def toolbar(**kwargs):
 
 def _get_user_specific_where(user):
 
-    user_specific_where = []
+    user_specific_where = [Q()]
     abuse_permissions = AbusePermission.objects.filter(user=user.id)
 
     for perm in abuse_permissions:
