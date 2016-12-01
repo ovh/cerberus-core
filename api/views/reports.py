@@ -25,9 +25,10 @@
 from io import BytesIO
 
 from flask import Blueprint, g, request, send_file
+from voluptuous import Any, Optional
 
 from api.controllers import ReportItemsController, ReportsController
-from decorators import perm_required
+from decorators import perm_required, validate_body
 
 report_views = Blueprint('report_views', __name__)
 
@@ -60,6 +61,19 @@ def update_report(report=None):
         return ReportsController.update(report, body, g.user)
     else:
         return ReportsController.destroy(report)
+
+
+@report_views.route('/api/reports/<report>/validate', methods=['POST'])
+@perm_required
+@validate_body({
+    Optional('domainToRequest'): Any(str, unicode)
+})
+def validate_report(report=None):
+    """
+        Parse now validated "ToValidate" `abuse.models.Report`
+    """
+    body = request.get_json()
+    return ReportsController.validate(report, body, g.user)
 
 
 @report_views.route('/api/reports/<report>/items', methods=['GET'])

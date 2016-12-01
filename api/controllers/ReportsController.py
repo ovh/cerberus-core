@@ -303,15 +303,6 @@ def _update_status(body, report, user):
         body['ticket'] = None
         report.status = 'New'
         report.save()
-    elif report.status.lower() == 'tovalidate' and body['status'].lower() == 'attached':
-        report.status = 'Attached'
-        report.save()
-        utils.email_queue.enqueue(
-            'report.reparse_validated',
-            report_id=report.id,
-            user_id=user.id,
-        )
-        return {'message': 'Report successfully updated'}
     elif body['status'].lower() == 'attached' and not report.ticket and \
             all((report.category, report.defendant, report.service)):
         return TicketsController.create(body, user)
@@ -377,6 +368,42 @@ def destroy(report_id):
         raise NotFound('Report not found')
     report.update(status='Archived')
     return {'message': 'Report successfully archived'}
+
+
+def validate(report_id, body, user):
+    """
+        Parse now validated "ToValidate" `abuse.models.Report`
+    """
+    try:
+        report = Report.objects.get(id=int(report_id))
+        if report.status.lower() != 'tovalidate':
+            raise BadRequest('Report is not in ToValidate state')
+    except (ObjectDoesNotExist, ValueError):
+        raise NotFound('Report not found')
+
+    function = None
+    params = {
+        'report_id': report.id,
+        'user_id': user.id,
+        'domain_to_request': None
+    }
+
+    if report.defendant and report.service:
+        function = 'report.validate_with_defendant'
+    else:
+        if body.get('domainToRequest'):
+            function = 'report.cdn_request'
+            params['domain_to_request'] = body['domainToRequest']
+        else:
+            function = 'report.validate_without_defendant'
+
+    report.status = 'Attached'
+    report.save()
+
+    params = {k: v for k, v in params.iteritems() if v}
+    utils.email_queue.enqueue(function, **params)
+
+    return {'message': 'Report successfully validated'}
 
 
 def get_raw(report_id):

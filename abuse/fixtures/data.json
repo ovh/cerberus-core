@@ -1615,8 +1615,17 @@
 },
 {
   "fields": {
+    "endpoint": "report_views.validate_report",
+    "method": "POST"
+  },
+  "model": "abuse.apiroute",
+  "pk": 143
+},
+{
+  "fields": {
     "codename": "run_level_1",
     "allowedRoutes": [
+      143,  
       142,
       141,
       140,
@@ -1730,6 +1739,7 @@
   "fields": {
     "codename": "run_level_3",
     "allowedRoutes": [
+      143,  
       142,
       141,
       140,
