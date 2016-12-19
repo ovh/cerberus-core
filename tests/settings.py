@@ -41,12 +41,17 @@ CUSTOM_REPORT_WORKFLOWS = (
 CUSTOM_TICKET_ANSWER_WORKFLOWS = (
     'worker.workflows.ticket.mailerdaemon.MailerDaemonWorkflow',
     'worker.workflows.ticket.customeranswer.CustomerAnswerWorkflow',
+    'worker.workflows.ticket.cloudflarebackendresponse.CloudflareBackendResponse',
     'worker.workflows.ticket.default.DefaultAnswerWorkflow',
 )
 
 CUSTOM_SCHEDULING_ALGORITHMS = (
     'api.controllers.scheduling.global.GlobalSchedulingAlgorithm',
     'api.controllers.scheduling.limitedOpen.LimitedOpenSchedulingAlgorithm',
+)
+
+CUSTOM_CDN_REQUEST_WORKFLOWS = (
+    'worker.workflows.cdnrequest.cloudflare.CloudflareRequest',
 )
 
 QUEUE = {

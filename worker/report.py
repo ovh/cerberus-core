@@ -35,9 +35,8 @@ import common
 import database
 from abuse.models import (AttachedDocument, Defendant, Proof, Report,
                           ReportItem, ReportThreshold, Service, Ticket, User)
-from adapters.dao.customer.abstract import CustomerDaoException
-from adapters.services.mailer.abstract import MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
+from factory.cdnrequest import CDNRequestWorkflowFactory
 from factory.implementation import ImplementationFactory
 from factory.reportworkflow import ReportWorkflowFactory
 from factory.ticketanswerworkflow import TicketAnswerWorkflowFactory
@@ -73,17 +72,19 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
     #
     # `abuse.models.Defendant` and `abuse.models.Service` HAVE to be unique.
 
-    if not email_content:
-        Logger.error(unicode('Missing email content'))
-        return
-
     if not filename:  # Worker have to push email to Storage Service
         filename = hashlib.sha256(email_content).hexdigest()
         __save_email(filename, email_content)
 
     # Parse email content
     abuse_report = Parser.parse(email_content)
-    Logger.debug(unicode('New email from %s' % (abuse_report.provider)), extra={'from': abuse_report.provider, 'action': 'new email'})
+    Logger.debug(
+        unicode('New email from %s' % (abuse_report.provider)),
+        extra={
+            'from': abuse_report.provider,
+            'action': 'new email'
+        }
+    )
 
     # Check if provider is not blacklisted
     if abuse_report.provider in settings.PARSING['providers_to_ignore']:
@@ -91,7 +92,9 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         return
 
     # Check if it's an answer to a ticket(s)
-    tickets = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').is_email_ticket_answer(abuse_report)
+    tickets = ImplementationFactory.instance.get_singleton_of(
+        'MailerServiceBase'
+    ).is_email_ticket_answer(abuse_report)
     if tickets:
         for ticket, category, recipient in tickets:
             if all((ticket, category, recipient)) and not ticket.locked:  # OK it's an anwser, updating ticket and exiting
@@ -99,16 +102,14 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         return
 
     # Check if items are linked to customer and get corresponding services
-    try:
-        services = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_services_from_items(
-            urls=abuse_report.urls,
-            ips=abuse_report.ips,
-            fqdn=abuse_report.fqdn
-        )
-        schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
-    except CustomerDaoException as ex:
-        Logger.error(unicode('Exception while identifying defendants from items for mail %s -> %s ' % (filename, str(ex))))
-        raise CustomerDaoException(ex)
+    services = ImplementationFactory.instance.get_singleton_of(
+        'CustomerDaoBase'
+    ).get_services_from_items(
+        urls=abuse_report.urls,
+        ips=abuse_report.ips,
+        fqdn=abuse_report.fqdn
+    )
+    schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
 
     # Create report(s) with identified services
     if not services:
@@ -125,10 +126,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
     # Send acknowledgement to provider (only if send_ack = True and report is attached to a ticket)
     for report in created_reports:
         if send_ack and report.ticket:
-            try:
-                __send_ack(report, lang=lang)
-            except MailerServiceException as ex:
-                raise MailerServiceException(ex)
+            __send_ack(report, lang=lang)
 
     # Index to SearchService
     if ImplementationFactory.instance.is_implemented('SearchServiceBase'):
@@ -454,15 +452,7 @@ def archive_if_timeout(report_id=None):
 
         :param int report_id: The report id
     """
-    if not report_id:
-        Logger.error(unicode('Invalid parameters submitted [report_id=%d]' % (report_id)))
-        return
-
-    try:
-        report = Report.objects.get(id=report_id)
-    except (ObjectDoesNotExist, ValueError):
-        Logger.error(unicode('Report %d cannot be found in DB. Skipping...' % (report_id)))
-        return
+    report = Report.objects.get(id=report_id)
 
     if report.status != 'New':
         Logger.error(unicode('Report %d not New, status : %s , Skipping ...' % (report_id, report.status)))
@@ -526,74 +516,74 @@ def __create_threshold_ticket(data, thres):
 
 
 @transaction.atomic
-def reparse_validated(report_id=None, user_id=None):
+def validate_with_defendant(report_id=None, user_id=None):
     """
         Reparse now validated `abuse.models.Report`
 
         :param int report_id: A Cerberus `abuse.models.Report` id
         :param int user_id: A Cerberus `abuse.models.User` id
     """
-    try:
-        report = Report.objects.get(id=report_id)
-        user = User.objects.get(id=user_id)
-    except (ObjectDoesNotExist, ValueError):
-        Logger.error(unicode('Report %d cannot be found in DB. Skipping...' % (report_id)))
-        return
+    report = Report.objects.get(id=report_id)
+    user = User.objects.get(id=user_id)
 
-    if not report.defendant or not report.service:
-        _create_closed_ticket(report, user)
-    else:
-        _reinject_validated(report, user)
-
+    _reparse_validated(report, user)
     Logger.error(unicode('Report %d successfully processed' % (report_id)))
 
 
-def _reinject_validated(report, user):
+def _reparse_validated(report, user):
 
     trusted = True
     ticket = None
     if all((report.defendant, report.category, report.service)):
         msg = 'Looking for opened ticket for (%s, %s, %s)'
-        Logger.debug(unicode(msg % (report.defendant.customerId, report.category.name, report.service.name)))
+        msg = msg % (report.defendant.customerId, report.category.name, report.service.name)
+        Logger.debug(unicode(msg))
         ticket = database.search_ticket(report.defendant, report.category, report.service)
 
     # Checking specific processing workflow
     for workflow in ReportWorkflowFactory.instance.registered_instances:
-        if workflow.identify(report, ticket, is_trusted=trusted) and workflow.apply(report, ticket, trusted, False):
-            Logger.debug(unicode('Specific workflow %s applied' % (str(workflow.__class__.__name__))))
+        if (workflow.identify(report, ticket, is_trusted=trusted) and
+                workflow.apply(report, ticket, trusted, False)):
+            Logger.debug(unicode(
+                'Specific workflow %s applied' % (str(workflow.__class__.__name__))
+            ))
             return
 
     # Create ticket if trusted
-    new_ticket = False
     if not ticket:
-        ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
-        new_ticket = True
+        ticket = common.create_ticket(
+            report,
+            attach_new=True
+        )
 
     if ticket:
         report.ticket = Ticket.objects.get(id=ticket.id)
         report.status = 'Attached'
         report.save()
         database.set_ticket_higher_priority(report.ticket)
-        database.log_action_on_ticket(
-            ticket=ticket,
-            action='attach_report',
-            report=report,
-            new_ticket=new_ticket,
-            user=user
-        )
-
-        try:
-            __send_ack(report, lang='EN')
-        except MailerServiceException as ex:
-            raise MailerServiceException(ex)
+        __send_ack(report, lang='EN')
 
 
-def _create_closed_ticket(report, user):
+@transaction.atomic
+def validate_without_defendant(report_id=None, user_id=None):
+    """
+        Archived invalid `abuse.models.Report`
+
+        :param int report_id: A Cerberus `abuse.models.Report` id
+        :param int user_id: A Cerberus `abuse.models.User` id
+    """
+    report = Report.objects.get(id=report_id)
+    user = User.objects.get(id=user_id)
 
     report.ticket = common.create_ticket(report, attach_new=False)
     report.save()
+    _send_emails_invalid_report(report)
+    common.close_ticket(report, resolution_codename=settings.CODENAMES['invalid'], user=user)
+    Logger.info(unicode('Ticket %d and report %d closed' % (report.ticket.id, report.id)))
 
-    # Add temp proof(s) for mail content
+
+def _send_emails_invalid_report(report):
+
     temp_proofs = []
     if not report.ticket.proof.count():
         temp_proofs = common.get_temp_proofs(report.ticket)
@@ -602,10 +592,16 @@ def _create_closed_ticket(report, user):
     try:
         validate_email(report.provider.email.strip())
         Logger.info(unicode('Sending email to provider'))
-        common.send_email(report.ticket, [report.provider.email], settings.CODENAMES['not_managed_ip'])
+        common.send_email(
+            report.ticket,
+            [report.provider.email],
+            settings.CODENAMES['not_managed_ip']
+        )
         report.ticket.save()
         Logger.info(unicode('Mail sent to provider'))
-        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(report.ticket)
+        ImplementationFactory.instance.get_singleton_of(
+            'MailerServiceBase'
+        ).close_thread(report.ticket)
 
         # Delete temp proof(s)
         for proof in temp_proofs:
@@ -613,5 +609,35 @@ def _create_closed_ticket(report, user):
     except (AttributeError, TypeError, ValueError, ValidationError):
         pass
 
-    common.close_ticket(report, resolution_codename=settings.CODENAMES['invalid'], user=user)
-    Logger.info(unicode('Ticket %d and report %d closed' % (report.ticket.id, report.id)))
+
+@transaction.atomic
+def cdn_request(report_id=None, user_id=None, domain_to_request=None):
+    """
+        Given `abuse.models.Report` contains CDN protected domain,
+        try to resolve backend IP address
+
+        :param int report_id: A Cerberus `abuse.models.Report` id
+        :param int user_id: A Cerberus `abuse.models.User` id
+        :param int domain_to_request: The domain to resolve
+    """
+    report = Report.objects.get(id=report_id)
+    user = User.objects.get(id=user_id)
+    domain_to_request = domain_to_request.lower()
+
+    ReportItem.objects.create(
+        itemType='FQDN',
+        report=report,
+        rawItem=domain_to_request
+    )
+
+    for workflow in CDNRequestWorkflowFactory.instance.registered_instances:
+        if workflow.identify(report, domain_to_request):
+            is_workflow_applied = workflow.apply(report, domain_to_request)
+            if is_workflow_applied:
+                database.set_report_specificworkflow_tag(report, str(workflow.__class__.__name__))
+                Logger.debug(unicode(
+                    'Specific workflow %s applied' % str(workflow.__class__.__name__)
+                ))
+                return
+
+    raise Exception('No workflow applied')

@@ -391,20 +391,23 @@ def set_ticket_higher_priority(ticket):
         Set `abuse.models.Ticket` higher priority available through it's
         `abuse.models.Report`'s `abuse.models.Provider`
     """
-    if ticket.defendant:
-        defendant = Defendant.objects.get(customerId=ticket.defendant.customerId)
-        if defendant.details.creationDate >= datetime.now() - timedelta(days=30):
-            ticket.priority = sorted(PRIORITY_LEVEL.items(), key=operator.itemgetter(1))[1][0]  # High
-            ticket.save()
-            return
+    ticket_priority = 'Normal'
 
     priorities = list(set(ticket.reportTicket.all().values_list('provider__priority', flat=True)))
     for priority, _ in sorted(PRIORITY_LEVEL.items(), key=operator.itemgetter(1)):
         if priority in priorities:
-            Logger.debug(unicode('set priority %s to ticket %d' % (priority, ticket.id)))
-            ticket.priority = priority
-            ticket.save()
-            return
+            ticket_priority = priority
+            break
+
+    if ticket.defendant:  # Warning for new customer
+        defendant = Defendant.objects.get(customerId=ticket.defendant.customerId)
+        if defendant.details.creationDate >= datetime.now() - timedelta(days=30):
+            if PRIORITY_LEVEL[ticket_priority] > PRIORITY_LEVEL['High']:
+                ticket_priority = 'High'
+
+    Logger.debug(unicode('set priority %s to ticket %d' % (ticket_priority, ticket.id)))
+    ticket.priority = ticket_priority
+    ticket.save()
 
 
 def get_category(name):

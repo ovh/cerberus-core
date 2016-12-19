@@ -38,7 +38,9 @@ def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report
     """
         Wrapper to send email
     """
-    prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+    prefetched_email = ImplementationFactory.instance.get_singleton_of(
+        'MailerServiceBase'
+    ).prefetch_email_from_template(
         ticket,
         template_codename,
         lang=lang,
@@ -69,7 +71,13 @@ def create_ticket(report, denied_by=None, attach_new=False):
     """
         Create a `abuse.models.Ticket`
     """
-    ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority, attach_new=attach_new)
+    ticket = database.create_ticket(
+        report.defendant,
+        report.category,
+        report.service,
+        priority=report.provider.priority,
+        attach_new=attach_new
+    )
     database.log_action_on_ticket(
         ticket=ticket,
         action='attach_report',

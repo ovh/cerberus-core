@@ -27,6 +27,8 @@ import json
 import os
 import re
 import socket
+
+from functools import wraps
 from time import sleep
 from urlparse import urlparse
 
@@ -492,3 +494,27 @@ def string_to_underscore_case(string):
     """
     tmp = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', tmp).lower()
+
+
+def redis_lock(key):
+    """
+        Decorator using redis as a lock manager
+
+        :param str string: The redis key to monitor
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            count = 0
+            while redis.exists(key):
+                if count > 180:
+                    raise Exception('%s seems locked' % key)
+                count += 1
+                sleep(1)
+            redis.set(key, True)
+            try:
+                return func(*args, **kwargs)
+            finally:
+                redis.delete(key)
+        return wrapper
+    return decorator
