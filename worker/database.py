@@ -103,14 +103,24 @@ def get_item_status_score(item_id, last=3):
     """
         Get item scoring
     """
-    return UrlStatus.objects.filter(item_id=item_id).values_list('score', flat=True).order_by('-date')[:last]
+    return UrlStatus.objects.filter(
+        item_id=item_id
+    ).values_list(
+        'score',
+        flat=True
+    ).order_by('-date')[:last]
 
 
 def get_item_status_phishing(item_id, last=3):
     """
         Get item scoring
     """
-    return UrlStatus.objects.filter(item_id=item_id).values_list('isPhishing', flat=True).order_by('-date')[:last]
+    return UrlStatus.objects.filter(
+        item_id=item_id
+    ).values_list(
+        'isPhishing',
+        flat=True
+    ).order_by('-date')[:last]
 
 
 def log_action_on_ticket(ticket=None, action=None, user=None, **kwargs):
@@ -369,7 +379,7 @@ def create_ticket(defendant, category, service, priority='Normal', attach_new=Tr
                 priority=priority,
                 update=True,
             )
-            if all((defendant, service, category)) and attach_new:   # Automatically attach similar reports
+            if all((defendant, service, category)) and attach_new:   # attach similar reports
                 Report.objects.filter(
                     service=service,
                     defendant=defendant,
@@ -399,10 +409,11 @@ def set_ticket_higher_priority(ticket):
             ticket_priority = priority
             break
 
-    if ticket.defendant:  # Warning for new customer
+    if ticket.defendant:  # Warning for new customer or "big" ticket
         defendant = Defendant.objects.get(customerId=ticket.defendant.customerId)
-        if defendant.details.creationDate >= datetime.now() - timedelta(days=30):
-            if PRIORITY_LEVEL[ticket_priority] > PRIORITY_LEVEL['High']:
+        if PRIORITY_LEVEL[ticket_priority] > PRIORITY_LEVEL['High']:
+            if (defendant.details.creationDate >= datetime.now() - timedelta(days=30) or
+                    ticket.reportTicket.count() > settings.GENERAL_CONFIG['ticket_high_count']):
                 ticket_priority = 'High'
 
     Logger.debug(unicode('set priority %s to ticket %d' % (ticket_priority, ticket.id)))
@@ -483,8 +494,16 @@ def refresh_defendant_infos(defendant_id=None):
     fresh_defendant_infos = None
 
     try:
-        fresh_defendant_infos = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_customer_infos(defendant.customerId)
-        schema.valid_adapter_response('CustomerDaoBase', 'get_customer_infos', fresh_defendant_infos)
+        fresh_defendant_infos = ImplementationFactory.instance.get_singleton_of(
+            'CustomerDaoBase'
+        ).get_customer_infos(
+            defendant.customerId
+        )
+        schema.valid_adapter_response(
+            'CustomerDaoBase',
+            'get_customer_infos',
+            fresh_defendant_infos
+        )
         fresh_defendant_infos.pop('customerId', None)
         if DefendantRevision.objects.filter(**fresh_defendant_infos).count():
             revision = DefendantRevision.objects.filter(**fresh_defendant_infos).last()

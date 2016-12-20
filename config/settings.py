@@ -120,6 +120,7 @@ GENERAL_CONFIG = {
     },
     'magic_smtp_header': 'Test-Magic-Smtp-Header',
     'report_timeout': 30,
+    'ticket_high_count': 50,
     'mailer_daemon_patterns': [
         'mailer-daemon',
         '@my.provider.com'
