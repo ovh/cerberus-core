@@ -28,8 +28,9 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from mock import patch
 
-from abuse.models import (ServiceAction, ContactedProvider, Report, Provider,
-                          Resolution, Ticket, User, UrlStatus)
+from abuse.models import (ServiceAction, ContactedProvider, Report,
+                          Provider, Resolution, Ticket, User, UrlStatus,
+                          Service, Defendant)
 from adapters.services.phishing.abstract import PingResponse
 from factory.implementation import ImplementationFactory
 from factory.reportworkflow import ReportWorkflowFactory
@@ -46,6 +47,43 @@ class FakeJob(object):
         self.id = 42
         self.is_finished = True
         self.result = True
+
+
+class MockRedis(object):
+    """
+        Mimick a Redis object so unit tests can run
+    """
+    def __init__(self):
+        self.redis = {}
+
+    def set(self, key, *args):
+
+        if key not in self.redis:
+            self.redis[key] = []
+
+    def delete(self, key):
+
+        self.redis.pop(key, None)
+
+    def exists(self, key):
+        return key in self.redis
+
+    def rpush(self, key, value):
+
+        if key not in self.redis:
+            self.redis[key] = [value]
+        else:
+            self.redis[key].append(value)
+
+    def lrange(self, key, *args):
+
+        if key not in self.redis:
+            return []
+
+        return self.redis[key]
+
+    def lrem(self, key, value):
+        self.redis[key].remove(value)
 
 
 class TestWorkers(GlobalTestCase):
@@ -475,3 +513,197 @@ class TestWorkers(GlobalTestCase):
         self.assertEqual(2, len(emails))
         email = emails[0]
         self.assertIn('http://www.example.com/phishing.html', email.body)
+
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_tovalidate_invalid(self, mock_rq):
+        """
+            Check if report is archived when invalidate
+        """
+        from worker import report
+
+        mock_rq.return_value = None
+
+        sample = self._samples['sample23']
+        content = sample.read()
+        report.create_from_email(email_content=content, send_ack=True)
+        cerberus_report = Report.objects.last()
+        self.assertEqual('ToValidate', cerberus_report.status)
+        user = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
+        report.validate_without_defendant(report_id=cerberus_report.id, user_id=user.id)
+        cerberus_report = Report.objects.last()
+        self.assertEqual('Archived', cerberus_report.status)
+        self.assertTrue(cerberus_report.ticket)
+        self.assertEqual('Closed', cerberus_report.ticket.status)
+
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_tovalidate_valid(self, mock_rq):
+        """
+            Check if report is attached if validate
+        """
+        from worker import report
+
+        mock_rq.return_value = None
+
+        # Let's create a valid defendant/service first
+        sample = self._samples['sample2']
+        content = sample.read()
+        report.create_from_email(email_content=content)
+
+        # Now create ToValidate report
+        sample = self._samples['sample23']
+        content = sample.read()
+        report.create_from_email(email_content=content, send_ack=True)
+        cerberus_report = Report.objects.last()
+        self.assertEqual('ToValidate', cerberus_report.status)
+
+        # Consider operator add items on this report via UX
+        cerberus_report.service = Service.objects.last()
+        cerberus_report.defendant = Defendant.objects.last()
+        cerberus_report.save()
+
+        # Now reparse
+        user = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
+        report.validate_with_defendant(report_id=cerberus_report.id, user_id=user.id)
+        cerberus_report = Report.objects.last()
+        self.assertEqual('Attached', cerberus_report.status)
+        self.assertTrue(cerberus_report.ticket)
+        self.assertEqual('Open', cerberus_report.ticket.status)
+
+    @patch('rq.queue.Queue.enqueue')
+    @patch('utils.utils.redis', new_callable=MockRedis)
+    @patch('utils.utils.get_ips_from_fqdn')
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_tovalidate_cloudflare_request(self, mock_rq, mock_utils, mock_redis, mock_enqueue):
+        """
+            Test Cloudflare request workflow
+        """
+        from worker import report
+
+        mock_rq.return_value = None
+        mock_utils.return_value = ['103.21.244.1']
+        mock_enqueue.return_value = FakeJob()
+
+        # Create report
+        sample = self._samples['sample23']
+        content_to_request = sample.read()
+        report.create_from_email(email_content=content_to_request, send_ack=True)
+        cerberus_report = Report.objects.last()
+        user = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
+
+        # Apply cdn request workflow
+        report.cdn_request(
+            report_id=cerberus_report.id,
+            user_id=user.id,
+            domain_to_request='www.cdnproxy-protected-domain.com'
+        )
+
+        cerberus_report = Report.objects.last()
+        self.assertEqual('Attached', cerberus_report.status)
+        self.assertTrue(cerberus_report.ticket)
+
+        cerberus_ticket = Ticket.objects.last()
+        emails = ImplementationFactory.instance.get_singleton_of(
+            'MailerServiceBase'
+        ).get_emails(
+            cerberus_ticket
+        )
+        self.assertEqual(cerberus_ticket.treatedBy, user)
+        self.assertEqual(1, len(emails))
+        recipient = emails[0].sender
+
+        # Fake Cloudflare response and parse response
+        sample = self._samples['sample24']
+        content = sample.read()
+        content = content.replace('ticket+toreplace@example.com', recipient)
+        report.create_from_email(email_content=content, send_ack=True)
+
+        # Now ticket have a defendant/service
+        cerberus_report = Report.objects.last()
+        cerberus_ticket = Ticket.objects.last()
+        self.assertTrue(cerberus_report.service)
+        self.assertTrue(cerberus_report.defendant)
+
+        # Try use cache for new request
+        report.create_from_email(email_content=content_to_request, send_ack=True)
+        cerberus_report = Report.objects.last()
+        user = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
+
+        report.cdn_request(
+            report_id=cerberus_report.id,
+            user_id=user.id,
+            domain_to_request='www.cdnproxy-protected-domain.com'
+        )
+
+        cerberus_report = Report.objects.last()
+        self.assertEqual('Attached', cerberus_report.status)
+        self.assertTrue(cerberus_report.service)
+        self.assertTrue(cerberus_report.defendant)
+
+    @patch('rq.queue.Queue.enqueue')
+    @patch('utils.utils.redis', new_callable=MockRedis)
+    @patch('utils.utils.get_ips_from_fqdn')
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_tovalidate_cloudflare_request_2(self, mock_rq, mock_utils, mock_redis, mock_enqueue):
+        """
+            Testing two consecutive TovVlidate Cloudflare case
+        """
+        from worker import report
+
+        mock_rq.return_value = None
+        mock_utils.return_value = ['103.21.244.1']
+        mock_enqueue.return_value = FakeJob()
+
+        # Create report
+        sample = self._samples['sample23']
+        content_to_request = sample.read()
+
+        for _ in xrange(2):
+            report.create_from_email(email_content=content_to_request, send_ack=True)
+            cerberus_report = Report.objects.last()
+            user = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
+
+            # Apply cdn request workflow
+            report.cdn_request(
+                report_id=cerberus_report.id,
+                user_id=user.id,
+                domain_to_request='www.cdnproxy-protected-domain.com'
+            )
+
+        cerberus_ticket = Ticket.objects.last()
+        emails = ImplementationFactory.instance.get_singleton_of(
+            'MailerServiceBase'
+        ).get_emails(
+            cerberus_ticket
+        )
+        self.assertEqual(cerberus_ticket.treatedBy, user)
+        self.assertEqual(1, len(emails))
+        self.assertEqual(2, cerberus_ticket.reportTicket.count())
+        recipient = emails[0].sender
+
+        # Fake Cloudflare response and parse response
+        sample = self._samples['sample24']
+        content = sample.read()
+        content = content.replace('ticket+toreplace@example.com', recipient)
+        report.create_from_email(email_content=content, send_ack=True)
+
+        # Now ticket have a defendant/service
+        cerberus_report = Report.objects.last()
+        cerberus_ticket = Ticket.objects.last()
+        self.assertTrue(cerberus_report.service)
+        self.assertTrue(cerberus_report.defendant)
+
+        # Try use cache for new request
+        report.create_from_email(email_content=content_to_request, send_ack=True)
+        cerberus_report = Report.objects.last()
+        user = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
+
+        report.cdn_request(
+            report_id=cerberus_report.id,
+            user_id=user.id,
+            domain_to_request='www.cdnproxy-protected-domain.com'
+        )
+
+        cerberus_report = Report.objects.last()
+        self.assertEqual('Attached', cerberus_report.status)
+        self.assertTrue(cerberus_report.service)
+        self.assertTrue(cerberus_report.defendant)

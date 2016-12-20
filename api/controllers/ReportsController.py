@@ -293,7 +293,7 @@ def _update_status(body, report, user):
         raise BadRequest('Invalid status')
 
     # Detach report if requested status is "New"
-    # If status in ['attached', 'validated'], try to attach to existing ticket
+    # If status in ['attached'], try to attach to existing ticket
     #
     if body['status'].lower() == 'new':
         if report.ticket and report.ticket.reportTicket.count() == 1:  # Close corresponding ticket

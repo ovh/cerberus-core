@@ -73,9 +73,21 @@ class DefaultCustomerDao(CustomerDaoBase):
         if ips:  # Totally absurd example, just keep managed IPs
             ips = [ip_addr for ip_addr in ips if utils.get_ip_network(ip_addr) == 'managed']
             if ips:
-                response = get_default_struct(ServiceClass(DEFAULT_SERVICE), DefendantClass(**JOHN_DOE), ips=ips, urls=[], fqdn=[])
-        elif urls:
-            response = get_default_struct(ServiceClass(DEFAULT_SERVICE), DefendantClass(**JOHN_DOE), ips=[], urls=urls, fqdn=[])
+                response = get_default_struct(
+                    ServiceClass(DEFAULT_SERVICE),
+                    DefendantClass(**JOHN_DOE),
+                    ips=ips,
+                    urls=[],
+                    fqdn=[]
+                )
+        elif urls and 'http://www.cdnproxy-protected-domain.com/testcdn' not in urls:
+            response = get_default_struct(
+                ServiceClass(DEFAULT_SERVICE),
+                DefendantClass(**JOHN_DOE),
+                ips=[],
+                urls=urls,
+                fqdn=[]
+            )
         return response
 
     @staticmethod

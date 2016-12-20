@@ -308,7 +308,8 @@ def identify_ticket_from_meta(provider, recipients, subject):
 
     # Trying each recipients
     for recipient in recipients:
-        ticket = recipient = category = None
+
+        ticket = category = None
         search = regexp.RECIPIENT.search(str(recipient).lower())
         if search is not None:
             public_id = str(search.group(1)).lower()

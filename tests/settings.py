@@ -40,8 +40,8 @@ CUSTOM_REPORT_WORKFLOWS = (
 
 CUSTOM_TICKET_ANSWER_WORKFLOWS = (
     'worker.workflows.ticket.mailerdaemon.MailerDaemonWorkflow',
-    'worker.workflows.ticket.customeranswer.CustomerAnswerWorkflow',
     'worker.workflows.ticket.cloudflarebackendresponse.CloudflareBackendResponse',
+    'worker.workflows.ticket.customeranswer.CustomerAnswerWorkflow',
     'worker.workflows.ticket.default.DefaultAnswerWorkflow',
 )
 

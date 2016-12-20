@@ -83,7 +83,7 @@ class CloudflareBackendResponse(TicketAnswerWorkflowBase):
         if len(services) != 1:
             Logger.error(unicode('Cloudflare request does not contains valid IP'))
             alarm_ticket(ticket)
-            return
+            return True
 
         defendant = database.get_or_create_defendant(services[0]['defendant'])
         service = database.get_or_create_service(services[0]['service'])
@@ -99,6 +99,7 @@ class CloudflareBackendResponse(TicketAnswerWorkflowBase):
             defendant=defendant,
             service=service
         )
+        return True
 
 
 @utils.redis_lock(cloudflare.LOCK_REDIS_QUEUE)

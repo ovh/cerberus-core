@@ -68,7 +68,9 @@ class MailerDaemonWorkflow(TicketAnswerWorkflowBase):
             :return: If the workflow is applied
             :rtype: bool
         """
-        emails = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').get_emails(ticket)
+        emails = ImplementationFactory.instance.get_singleton_of(
+            'MailerServiceBase'
+        ).get_emails(ticket)
         emails = [email for email in emails if email.category.lower() == 'defendant']
         tried_emails = [email.recipient for email in emails]
 

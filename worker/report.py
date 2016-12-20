@@ -441,9 +441,13 @@ def _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename
         )
 
     for workflow in TicketAnswerWorkflowFactory.instance.registered_instances:
-        if workflow.identify(ticket, abuse_report, recipient, category) and workflow.apply(ticket, abuse_report, recipient, category):
-            Logger.debug(unicode('Specific workflow %s applied' % (str(workflow.__class__.__name__))))
-            return
+        if workflow.identify(ticket, abuse_report, recipient, category):
+            applied = workflow.apply(ticket, abuse_report, recipient, category)
+            if applied:
+                Logger.debug(unicode(
+                    'Specific workflow %s applied' % (str(workflow.__class__.__name__))
+                ))
+                return
 
 
 def archive_if_timeout(report_id=None):
@@ -629,6 +633,9 @@ def cdn_request(report_id=None, user_id=None, domain_to_request=None):
         report=report,
         rawItem=domain_to_request
     )
+
+    report.status = 'Attached'
+    report.save()
 
     for workflow in CDNRequestWorkflowFactory.instance.registered_instances:
         if workflow.identify(report, domain_to_request):

@@ -111,9 +111,9 @@ def get_task_from_cache(domain_to_request):
             service = Service.objects.filter(
                 id=entry['service_id']
             ).last()
-            ticket = Ticket.objects.filter(
+            ticket = Ticket.objects.get(
                 id=entry['request_ticket_id']
-            ).last()
+            )
             expiration = datetime.fromtimestamp(entry['expiration'])
             break
 

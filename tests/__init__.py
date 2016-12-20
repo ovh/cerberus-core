@@ -103,10 +103,24 @@ class GlobalTestCase(TestCase):
         )
 
         MailTemplate.objects.create(
+            codename='not_managed_ip',
+            name='not_managed_ip',
+            subject='not_managed_ip',
+            body='not_managed_ip',
+        )
+
+        MailTemplate.objects.create(
             codename='ticket_closed',
             name='ticket closed',
             subject='ticket closed',
             body='ticket closed',
+        )
+
+        MailTemplate.objects.create(
+            codename='cloudflare_ip_request',
+            name='Cloudflare ip request',
+            subject='Cloudflare ip request',
+            body='Cloudflare ip request',
         )
 
         MailTemplate.objects.create(
@@ -125,6 +139,7 @@ class GlobalTestCase(TestCase):
             Tag.objects.create(codename=tag, name=tag, tagType='Ticket')
 
         Resolution.objects.create(codename='no_more_content')
+        Resolution.objects.create(codename='invalid')
         Resolution.objects.create(codename='fixed')
         Resolution.objects.create(codename='forward_acns')
         Resolution.objects.create(codename='fixed_by_customer')
