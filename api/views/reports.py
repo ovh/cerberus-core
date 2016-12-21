@@ -66,7 +66,7 @@ def update_report(report=None):
 @report_views.route('/api/reports/<report>/validate', methods=['POST'])
 @perm_required
 @validate_body({
-    Optional('domainToRequest'): Any(str, unicode)
+    Optional('domainToRequest'): Any(str, unicode, None)
 })
 def validate_report(report=None):
     """
