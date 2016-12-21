@@ -25,9 +25,7 @@
 import json
 import operator
 import re
-import time
 from base64 import b64encode
-from datetime import datetime
 from Queue import Queue
 from threading import Thread
 from urllib import unquote
@@ -306,6 +304,9 @@ def _update_status(body, report, user):
     elif body['status'].lower() == 'attached' and not report.ticket and \
             all((report.category, report.defendant, report.service)):
         return TicketsController.create(body, user)
+    elif body['status'].lower() == 'archived':
+        report.status = 'Archived'
+        report.save()
 
     return body
 
