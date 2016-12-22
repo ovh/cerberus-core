@@ -32,8 +32,8 @@ from django.forms.models import model_to_dict
 from werkzeug.exceptions import BadRequest, InternalServerError, NotFound
 
 from abuse.models import (Category, Defendant, DefendantComment,
-                          DefendantHistory, DefendantRevision, Report, Stat,
-                          Tag, Ticket)
+                          DefendantHistory, DefendantRevision,
+                          Report, Tag, Ticket)
 from adapters.dao.customer.abstract import CustomerDaoException
 from factory.implementation import ImplementationFactory
 from utils import schema, utils
@@ -206,41 +206,3 @@ def get_defendant_services(customer_id):
         return InternalServerError(str(ex))
 
     return response
-
-
-def get_defendant_stats(**kwargs):
-    """
-        Get abuse stats for a defendant
-    """
-    if 'defendant' in kwargs:
-        customer_id = kwargs['defendant']
-    else:
-        raise BadRequest('No defendant specified')
-
-    if 'nature' in kwargs:
-        nature = kwargs['nature']
-    else:
-        raise BadRequest('No type specified')
-
-    defendants = Defendant.objects.filter(customerId=customer_id)
-    if not len(defendants):
-        raise NotFound('Defendant not found')
-
-    resp = []
-    now = int(time())
-
-    for category in Category.objects.all():
-        data = {'name': category.name}
-        stats = Stat.objects.filter(
-            defendant__in=defendants,
-            category=category.name
-        ).order_by('date')
-        #  * 1000 for HighCharts
-        data['data'] = [[mktime(s.date.timetuple()) * 1000, getattr(s, nature)] for s in stats]
-        try:
-            data['data'].append([now * 1000, data['data'][-1][1]])
-        except IndexError:
-            pass
-        resp.append(data)
-
-    return resp

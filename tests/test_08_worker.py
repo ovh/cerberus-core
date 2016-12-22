@@ -27,7 +27,7 @@ import os
 from django.conf import settings
 from mock import patch
 
-from abuse.models import (ContactedProvider, Defendant, Report, User, Stat,
+from abuse.models import (ContactedProvider, Defendant, Report, User,
                           ReportThreshold, DefendantHistory)
 from factory.implementation import ImplementationFactory
 from tests import GlobalTestCase
@@ -131,13 +131,6 @@ class TestWorkers(GlobalTestCase):
         self.assertEqual(1, len(emails))
         self.assertEqual(1, ContactedProvider.objects.count())
         self.assertIn(report.ticket.publicId, emails[0].subject)
-
-        # Test stats
-        from worker import stats
-        stats.update_defendants_history()
-        stat = Stat.objects.get(defendant=report.defendant, category='Copyright')
-        self.assertEqual(1, stat.reports)
-        self.assertEqual(1, stat.tickets)
 
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
     def test_report_with_attachments(self, mock_rq):

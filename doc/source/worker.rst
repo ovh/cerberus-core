@@ -26,11 +26,6 @@ Report
 .. automodule:: worker.report
     :members:
 
-Stats
-------------------
-.. automodule:: worker.stats
-    :members:
-
 Parsing
 ------------------
 .. automodule:: worker.parsing.parser

@@ -98,18 +98,3 @@ def delete_defendant_tag(defendant=None, tag=None):
     """ Remove defendant tag
     """
     return DefendantsController.remove_tag(defendant, tag, g.user)
-
-
-@defendant_views.route('/api/stats/tickets/<defendant>', methods=['GET'])
-def get_defendant_tickets_stats(defendant=None):
-    """ Get tickets stats for a given defendant
-    """
-    return DefendantsController.get_defendant_stats(defendant=defendant, nature='tickets')
-
-
-@defendant_views.route('/api/stats/reports/<defendant>', methods=['GET'])
-def get_defendant_reports_stats(defendant=None):
-    """
-        Get reports stats for a given defendant
-    """
-    return DefendantsController.get_defendant_stats(defendant=defendant, nature='reports')

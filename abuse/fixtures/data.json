@@ -791,14 +791,6 @@
 },
 {
   "fields": {
-    "endpoint": "ticket_views.create_ticket",
-    "method": "POST"
-  },
-  "model": "abuse.apiroute",
-  "pk": 40
-},
-{
-  "fields": {
     "endpoint": "misc_views.logout",
     "method": "POST"
   },
@@ -1311,22 +1303,6 @@
 },
 {
   "fields": {
-    "endpoint": "defendant_views.get_defendant_tickets_stats",
-    "method": "GET"
-  },
-  "model": "abuse.apiroute",
-  "pk": 105
-},
-{
-  "fields": {
-    "endpoint": "defendant_views.get_defendant_reports_stats",
-    "method": "GET"
-  },
-  "model": "abuse.apiroute",
-  "pk": 106
-},
-{
-  "fields": {
     "endpoint": "misc_views.get_ip_report_count",
     "method": "GET"
   },
@@ -1666,9 +1642,7 @@
       108,
       102,
       101,
-      106,
       107,
-      105,
       39,
       38,
       33,
@@ -1709,7 +1683,6 @@
       44,
       42,
       43,
-      40,
       1,
       5,
       74,
@@ -1810,10 +1783,8 @@
       103,
       100,
       101,
-      106,
       107,
       104,
-      105,
       39,
       38,
       33,
@@ -1866,7 +1837,6 @@
       45,
       42,
       43,
-      40,
       87,
       1,
       5,
@@ -1960,10 +1930,8 @@
       103,
       100,
       101,
-      106,
       107,
       104,
-      105,
       39,
       38,
       33,
@@ -2016,7 +1984,6 @@
       45,
       42,
       43,
-      40,
       87,
       1,
       5,

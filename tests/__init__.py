@@ -265,8 +265,6 @@ class GlobalTestCase(TestCase):
             'threshold_views.get_threshold',
             'threshold_views.update_threshold',
             'threshold_views.delete_threshold',
-            'defendant_views.get_defendant_tickets_stats',
-            'defendant_views.get_defendant_reports_stats',
             'misc_views.get_ip_report_count',
             'email_templates_views.get_template',
             'email_templates_views.update_template',

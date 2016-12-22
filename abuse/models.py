@@ -459,17 +459,6 @@ class AbusePermission(models.Model):
     profile = models.ForeignKey(Profile, null=True)
 
 
-class Stat(models.Model):
-    """
-        `abuse.models.Defendant` abuse statistic
-    """
-    defendant = models.ForeignKey(Defendant, null=False)
-    category = models.ForeignKey(Category, null=False)
-    reports = models.IntegerField(null=False)
-    tickets = models.IntegerField(null=False)
-    date = models.DateTimeField(null=False)
-
-
 class News(models.Model):
     """
         Cerberus news model
