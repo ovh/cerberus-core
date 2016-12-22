@@ -46,9 +46,18 @@ class GlobalSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
 
         if kwargs.get('where'):
             where = kwargs['where']
-            return Ticket.objects.filter(where, status__in=GLOBAL_TICKET_STATUS).order_by('id').distinct().count()
+            return Ticket.objects.filter(
+                where,
+                status__in=GLOBAL_TICKET_STATUS
+            ).order_by(
+                'id'
+            ).distinct().count()
         else:
-            return Ticket.objects.filter(status__in=GLOBAL_TICKET_STATUS).order_by('id').distinct().count()
+            return Ticket.objects.filter(
+                status__in=GLOBAL_TICKET_STATUS
+            ).order_by(
+                'id'
+            ).distinct().count()
 
     def get_tickets(self, user=None, **kwargs):
         """
@@ -74,6 +83,7 @@ class GlobalSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
             offset = 1
 
         where = common.get_user_filters(user)
+        where.extend(common.get_generic_filters(filters))
         order_by = ['modificationDate']
 
         if filters.get('onlyUnassigned'):
@@ -83,6 +93,7 @@ class GlobalSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
             treated_by_filters = common.get_treated_by_filters(user)
 
         # Aggregate all filters
+        where = list(set(where))
         where = reduce(operator.and_, where)
 
         nb_record = Ticket.objects.filter(
@@ -96,7 +107,9 @@ class GlobalSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
         # Special case for Critical
         for ticket_status in TODO_TICKET_STATUS_FILTERS:
             for filters in treated_by_filters:
-                tickets = get_specific_filtered_todo_tickets(where, ids, 'Critical', ticket_status, filters, order_by, limit, offset)
+                tickets = get_specific_filtered_todo_tickets(where, ids, 'Critical',
+                                                             ticket_status, filters,
+                                                             order_by, limit, offset)
                 ids.update([t['id'] for t in tickets])
                 res.extend(tickets)
                 if len(res) > limit * offset:
@@ -108,7 +121,9 @@ class GlobalSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
 
             for priority in TODO_TICKET_PRIORITY_FILTERS:
                 for filters in treated_by_filters:
-                    tickets = get_specific_filtered_todo_tickets(where, ids, priority, ticket_status, filters, order_by, limit, offset)
+                    tickets = get_specific_filtered_todo_tickets(where, ids, priority,
+                                                                 ticket_status, filters,
+                                                                 order_by, limit, offset)
                     ids.update([t['id'] for t in tickets])
                     res.extend(tickets)
                     if len(res) > limit * offset:
@@ -117,7 +132,8 @@ class GlobalSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
         return res[(offset - 1) * limit:limit * offset], nb_record
 
 
-def get_specific_filtered_todo_tickets(where, ids, priority, status, treated_by, order_by, limit, offset):
+def get_specific_filtered_todo_tickets(where, ids, priority, status,
+                                       treated_by, order_by, limit, offset):
     """
         Returns a list of `abuse.models.Ticket` dict-mapping based on multiple filters
     """

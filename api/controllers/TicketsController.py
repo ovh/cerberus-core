@@ -1468,7 +1468,8 @@ def cancel_asynchronous_job(ticket_id, job_id, user):
     return {'message': 'Task successfully canceled'}
 
 
-def schedule_asynchronous_job(ticket_id, action_id, ip_addr, user, seconds=1, method='apply_action', params=None):
+def schedule_asynchronous_job(ticket_id, action_id, ip_addr, user,
+                              seconds=1, method='apply_action', params=None):
     """
         Schedule task on ticket
     """

@@ -27,6 +27,7 @@ import operator
 from django.db.models import Q
 
 from abuse.models import AbusePermission, User
+from api.constants import TICKET_FILTER_MAPPING
 
 USER_FILTERS_BEGINNER_PRIORITY = ('Low', 'Normal')
 
@@ -54,7 +55,7 @@ def get_treated_by_filters(user):
 
 def get_user_filters(user):
     """
-        Returns `django.db.models.query.QuerySet` filters depending on allowed category for given user
+        Returns `django.db.models.query.QuerySet` filters based on allowed category for given user
     """
     where = [Q()]
     user_specific_where = []
@@ -80,5 +81,32 @@ def get_user_filters(user):
     else:
         # If no category allowed
         where.append(Q(category=None))
+
+    return where
+
+
+def get_generic_filters(filters):
+    """
+        Returns `django.db.models.query.QuerySet` filters based on request query filters
+    """
+
+    where = [Q()]
+    # Generates Django query filter
+    if filters.get('where'):
+        keys = set(k for k in filters['where'])
+        if 'in' in keys:
+            for param in filters['where']['in']:
+                for key, val in param.iteritems():
+                    field = reduce(lambda a, kv: a.replace(*kv), TICKET_FILTER_MAPPING, key)
+                    where.append(reduce(operator.or_, [Q(**{field: i}) for i in val]))
+        if 'like' in keys:
+            like = []
+            for param in filters['where']['like']:
+                for key, val in param.iteritems():
+                    field = reduce(lambda a, kv: a.replace(*kv), TICKET_FILTER_MAPPING, key)
+                    field = field + '__icontains'
+                    like.append(Q(**{field: val[0]}))
+            if len(like):
+                where.append(reduce(operator.or_, like))
 
     return where

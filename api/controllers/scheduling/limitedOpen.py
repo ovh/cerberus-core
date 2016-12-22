@@ -89,6 +89,7 @@ class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
             offset = 1
 
         where = common.get_user_filters(user)
+        where.extend(common.get_generic_filters(filters))
         where.append(Q(escalated=False))
         order_by = ['modificationDate', '-reportTicket__tags__level']
 
@@ -101,6 +102,7 @@ class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
         temp_where = reduce(operator.and_, where)
         rejected = get_defendant_to_reject(where=temp_where)
         where.append(~Q(defendant__in=rejected))
+        where = list(set(where))
         where = reduce(operator.and_, where)
 
         nb_record = Ticket.objects.filter(
@@ -115,7 +117,9 @@ class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
         for ticket_status in TODO_TICKET_STATUS_FILTERS:
             for priority in TODO_TICKET_PRIORITY_FILTERS:
                 for filters in treated_by_filters:
-                    tickets = get_specific_filtered_todo_tickets(where, ids, priority, ticket_status, filters, order_by, limit, offset)
+                    tickets = get_specific_filtered_todo_tickets(where, ids, priority,
+                                                                 ticket_status, filters,
+                                                                 order_by, limit, offset)
                     ids.update([t['id'] for t in tickets])
                     res.extend(tickets)
                     if len(res) > limit * offset:
@@ -124,7 +128,8 @@ class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
         return res[(offset - 1) * limit:limit * offset], nb_record
 
 
-def get_specific_filtered_todo_tickets(where, ids, priority, status, treated_by, order_by, limit, offset):
+def get_specific_filtered_todo_tickets(where, ids, priority, status,
+                                       treated_by, order_by, limit, offset):
     """
         Returns a list of `abuse.models.Ticket` dict-mapping based on multiple filters
     """
