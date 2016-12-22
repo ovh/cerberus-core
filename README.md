@@ -58,7 +58,6 @@ You can now insert theses entries in your favorite scheduler:
 
  * Schedule `rqcheduler`, `event/email_fetcher.py`, `worker/worker.py` and `uwsgi --http-socket 8080 api/uwsgi.ini` to be run as a daemon.
  * Schedule `event/workflow.py` to be run every minute.
- * Schedule `event/stats.py` to be run every quarter hour.
 
 The whole project use `python-rq` and `rq-scheduler`. You can see jobs status with:
 

@@ -87,6 +87,15 @@ def get_ticket_items(ticket=None):
     )
 
 
+@ticket_views.route('/api/tickets/<ticket>/items/toproof', methods=['POST'])
+@perm_required
+def add_items_to_proof(ticket=None):
+    """
+        Add all `abuse.models.ReportItems` to `abuse.models.Ticket`'s `abuse.models.Proof`
+    """
+    return TicketsController.add_items_to_proof(ticket_id=ticket, user=g.user)
+
+
 @ticket_views.route('/api/tickets/<ticket>/items/<item>', methods=['PUT', 'DELETE'])
 @perm_required
 def update_ticket_item(ticket=None, item=None):
@@ -140,15 +149,6 @@ def update_ticket_proof(ticket=None, proof=None):
         return TicketsController.update_proof(ticket, proof, body, g.user)
     else:
         return TicketsController.delete_proof(ticket, proof, g.user)
-
-
-@ticket_views.route('/api/tickets', methods=['POST'])
-@perm_required
-def create_ticket():
-    """ Post a new ticket
-    """
-    body = request.get_json()
-    return TicketsController.create(body, g.user)
 
 
 @ticket_views.route('/api/tickets/<ticket>', methods=['PUT'])

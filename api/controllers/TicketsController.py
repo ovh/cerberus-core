@@ -46,6 +46,7 @@ from abuse.models import (AbusePermission, ContactedProvider, Defendant,
                           History, Proof, Report, Resolution, Service,
                           ServiceAction, ServiceActionJob, Tag, Ticket,
                           TicketComment, AttachedDocument, StarredTicket)
+from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.action.abstract import ActionServiceException
 from adapters.services.mailer.abstract import EMAIL_VALID_CATEGORIES, MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
@@ -57,7 +58,7 @@ from api.controllers import (DefendantsController, GeneralController,
                              ProvidersController)
 from factory.implementation import ImplementationFactory
 from factory.ticketscheduling import TicketSchedulingAlgorithmFactory
-from utils import utils
+from utils import schema, utils
 from worker import database
 
 
@@ -808,6 +809,59 @@ def delete_proof(ticket_id, proof_id, user):
             FieldError, IntegrityError, TypeError, ValueError) as ex:
         raise BadRequest(str(ex.message))
     return {'message': 'Proof successfully deleted'}
+
+
+def add_items_to_proof(ticket_id, user):
+    """
+        Add all `abuse.models.ReportItems` to `abuse.models.Ticket`'s `abuse.models.Proof`
+    """
+    try:
+        ticket = Ticket.objects.get(id=ticket_id)
+        if not all((ticket.defendant, ticket.service)):
+            raise BadRequest('Need defendant')
+    except (IndexError, ObjectDoesNotExist, ValueError):
+        raise NotFound('Ticket not found')
+
+    items = ticket.reportTicket.all().values_list(
+        'reportItemRelatedReport__rawItem',
+        flat=True
+    ).distinct()
+
+    # Check items current state
+    try:
+        services = ImplementationFactory.instance.get_singleton_of(
+            'CustomerDaoBase'
+        ).get_services_from_items(
+            ips=items,
+            urls=items,
+            fqdn=items
+        )
+        schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
+    except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
+        raise InternalServerError('Unknown exception while identifying defendant')
+
+    _create_proof(ticket, services)
+
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='add_proof',
+        user=user,
+    )
+
+    return {'message': 'Proof successfully updated'}
+
+
+def _create_proof(ticket, services):
+
+    for service in services:
+        if (service['defendant']['customerId'] == ticket.defendant.customerId and
+                service['service']['serviceId'] == ticket.service.serviceId):
+            items = [item for sub in services[0]['items'].values() for item in sub if sub]
+            for item in items:
+                proof, _ = Proof.objects.get_or_create(
+                    ticket=ticket,
+                    content=item
+                )
 
 
 def update_status(ticket, status, body, user):
