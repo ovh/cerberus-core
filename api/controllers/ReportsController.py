@@ -301,8 +301,7 @@ def _update_status(body, report, user):
         body['ticket'] = None
         report.status = 'New'
         report.save()
-    elif body['status'].lower() == 'attached' and not report.ticket and \
-            all((report.category, report.defendant, report.service)):
+    elif body['status'].lower() == 'attached' and not report.ticket:
         return TicketsController.create(body, user)
     elif body['status'].lower() == 'archived':
         report.status = 'Archived'
