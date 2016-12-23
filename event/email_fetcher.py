@@ -136,8 +136,6 @@ class EmailFetcher(object):
             Infinite loop fetching email , lauching < 10 threads pushing email
             to storage service and worker
         """
-        threads = []
-
         try:
             self._imap_conn = get_imap_connection(host=HOST, port=PORT, user=USER, passwd=PASS)
         except (IMAP4.error, IMAP4.abort, IMAP4.readonly) as ex:
@@ -154,7 +152,9 @@ class EmailFetcher(object):
                 Logger.debug(unicode('Error in IMAP connection - %s' % (str(ex))))
                 return
 
+            threads = []
             queue = Queue.Queue()
+
             for uid in messages.keys():
                 queue.put(uid)
 
