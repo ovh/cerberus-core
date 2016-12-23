@@ -93,6 +93,7 @@ class CloudflareBackendResponse(TicketAnswerWorkflowBase):
         ticket.status = 'Open'
         ticket.defendant = defendant
         ticket.service = service
+        ticket.treatedBy = None
         ticket.save()
 
         ticket.reportTicket.all().update(
