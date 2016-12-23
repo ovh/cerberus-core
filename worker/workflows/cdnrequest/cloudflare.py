@@ -30,7 +30,7 @@ from time import mktime
 
 from django.conf import settings
 
-from abuse.models import Defendant, Service, Ticket, User
+from abuse.models import Defendant, Service, Ticket, User, Proof
 from utils import utils
 from worker import database, common
 from worker.workflows.cdnrequest.abstract import CDNRequestWorkflowBase
@@ -148,6 +148,15 @@ def create_request_ticket(report, domain_to_request):
         report,
         denied_by=None,
         attach_new=False
+    )
+
+    proof_content = report.reportItemRelatedReport.filter(
+        itemType='FQDN'
+    ).last().rawItem
+
+    Proof.objects.create(
+        ticket=ticket,
+        content=proof_content
     )
 
     ticket.treatedBy = BOT_USER
