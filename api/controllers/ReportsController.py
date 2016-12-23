@@ -52,6 +52,7 @@ from api.controllers import (DefendantsController, GeneralController,
 from factory.implementation import ImplementationFactory
 from utils import utils
 from worker import database
+from worker.parsing import regexp
 
 html2text.ignore_images = True
 html2text.images_to_alt = True
@@ -392,6 +393,8 @@ def validate(report_id, body, user):
         function = 'report.validate_with_defendant'
     else:
         if body.get('domainToRequest'):
+            if not re.search(regexp.DOMAIN_RE, body['domainToRequest']):
+                raise BadRequest('Not a valid domain name')
             function = 'report.cdn_request'
             params['domain_to_request'] = body['domainToRequest']
         else:
