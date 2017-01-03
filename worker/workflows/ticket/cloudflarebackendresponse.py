@@ -56,7 +56,6 @@ class CloudflareBackendResponse(TicketAnswerWorkflowBase):
             :rtype: bool
         """
         if (abuse_report.provider == cloudflare.CLOUDFLARE_EMAIL and
-                ticket.treatedBy.username == BOT_USER.username and
                 check_if_ticket_in_cache(ticket.id)):
             return True
         return False
@@ -75,30 +74,23 @@ class CloudflareBackendResponse(TicketAnswerWorkflowBase):
         services = ImplementationFactory.instance.get_singleton_of(
             'CustomerDaoBase'
         ).get_services_from_items(
-            urls=abuse_report.urls,
             ips=abuse_report.ips,
-            fqdn=abuse_report.fqdn
         )
 
         if len(services) != 1:
-            Logger.error(unicode('Cloudflare request does not contains valid IP'))
+            Logger.error(unicode('Cloudflare response does not contains valid IP'))
             alarm_ticket(ticket)
-            return True
+        else:
+            update_ticket(services, ticket)
 
-        defendant = database.get_or_create_defendant(services[0]['defendant'])
-        service = database.get_or_create_service(services[0]['service'])
-        update_redis_cache(ticket.id, defendant.id, service.id)
-
-        ticket.status = ticket.previousStatus
-        ticket.status = 'Open'
-        ticket.defendant = defendant
-        ticket.service = service
-        ticket.treatedBy = None
-        ticket.save()
-
-        ticket.reportTicket.all().update(
-            defendant=defendant,
-            service=service
+        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').attach_external_answer(
+            ticket,
+            abuse_report.provider,
+            recipient,
+            abuse_report.subject,
+            abuse_report.body,
+            category,
+            attachments=abuse_report.attachments
         )
         return True
 
@@ -129,6 +121,27 @@ def alarm_ticket(ticket):
         action='change_status',
         previous_value=ticket.previousStatus,
         new_value=ticket.status
+    )
+
+
+def update_ticket(services, ticket):
+    """
+        Update ticket with defendant/service infos
+    """
+    defendant = database.get_or_create_defendant(services[0]['defendant'])
+    service = database.get_or_create_service(services[0]['service'])
+    update_redis_cache(ticket.id, defendant.id, service.id)
+
+    ticket.status = ticket.previousStatus
+    ticket.status = 'Open'
+    ticket.defendant = defendant
+    ticket.service = service
+    ticket.treatedBy = None
+    ticket.save()
+
+    ticket.reportTicket.all().update(
+        defendant=defendant,
+        service=service
     )
 
 
