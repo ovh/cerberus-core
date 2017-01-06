@@ -88,10 +88,7 @@ class PhishingReportWorkflow(ReportWorkflowBase):
             _attach_report_to_ticket(report, ticket, new_ticket)
             phishing.block_url_and_mail(ticket_id=ticket, report_id=report)
             Logger.debug(unicode('Clearly phishing workflow applied'))
-            return True
-
-        # Report has to be manually checked
-        if not report.provider.apiKey:  # Means it is not a trusted phishing provider
+        else:  # else report has to be manually checked
             report.status = 'PhishToCheck'
             report.save()
             utils.push_notification({
@@ -100,19 +97,8 @@ class PhishingReportWorkflow(ReportWorkflowBase):
                 'message': 'New PhishToCheck report %d' % (report.id),
             })
             Logger.debug(unicode('PhishToCheck workflow applied'))
-            return True
-        else:
-            if not ticket and is_trusted:  # Create ticket
-                ticket = _create_ticket(report)
-                new_ticket = True
 
-            if ticket:
-                _attach_report_to_ticket(report, ticket, new_ticket)
-                if is_there_some_urls:  # Block urls
-                    phishing.block_url_and_mail(ticket_id=ticket, report_id=report)
-
-            Logger.debug(unicode('Trusted phishing provider workflow applied'))
-            return True
+        return True
 
 
 def are_all_items_phishing(report):

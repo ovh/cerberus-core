@@ -456,15 +456,6 @@ class TestWorkers(GlobalTestCase):
         from worker import report
 
         mock_rq.return_value = None
-        sample = self._samples['sample20']
-        content = sample.read()
-        report.create_from_email(email_content=content, send_ack=False)
-
-        self.assertEqual(1, Report.objects.count())
-        cerberus_report = Report.objects.last()
-        self.assertEqual('Phishing', cerberus_report.category.name)
-        self.assertTrue(cerberus_report.ticket)
-        self.assertEqual('Attached', cerberus_report.status)
 
         sample = self._samples['sample6']
         content = sample.read()
