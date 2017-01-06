@@ -393,10 +393,11 @@ def validate(report_id, body, user):
         function = 'report.validate_with_defendant'
     else:
         if body.get('domainToRequest'):
-            if not re.search(regexp.DOMAIN_RE, body['domainToRequest']):
+            search = re.search(regexp.DOMAIN_RE, body['domainToRequest'])
+            if not search:
                 raise BadRequest('Not a valid domain name')
             function = 'report.cdn_request'
-            params['domain_to_request'] = body['domainToRequest'].group()
+            params['domain_to_request'] = search.group()
         else:
             function = 'report.validate_without_defendant'
 
