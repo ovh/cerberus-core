@@ -22,16 +22,18 @@
 """
     Mail fetcher for Cerberus
 
+    Elegant solution here: https://www.metachris.com/2016/04/python-threadpool/
+
 """
 
 import hashlib
 import inspect
 import os
-import Queue
 import socket
 import ssl
 import sys
 from imaplib import IMAP4, IMAP4_SSL
+from Queue import Queue
 from threading import Thread
 from time import sleep
 
@@ -71,13 +73,15 @@ HOST = settings.EMAIL_FETCHER['host']
 PORT = settings.EMAIL_FETCHER['port']
 USER = settings.EMAIL_FETCHER['login']
 PASS = settings.EMAIL_FETCHER['pass']
+STORAGE_DIR = settings.GENERAL_CONFIG['email_storage_dir']
 
 
-def push_email(uid, email, queue):
+def push_email(uid, messages):
     """
         Push to Storage Service
         Add a worker task
     """
+    email = messages.get(uid)
     filename = hashlib.sha256(email).hexdigest()
     Logger.debug(unicode('New mail - UID %s - HASH %s' % (uid, filename)), extra={'hash': filename})
 
@@ -88,18 +92,18 @@ def push_email(uid, email, queue):
         except UnicodeError:
             Logger.debug(str('error while decoding email with charset %s' % (chset,)))
 
-    push_to_storage_service(filename, email)
-    push_task_to_worker(filename, email)
-    queue.get(uid)
+    _push_to_storage_service(filename, email)
+    _push_task_to_worker(filename, email)
+    messages.pop(uid, None)
 
 
-def push_to_storage_service(filename, email):
+def _push_to_storage_service(filename, email):
     """ Push email storage service
 
         :param str filename: The filename of the email
         :param str email: The content of the email
     """
-    with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
+    with ImplementationFactory.instance.get_instance_of('StorageServiceBase', STORAGE_DIR) as cnx:
         try:
             cnx.read(filename)
             Logger.error(unicode('Email %s already in Storage Service' % (filename)))
@@ -111,7 +115,7 @@ def push_to_storage_service(filename, email):
         Logger.info(unicode('Email %s pushed to Storage Service' % (filename)))
 
 
-def push_task_to_worker(filename, email):
+def _push_task_to_worker(filename, email):
     """ Push parsing task to worker
 
         :param str filename: The filename of the email
@@ -123,6 +127,56 @@ def push_task_to_worker(filename, email):
         filename=filename,
     )
     Logger.info(unicode('Task for email %s successfully created' % (filename)))
+
+
+class Worker(Thread):
+    """
+        Thread executing tasks from a given tasks queue
+    """
+    def __init__(self, tasks):
+        Thread.__init__(self)
+        self.tasks = tasks
+        self.daemon = True
+        self.start()
+
+    def run(self):
+        while True:
+            func, args, kargs = self.tasks.get()
+            try:
+                func(*args, **kargs)
+            except Exception as ex:
+                Logger.debug(unicode('error in email worker: %s' % str(ex)))
+            finally:
+                self.tasks.task_done()
+
+
+class ThreadPool(object):
+    """
+        Pool of threads consuming tasks from a queue
+    """
+    def __init__(self, num_threads):
+        self.tasks = Queue(num_threads)
+        for _ in range(num_threads):
+            Worker(self.tasks)
+
+    def add_task(self, func, args, **kargs):
+        """
+            Add a task to the queue
+        """
+        self.tasks.put((func, args, kargs))
+
+    def map(self, func, args_list):
+        """
+            Add a list of tasks to the queue
+        """
+        for args in args_list:
+            self.add_task(func, args)
+
+    def wait_completion(self):
+        """
+            Wait for completion of all the tasks in the queue
+        """
+        self.tasks.join()
 
 
 class EmailFetcher(object):
@@ -145,29 +199,27 @@ class EmailFetcher(object):
             Logger.error(unicode('Error in IMAP connection - %s' % (str(ex))))
             return
 
+        pool = ThreadPool(5)
+
         while True:
             try:
                 messages = self.get_messages()
-            except (socket.error, socket.gaierror, socket.herror, socket.timeout, ssl.SSLError) as ex:
+            except (socket.error, socket.gaierror, socket.herror,
+                    socket.timeout, ssl.SSLError) as ex:
                 Logger.debug(unicode('Error in IMAP connection - %s' % (str(ex))))
                 return
 
-            threads = []
-            queue = Queue.Queue()
+            if not messages:
+                sleep(1)
+                continue
 
-            for uid in messages.keys():
-                queue.put(uid)
+            uids = messages.keys()
+            args = [(uid, messages) for uid in uids]
+            pool.map(push_email, args)
+            pool.wait_completion()
 
-            for uid, email in messages.iteritems():
-                thread = Thread(target=push_email, args=(uid, email, queue))
-                threads.append(thread)
-                thread.start()
-
-            for thread in threads:
-                thread.join()
-
-            for uid in messages.keys():
-                if uid not in queue.queue:
+            for uid in uids:
+                if uid not in messages:
                     self._imap_conn.uid('store', uid, '+FLAGS', r'(\Deleted)')
 
             self._imap_conn.expunge()
