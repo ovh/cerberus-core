@@ -401,9 +401,7 @@ def _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename
     """
         If the email is an answer to a cerberus ticket:
 
-        - update ticket status
-        - cancel all pending ServiceAction jobs and ticket.timeout jobs
-        - append response to ticket's email thread
+        - apply ticket's answer workflow if exists
         - save attachments
 
         :param `abuse.models.Ticket` ticket: A Cerberus `abuse.models.Ticket` instance

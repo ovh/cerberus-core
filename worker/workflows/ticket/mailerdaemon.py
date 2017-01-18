@@ -28,14 +28,6 @@ from factory.implementation import ImplementationFactory
 from worker import database
 from worker.workflows.ticket.abstract import TicketAnswerWorkflowBase
 
-ASYNC_JOB_TO_CANCEL = (
-    'action.apply_if_no_reply',
-    'action.apply_then_close',
-    'action.apply_action',
-    'ticket.timeout',
-    'ticket.reminder',
-)
-
 
 class MailerDaemonWorkflow(TicketAnswerWorkflowBase):
     """
