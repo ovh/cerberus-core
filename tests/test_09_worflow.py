@@ -372,7 +372,7 @@ class TestWorkers(GlobalTestCase):
             Sample6 is a trusted phishing report
         """
         from worker import report
-        BusinessRules.objects.all().delete()
+        BusinessRules.objects.filter(name__icontains='phishing').delete()
 
         mock_rq.return_value = None
         sample = self._samples['sample6']
@@ -392,7 +392,7 @@ class TestWorkers(GlobalTestCase):
             Sample7 is not a trusted phishing report
         """
         from worker import report
-        BusinessRules.objects.all().delete()
+        BusinessRules.objects.filter(name__icontains='phishing').delete()
 
         mock_rq.return_value = None
         sample = self._samples['sample7']
@@ -411,7 +411,7 @@ class TestWorkers(GlobalTestCase):
             Test copyright/acns specific workflow
         """
         from worker import report
-        BusinessRules.objects.all().delete()
+        BusinessRules.objects.filter(name__icontains='acns').delete()
 
         Provider.objects.create(email='broadgreenpictures@copyright-compliance.com', trusted=True)
         mock_rq.return_value = None

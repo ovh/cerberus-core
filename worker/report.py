@@ -77,7 +77,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
 
     if not filename:  # Worker have to push email to Storage Service
         filename = hashlib.sha256(email_content).hexdigest()
-        __save_email(filename, email_content)
+        _save_email(filename, email_content)
 
     # Parse email content
     abuse_report = Parser.parse(email_content)
@@ -100,7 +100,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
     ).is_email_ticket_answer(abuse_report)
     if tickets:
         for ticket, category, recipient in tickets:
-            if all((ticket, category, recipient)) and not ticket.locked:  # OK it's an anwser, updating ticket and exiting
+            if all((ticket, category, recipient)) and not ticket.locked:  # it's an ticket anwser
                 _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename)
         return
 
@@ -116,11 +116,11 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
 
     # Create report(s) with identified services
     if not services:
-        created_reports = [__create_without_services(abuse_report, filename)]
+        created_reports = [_create_without_services(abuse_report, filename)]
     else:
         with pglocks.advisory_lock('cerberus_lock'):
-            __create_defendants_and_services(services)
-        created_reports = __create_with_services(abuse_report, filename, services)
+            _create_defendants_and_services(services)
+        created_reports = _create_with_services(abuse_report, filename, services)
 
     # Upload attachments
     if abuse_report.attachments:
@@ -129,17 +129,25 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
     # Send acknowledgement to provider (only if send_ack = True and report is attached to a ticket)
     for report in created_reports:
         if send_ack and report.ticket:
-            __send_ack(report, lang=lang)
+            _send_ack(report, lang=lang)
 
     # Index to SearchService
     if ImplementationFactory.instance.is_implemented('SearchServiceBase'):
-        __index_report_to_searchservice(abuse_report, filename, [rep.id for rep in created_reports])
+        _index_report_to_searchservice(abuse_report, filename, [rep.id for rep in created_reports])
 
     Logger.info(unicode('All done successfully for email %s' % (filename)))
 
 
+def _create_defendants_and_services(services):
+
+    for data in services:  # For identified (service, defendant, items) tuple
+
+        data['defendant'] = database.get_or_create_defendant(data['defendant'])
+        data['service'] = database.get_or_create_service(data['service'])
+
+
 @transaction.atomic
-def __create_without_services(abuse_report, filename):
+def _create_without_services(abuse_report, filename):
     """
         Create report in Cerberus
 
@@ -149,8 +157,6 @@ def __create_without_services(abuse_report, filename):
         :returns: The Cerberus `abuse.models.Report`
     """
     provider = database.get_or_create_provider(abuse_report.provider)
-    trusted = True if provider.trusted or abuse_report.trusted else False
-    status = 'ToValidate' if trusted else 'New'
 
     report = Report.objects.create(**{
         'provider': provider,
@@ -159,38 +165,18 @@ def __create_without_services(abuse_report, filename):
         'body': abuse_report.body,
         'category': database.get_category(abuse_report.category),
         'filename': filename,
-        'status': status,
+        'status': 'New',
     })
 
-    __add_report_tags(report, abuse_report.recipients)
-    autoarchive, _, _ = __get_attributes_based_on_tags(report, abuse_report.recipients)
+    _add_report_tags(report, abuse_report.recipients)
     database.log_new_report(report)
+    _apply_business_rules(abuse_report, report)
 
-    # If report is not attached within 30 days -> archived
-    if report.status == 'New':
-        utils.scheduler.enqueue_in(
-            timedelta(days=settings.GENERAL_CONFIG['report_timeout']),
-            'report.archive_if_timeout',
-            report_id=report.id
-        )
-
-    if autoarchive:
-        report.status = 'Archived'
-
-    report.save()
     return report
 
 
-def __create_defendants_and_services(services):
-
-    for data in services:  # For identified (service, defendant, items) tuple
-
-        data['defendant'] = database.get_or_create_defendant(data['defendant'])
-        data['service'] = database.get_or_create_service(data['service'])
-
-
 @transaction.atomic
-def __create_with_services(abuse_report, filename, services):
+def _create_with_services(abuse_report, filename, services):
     """
         Create report(s), ticket(s), item(s), defendant(s), service(s), attachment(s) in Cerberus
 
@@ -204,7 +190,7 @@ def __create_with_services(abuse_report, filename, services):
 
     for data in services:  # For identified (service, defendant, items) tuple
 
-        report = __create_without_services(abuse_report, filename)
+        report = _create_without_services(abuse_report, filename)
         created_reports.append(report)
         report.defendant = data['defendant']
         report.service = data['service']
@@ -213,11 +199,7 @@ def __create_with_services(abuse_report, filename, services):
         if report.status == 'Archived':  # because autoarchive tag
             continue
 
-        _, attach_only, no_phishtocheck = __get_attributes_based_on_tags(report, abuse_report.recipients)
-        __insert_items(report.id, data['items'])
-
-        # The provider or the way we received the report
-        trusted = True if report.provider.trusted or abuse_report.trusted else False
+        _insert_items(report.id, data['items'])
 
         # Looking for existing open ticket for same (service, defendant, category)
         ticket = None
@@ -225,55 +207,36 @@ def __create_with_services(abuse_report, filename, services):
             ticket = database.search_ticket(report.defendant, report.category, report.service)
 
         # Running rules
-        rule_applied = False
-        for rule in BusinessRules.objects.filter(rulesType='Report').order_by('orderId'):
-            rule_applied = run(
-                rule.config,
-                defined_variables=ReportVariables(abuse_report, report, ticket),
-                defined_actions=ReportActions(report, ticket),
-            )
-            if rule_applied:
-                BusinessRulesHistory.objects.create(
-                    businessRules=rule,
-                    defendant=report.defendant,
-                    report=report,
-                    ticket=report.ticket
-                )
-                database.set_report_specificworkflow_tag(report, rule.name)
-                Logger.debug(unicode('Specific workflow %s applied' % str(rule.name)))
-                break
-
+        rule_applied = _apply_business_rules(abuse_report, report, ticket)
         if rule_applied:
             continue
-
-        # If attach report only and no ticket found, continue
-        if not ticket and attach_only:
-            report.status = 'Archived'
-            report.save()
-            continue
-
-        # Create ticket if trusted
-        new_ticket = False
-        if not ticket and trusted:
-            ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
-            new_ticket = True
-
-        if ticket:
-            report.ticket = Ticket.objects.get(id=ticket.id)
-            report.status = 'Attached'
-            report.save()
-            database.set_ticket_higher_priority(report.ticket)
-            database.log_action_on_ticket(
-                ticket=ticket,
-                action='attach_report',
-                report=report,
-                new_ticket=new_ticket
-            )
 
     return created_reports
 
 
-def __index_report_to_searchservice(parsed_email, filename, reports_id):
+def _apply_business_rules(parsed_email=None, report=None, ticket=None):
+
+    for rule in BusinessRules.objects.filter(rulesType='Report').order_by('orderId'):
+        rule_applied = run(
+            rule.config,
+            defined_variables=ReportVariables(parsed_email, report, ticket),
+            defined_actions=ReportActions(report, ticket),
+        )
+        if rule_applied:
+            BusinessRulesHistory.objects.create(
+                businessRules=rule,
+                defendant=report.defendant,
+                report=report,
+                ticket=report.ticket
+            )
+            database.set_report_specificworkflow_tag(report, rule.name)
+            Logger.debug(unicode('Workflow %s applied' % str(rule.name)))
+            return True
+
+    return False
+
+
+def _index_report_to_searchservice(parsed_email, filename, reports_id):
     """ Index a report to the SearchService
     """
     try:
@@ -288,7 +251,7 @@ def __index_report_to_searchservice(parsed_email, filename, reports_id):
         Logger.error(unicode('Unable to index mail %s in SearchService -> %s' % (filename, ex)))
 
 
-def __send_ack(report, lang=None):
+def _send_ack(report, lang=None):
     """ Send acknoledgement to provider
 
         :param `abuse.models.Report` report: A `abuse.models.Report` instance
@@ -307,7 +270,7 @@ def __send_ack(report, lang=None):
     report.save()
 
 
-def __insert_items(report_id, items):
+def _insert_items(report_id, items):
     """ Insert report's items for to database
 
         :param int report_id: The id of the report
@@ -357,7 +320,7 @@ def _save_attachments(filename, attachments, reports=None, tickets=None):
                 ticket.attachments.add(attachment_obj)
 
 
-def __save_email(filename, email):
+def _save_email(filename, email):
     """
         Push email storage service
 
@@ -369,7 +332,7 @@ def __save_email(filename, email):
         Logger.info(unicode('Email %s pushed to Storage Service' % (filename)))
 
 
-def __add_report_tags(report, recipients):
+def _add_report_tags(report, recipients):
     """
         Add tags to report based on provider, subject etc ...
 
@@ -381,30 +344,6 @@ def __add_report_tags(report, recipients):
     for tag in tags:
         if tag.tagType == 'Report':
             report.tags.add(tag)
-
-
-def __get_attributes_based_on_tags(report, recipients):
-    """
-        Get specific attributes based on provider's tags
-
-        :param `abuse.models.Report` report: A `abuse.models.Report` instance
-        :param list recipients: The list of recipients
-        :rtype: tuple
-        :returns: tuple of bool (autoarchive, attach_only, no_phishtocheck)
-    """
-    autoarchive = attach_only = no_phishtocheck = False
-    tags = database.get_tags(report.provider, recipients, report.subject, report.body)
-
-    for tag in tags:
-        if tag.tagType == 'Provider':
-            if tag.name == settings.TAGS['autoarchive']:
-                autoarchive = True
-            if tag.name == settings.TAGS['attach_only']:
-                attach_only = True
-            if tag.name == settings.TAGS['no_phishtocheck']:
-                no_phishtocheck = True
-
-    return autoarchive, attach_only, no_phishtocheck
 
 
 def _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename):
@@ -467,7 +406,9 @@ def archive_if_timeout(report_id=None):
     report = Report.objects.get(id=report_id)
 
     if report.status != 'New':
-        Logger.error(unicode('Report %d not New, status : %s , Skipping ...' % (report_id, report.status)))
+        Logger.error(unicode(
+            'Report %d not New, status : %s , Skipping ...' % (report_id, report.status)
+        ))
         return
 
     report.ticket = None
@@ -479,13 +420,14 @@ def archive_if_timeout(report_id=None):
 def create_ticket_with_threshold():
     """
         Automatically creates ticket if there are more than `abuse.models.ReportThreshold.threshold`
-        new reports created during `abuse.models.ReportThreshold.interval` (days) for same (category/defendant/service)
+        new reports created during `abuse.models.ReportThreshold.interval` (days)
+        for same (category/defendant/service)
     """
-    log_msg = 'threshold : Checking report threshold for category %s, threshold %d, interval %d days'
+    log_msg = 'Checking threshold for category %s, threshold %d, interval %d days'
 
     for thres in ReportThreshold.objects.all():
         Logger.info(unicode(log_msg % (thres.category.name, thres.threshold, thres.interval)))
-        reports = __get_threshold_reports(thres.category, thres.interval)
+        reports = _get_threshold_reports(thres.category, thres.interval)
         reports = Counter(reports)
         for data, count in reports.iteritems():
             nb_tickets = Ticket.objects.filter(
@@ -494,11 +436,13 @@ def create_ticket_with_threshold():
                 service__id=data[1],
             ).count()
             if count >= thres.threshold and not nb_tickets:
-                ticket = __create_threshold_ticket(data, thres)
-                Logger.info(unicode('threshold: tuple %s match, ticket %s has been created' % (str(data), ticket.id)))
+                ticket = _create_threshold_ticket(data, thres)
+                Logger.info(unicode(
+                    'Threshold tuple %s match, ticket %s has been created' % (str(data), ticket.id)
+                ))
 
 
-def __get_threshold_reports(category, delta):
+def _get_threshold_reports(category, delta):
 
     reports = Report.objects.filter(
         ~Q(defendant=None),
@@ -513,7 +457,7 @@ def __get_threshold_reports(category, delta):
     return reports
 
 
-def __create_threshold_ticket(data, thres):
+def _create_threshold_ticket(data, thres):
 
     service = Service.objects.filter(id=data[1]).last()
     defendant = Defendant.objects.filter(customerId=data[0]).last()
@@ -581,7 +525,7 @@ def _reparse_validated(report, user):
         report.status = 'Attached'
         report.save()
         database.set_ticket_higher_priority(report.ticket)
-        __send_ack(report, lang='EN')
+        _send_ack(report, lang='EN')
 
 
 @transaction.atomic

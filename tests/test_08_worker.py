@@ -222,20 +222,22 @@ class TestWorkers(GlobalTestCase):
         sample = self._samples['sample11']  # Low
         content = sample.read()
         report.create_from_email(email_content=content, send_ack=True)
-        cerberus_report = Report.objects.last()
-        self.assertEqual('Low', cerberus_report.ticket.priority)
+        cerberus_report_1 = Report.objects.last()
+        self.assertEqual('Low', cerberus_report_1.ticket.priority)
 
         sample = self._samples['sample13']  # Critical
         content = sample.read()
         report.create_from_email(email_content=content, send_ack=True)
-        cerberus_report = Report.objects.last()
-        self.assertEqual('Critical', cerberus_report.ticket.priority)
+        cerberus_report_2 = Report.objects.last()
+        self.assertEqual(cerberus_report_1.ticket.id, cerberus_report_2.ticket.id)
+        self.assertEqual('Critical', cerberus_report_2.ticket.priority)
 
         sample = self._samples['sample12']  # Normal
         content = sample.read()
         report.create_from_email(email_content=content, send_ack=True)
-        cerberus_report = Report.objects.last()
-        self.assertEqual('Critical', cerberus_report.ticket.priority)
+        cerberus_report_3 = Report.objects.last()
+        self.assertEqual(cerberus_report_1.ticket.id, cerberus_report_3.ticket.id)
+        self.assertEqual('Critical', cerberus_report_3.ticket.priority)
 
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
     def test_blacklisted_provider(self, mock_rq):

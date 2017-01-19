@@ -313,9 +313,141 @@ def set_roles():
 def set_business_rules():
 
     BusinessRules.objects.create(
-        name='phishing_down',
+        name='default_no_defendant',
         rulesType='Report',
         orderId=1,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_false",
+                        "value": True,
+                    },
+                    {
+                        "name": "is_report_trusted",
+                        "operator": "is_false",
+                        "value": True,
+                    },
+                    {
+                        "name": "autoarchive",
+                        "operator": "is_false",
+                        "value": True,
+                    },
+                ]
+            },
+            "actions": [
+                {
+                    "name": "do_nothing",
+                },
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='autoarchive_no_defendant',
+        rulesType='Report',
+        orderId=2,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_false",
+                        "value": True,
+                    },
+                    {
+                        "name": "autoarchive",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                ]
+            },
+            "actions": [
+                {
+                    "name": "set_report_status",
+                    "params": {
+                        "status": "Archived"
+                    }
+                },
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='autoarchive_defendant',
+        rulesType='Report',
+        orderId=3,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "autoarchive",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "has_ticket",
+                        "operator": "is_false",
+                        "value": True,
+                    },
+                ]
+            },
+            "actions": [
+                {
+                    "name": "set_report_status",
+                    "params": {
+                        "status": "Archived"
+                    }
+                },
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='to_validate',
+        rulesType='Report',
+        orderId=4,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_false",
+                        "value": True,
+                    },
+                    {
+                        "name": "is_report_trusted",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "autoarchive",
+                        "operator": "is_false",
+                        "value": True,
+                    },
+                ]
+            },
+            "actions": [
+                {
+                    "name": "set_report_status",
+                    "params": {
+                        "status": "ToValidate"
+                    }
+                },
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='phishing_down',
+        rulesType='Report',
+        orderId=5,
         config={
             "conditions": {
                 "all": [
@@ -323,6 +455,11 @@ def set_business_rules():
                         "name": "report_category",
                         "operator": "equal_to",
                         "value": "phishing",
+                    },
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
                     },
                     {
                         "name": "urls_down",
@@ -347,10 +484,15 @@ def set_business_rules():
     BusinessRules.objects.create(
         name='phishing_up',
         rulesType='Report',
-        orderId=2,
+        orderId=6,
         config={
             "conditions": {
                 "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
                     {
                         "name": "report_category",
                         "operator": "equal_to",
@@ -396,10 +538,15 @@ def set_business_rules():
     BusinessRules.objects.create(
         name='phishing_phishtocheck',
         rulesType='Report',
-        orderId=3,
+        orderId=7,
         config={
             "conditions": {
                 "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
                     {
                         "name": "report_category",
                         "operator": "equal_to",
@@ -428,10 +575,15 @@ def set_business_rules():
     BusinessRules.objects.create(
         name='phishing_ignore',
         rulesType='Report',
-        orderId=4,
+        orderId=8,
         config={
             "conditions": {
                 "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
                     {
                         "name": "report_category",
                         "operator": "equal_to",
@@ -460,10 +612,15 @@ def set_business_rules():
     BusinessRules.objects.create(
         name='copyright_trusted',
         rulesType='Report',
-        orderId=4,
+        orderId=9,
         config={
             "conditions": {
                 "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
                     {
                         "name": "report_category",
                         "operator": "equal_to",
@@ -507,10 +664,15 @@ def set_business_rules():
     BusinessRules.objects.create(
         name='copyright_foward_acns',
         rulesType='Report',
-        orderId=5,
+        orderId=10,
         config={
             "conditions": {
                 "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
                     {
                         "name": "report_category",
                         "operator": "equal_to",
@@ -549,6 +711,37 @@ def set_business_rules():
                     "name": "close_ticket",
                     "params": {
                         "resolution": "forward_acns",
+                    }
+                }
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='defaul_defendant_trusted',
+        rulesType='Report',
+        orderId=11,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "is_report_trusted",
+                        "operator": "is_true",
+                        "value": True,
+                    }
+                ]
+            },
+            "actions": [
+                {
+                    "name": "create_ticket",
+                    "params": {
+                        "attach_new": True,
+                        "create_new": False,
                     }
                 }
             ]

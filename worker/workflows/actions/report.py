@@ -142,6 +142,23 @@ class ReportActions(BaseActions):
             ticket=self.ticket,
         )
 
+    @rule_action(params=[{'fieldType': FIELD_TEXT, 'name': 'status'}])
+    def set_report_status(self, status):
+        """
+        """
+        self.report.status = status
+        self.report.save()
+
+    @rule_action(params=[{'fieldType': FIELD_NUMERIC, 'name': 'days'}])
+    def set_report_timeout(self, days):
+        """
+        """
+        utils.scheduler.enqueue_in(
+            timedelta(days=days),
+            'report.archive_if_timeout',
+            report_id=self.report.id
+        )
+
     @rule_action()
     def set_ticket_phishtocheck(self):
         """

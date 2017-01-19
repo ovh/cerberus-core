@@ -28,6 +28,7 @@ class ReportVariables(BaseVariables):
         """
         recipients = []
         self.trusted = report.provider.trusted or is_trusted
+        self.existing_ticket = bool(ticket)
 
         if parsed_email:
             recipients = parsed_email.recipients
@@ -42,6 +43,12 @@ class ReportVariables(BaseVariables):
             report.subject,
             report.body
         )
+
+    @boolean_rule_variable()
+    def has_ticket(self):
+        """
+        """
+        return self.existing_ticket
 
     @boolean_rule_variable()
     def is_report_trusted(self):
@@ -85,6 +92,15 @@ class ReportVariables(BaseVariables):
         return False
 
     @boolean_rule_variable()
+    def autoarchive(self):
+        """
+        """
+        for tag in self.attibutes_tags:
+            if tag.tagType == 'Provider' and tag.name == settings.TAGS['autoarchive']:
+                return True
+        return False
+
+    @boolean_rule_variable()
     def urls_down(self):
         """
         """
@@ -115,6 +131,12 @@ class ReportVariables(BaseVariables):
             response = True
 
         return response
+
+    @boolean_rule_variable()
+    def has_defendant(self):
+        """
+        """
+        return bool(self.report.defendant)
 
     @numeric_rule_variable()
     def customer_since(self):
