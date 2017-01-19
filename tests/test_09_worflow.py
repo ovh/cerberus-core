@@ -30,10 +30,9 @@ from mock import patch
 
 from abuse.models import (ServiceAction, ContactedProvider, Report,
                           Provider, Resolution, Ticket, User, UrlStatus,
-                          Service, Defendant)
+                          Service, Defendant, BusinessRules, BusinessRulesHistory)
 from adapters.services.phishing.abstract import PingResponse
 from factory.implementation import ImplementationFactory
-from factory.reportworkflow import ReportWorkflowFactory
 from tests import GlobalTestCase
 
 SAMPLES_DIRECTORY = 'tests/samples'
@@ -110,7 +109,6 @@ class TestWorkers(GlobalTestCase):
         """
             Sample6 is a phishing report
         """
-        ReportWorkflowFactory.instance.read_worflows_available()
         from worker import report
 
         mock_rq.return_value = None
@@ -129,7 +127,6 @@ class TestWorkers(GlobalTestCase):
         """
             Sample7 is a phishing report
         """
-        ReportWorkflowFactory.instance.read_worflows_available()
         from worker import report
 
         mock_rq.return_value = None
@@ -157,7 +154,6 @@ class TestWorkers(GlobalTestCase):
         """
             Sample6 is a phishing report, now down items
         """
-        ReportWorkflowFactory.instance.read_worflows_available()
         from worker import report
 
         mock_rq.return_value = None
@@ -182,7 +178,6 @@ class TestWorkers(GlobalTestCase):
         """
             Test phishing workflow
         """
-        ReportWorkflowFactory.instance.read_worflows_available()
         from worker import report
 
         mock_rq_enqueue_in.return_value = None
@@ -237,11 +232,10 @@ class TestWorkers(GlobalTestCase):
     @patch('rq.queue.Queue.enqueue')
     @patch('rq_scheduler.scheduler.Scheduler.schedule')
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
-    def test_copyright_specific_workflow(self, mock_rq_enqueue_in, mock_rq_schedule, mock_rq_enqueue):
+    def test_copyright_trusted_specific_workflow(self, mock_rq_enqueue_in, mock_rq_schedule, mock_rq_enqueue):
         """
-            Test copyright timeout
+            Test copyright workflow and timeout
         """
-        ReportWorkflowFactory.instance.read_worflows_available()
         from worker import report
 
         mock_rq_enqueue_in.return_value = None
@@ -255,7 +249,8 @@ class TestWorkers(GlobalTestCase):
         cerberus_report.reportItemRelatedReport.all().update(fqdnResolved='1.2.3.4')
         self.assertEqual('Attached', cerberus_report.status)
         self.assertTrue(cerberus_report.ticket)
-        self.assertIn('report:copyright_report_workflow', cerberus_report.tags.all().values_list('name', flat=True))
+        self.assertIn('report:copyright_trusted', cerberus_report.tags.all().values_list('name', flat=True))
+        self.assertTrue(BusinessRulesHistory.objects.count())
 
         cerberus_report.status = 'Attached'
         cerberus_report.ticket.status = 'WaitingAnswer'
@@ -290,7 +285,6 @@ class TestWorkers(GlobalTestCase):
         """
             Test action functions
         """
-        ReportWorkflowFactory.instance.read_worflows_available()
         from worker import report
 
         mock_rq.return_value = None
@@ -356,7 +350,6 @@ class TestWorkers(GlobalTestCase):
         """
             Test copyright/acns specific workflow
         """
-        ReportWorkflowFactory.instance.read_worflows_available()
         from worker import report
 
         Provider.objects.create(email='broadgreenpictures@copyright-compliance.com', trusted=True)
@@ -369,6 +362,7 @@ class TestWorkers(GlobalTestCase):
         emails = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').get_emails(cerberus_report.ticket)
         self.assertEqual(2, len(emails))
         self.assertEqual('Archived', cerberus_report.status)
+        self.assertTrue(cerberus_report.ticket.resolution)
         self.assertEqual('Closed', cerberus_report.ticket.status)
 
     # Now testing without specific workflow
@@ -377,8 +371,8 @@ class TestWorkers(GlobalTestCase):
         """
             Sample6 is a trusted phishing report
         """
-        ReportWorkflowFactory.instance.registered_instances = []
         from worker import report
+        BusinessRules.objects.all().delete()
 
         mock_rq.return_value = None
         sample = self._samples['sample6']
@@ -397,8 +391,8 @@ class TestWorkers(GlobalTestCase):
         """
             Sample7 is not a trusted phishing report
         """
-        ReportWorkflowFactory.instance.registered_instances = []
         from worker import report
+        BusinessRules.objects.all().delete()
 
         mock_rq.return_value = None
         sample = self._samples['sample7']
@@ -416,8 +410,8 @@ class TestWorkers(GlobalTestCase):
         """
             Test copyright/acns specific workflow
         """
-        ReportWorkflowFactory.instance.registered_instances = []
         from worker import report
+        BusinessRules.objects.all().delete()
 
         Provider.objects.create(email='broadgreenpictures@copyright-compliance.com', trusted=True)
         mock_rq.return_value = None
@@ -432,10 +426,10 @@ class TestWorkers(GlobalTestCase):
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
     def test_acns_specific_no_workflow_2(self, mock_rq):
         """
-            Test copyright/acns specific workflow
+            Test copyright/acns specific with no workflow
         """
-        ReportWorkflowFactory.instance.registered_instances = []
         from worker import report
+        BusinessRules.objects.all().delete()
 
         Provider.objects.create(email='broadgreenpictures@copyright-compliance.com', trusted=False)
         mock_rq.return_value = None
@@ -450,9 +444,7 @@ class TestWorkers(GlobalTestCase):
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
     def test_phishing_trusted_provider(self, mock_rq):
         """
-            Sample20 came from a trusted phishing provider
         """
-        ReportWorkflowFactory.instance.read_worflows_available()
         from worker import report
 
         mock_rq.return_value = None
@@ -483,7 +475,6 @@ class TestWorkers(GlobalTestCase):
         """
             Test when phishing is clearly identified (PingResponse last parameter is True)
         """
-        ReportWorkflowFactory.instance.read_worflows_available()
         from worker import report
 
         mock_rq_enqueue_in.return_value = None

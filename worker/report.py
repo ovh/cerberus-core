@@ -34,15 +34,18 @@ from django.db.models import ObjectDoesNotExist, Q
 import common
 import database
 from abuse.models import (AttachedDocument, Defendant, Proof, Report,
-                          ReportItem, ReportThreshold, Service, Ticket, User)
+                          ReportItem, ReportThreshold, Service, Ticket,
+                          User, BusinessRules, BusinessRulesHistory)
 from adapters.services.search.abstract import SearchServiceException
 from factory.cdnrequest import CDNRequestWorkflowFactory
 from factory.implementation import ImplementationFactory
-from factory.reportworkflow import ReportWorkflowFactory
 from factory.ticketanswerworkflow import TicketAnswerWorkflowFactory
 from parsing.parser import EmailParser
 from utils import pglocks, schema, utils
 from worker import Logger
+from .workflows.actions import ReportActions
+from .workflows.engine import run
+from .workflows.variables import ReportVariables
 
 Parser = EmailParser()
 
@@ -219,21 +222,28 @@ def __create_with_services(abuse_report, filename, services):
         # Looking for existing open ticket for same (service, defendant, category)
         ticket = None
         if all((report.defendant, report.category, report.service)):
-            msg = 'Looking for opened ticket for (%s, %s, %s)'
-            Logger.debug(unicode(msg % (report.defendant.customerId, report.category.name, report.service.name)))
             ticket = database.search_ticket(report.defendant, report.category, report.service)
 
-        # Checking specific processing workflow
-        is_workflow_applied = False
-        for workflow in ReportWorkflowFactory.instance.registered_instances:
-            if workflow.identify(report, ticket, is_trusted=trusted):
-                is_workflow_applied = workflow.apply(report, ticket, trusted, no_phishtocheck)
-                if is_workflow_applied:
-                    database.set_report_specificworkflow_tag(report, str(workflow.__class__.__name__))
-                    Logger.debug(unicode('Specific workflow %s applied' % str(workflow.__class__.__name__)))
-                    break
+        # Running rules
+        rule_applied = False
+        for rule in BusinessRules.objects.filter(rulesType='Report').order_by('orderId'):
+            rule_applied = run(
+                rule.config,
+                defined_variables=ReportVariables(abuse_report, report, ticket),
+                defined_actions=ReportActions(report, ticket),
+            )
+            if rule_applied:
+                BusinessRulesHistory.objects.create(
+                    businessRules=rule,
+                    defendant=report.defendant,
+                    report=report,
+                    ticket=report.ticket
+                )
+                database.set_report_specificworkflow_tag(report, rule.name)
+                Logger.debug(unicode('Specific workflow %s applied' % str(rule.name)))
+                break
 
-        if is_workflow_applied:
+        if rule_applied:
             continue
 
         # If attach report only and no ticket found, continue
@@ -534,7 +544,6 @@ def validate_with_defendant(report_id=None, user_id=None):
 
 def _reparse_validated(report, user):
 
-    trusted = True
     ticket = None
     if all((report.defendant, report.category, report.service)):
         msg = 'Looking for opened ticket for (%s, %s, %s)'
@@ -543,12 +552,21 @@ def _reparse_validated(report, user):
         ticket = database.search_ticket(report.defendant, report.category, report.service)
 
     # Checking specific processing workflow
-    for workflow in ReportWorkflowFactory.instance.registered_instances:
-        if (workflow.identify(report, ticket, is_trusted=trusted) and
-                workflow.apply(report, ticket, trusted, False)):
-            Logger.debug(unicode(
-                'Specific workflow %s applied' % (str(workflow.__class__.__name__))
-            ))
+    for rule in BusinessRules.objects.filter(rulesType='Report').order_by('orderId'):
+        rule_applied = run(
+            rule.config,
+            defined_variables=ReportVariables(None, report, ticket, is_trusted=True),
+            defined_actions=ReportActions(report, ticket),
+        )
+        if rule_applied:
+            BusinessRulesHistory.objects.create(
+                businessRules=rule,
+                defendant=report.defendant,
+                report=report,
+                ticket=report.ticket
+            )
+            database.set_report_specificworkflow_tag(report, rule.name)
+            Logger.debug(unicode('Specific workflow %s applied' % str(rule.name)))
             return
 
     # Create ticket if trusted

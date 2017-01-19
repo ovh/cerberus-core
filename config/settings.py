@@ -32,11 +32,7 @@ CUSTOM_IMPLEMENTATIONS = (
     'default.adapters.services.action.impl.DefaultActionService',
 )
 
-CUSTOM_REPORT_WORKFLOWS = (
-    'worker.workflows.report.phishing.PhishingReportWorkflow',
-    'worker.workflows.report.copyright.CopyrightReportWorkflow',
-    'worker.workflows.report.acns.AcnsReportWorkflow',
-)
+CUSTOM_REPORT_WORKFLOWS = ()
 
 CUSTOM_TICKET_ANSWER_WORKFLOWS = (
     'worker.workflows.ticket.mailerdaemon.MailerDaemonWorkflow',
@@ -112,11 +108,6 @@ GENERAL_CONFIG = {
         'wait': 172800,
         'up_threshold': 0,
         'down_threshold': 75,
-    },
-    'copyright': {
-        'wait': 172800,
-        'acns_patterns': ('www.acns.net/ACNS',),
-        'trusted_copyright_providers': ['supertrusted@copyrightprovider.com'],
     },
     'magic_smtp_header': 'Test-Magic-Smtp-Header',
     'report_timeout': 30,

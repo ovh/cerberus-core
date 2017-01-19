@@ -625,3 +625,30 @@ class StarredTicket(models.Model):
 
     class Meta:
         unique_together = ("ticket", "user")
+
+
+class BusinessRules(models.Model):
+    """
+        Defines a association between `worker.workflows.variables` and `worker.workflows.actions`
+    """
+    RULES_TYPE = (
+        ('Report', 'Report'),
+        ('EmailReply', 'EmailReply'),
+        ('CDNRequest', 'CDNRequest'),
+    )
+
+    name = TruncatedCharField(max_length=256, null=False)
+    orderId = models.PositiveSmallIntegerField(null=False)
+    rulesType = TruncatedCharField(max_length=32, null=False, choices=RULES_TYPE)
+    config = JSONField()
+
+
+class BusinessRulesHistory(models.Model):
+    """
+        `abuse.models.BusinessRules` execution history
+    """
+    businessRules = models.ForeignKey(BusinessRules, null=False)
+    defendant = models.ForeignKey(Defendant, null=True)
+    report = models.ForeignKey(Report, null=True)
+    ticket = models.ForeignKey(Ticket, null=True)
+    date = models.DateTimeField(auto_now=True)
