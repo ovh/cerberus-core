@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-    Business rules for new abuse report
+    Actions for Report rules
 """
 
 import re
@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 from abuse.models import Proof, Resolution
 from config import settings
-from factory.implementation import ImplementationFactory
+from factory import implementations
 from utils import utils
 from worker.parsing import regexp
 from worker.workflows.engine.actions import rule_action, BaseActions
@@ -21,7 +21,7 @@ from worker import common, database, phishing
 
 class ReportActions(BaseActions):
     """
-        This class implements usefull actions required for rules
+        This class implements usefull actions required for Report `abuse.models.BusinessRules`
     """
     def __init__(self, report, ticket):
         """
@@ -67,7 +67,7 @@ class ReportActions(BaseActions):
             resolution_obj = Resolution.objects.get(codename=settings.CODENAMES[resolution])
             close_reason = resolution_obj.codename
 
-        ImplementationFactory.instance.get_singleton_of(
+        implementations.get_singleton_of(
             'MailerServiceBase'
         ).close_thread(self.ticket)
 

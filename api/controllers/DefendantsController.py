@@ -23,7 +23,7 @@
 """
 
 from collections import Counter
-from time import mktime, time
+from time import mktime
 
 from django.core.exceptions import FieldError
 from django.db import IntegrityError
@@ -31,7 +31,7 @@ from django.db.models import ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
 from werkzeug.exceptions import BadRequest, InternalServerError, NotFound
 
-from abuse.models import (Category, Defendant, DefendantComment,
+from abuse.models import (Defendant, DefendantComment,
                           DefendantHistory, DefendantRevision,
                           Report, Tag, Ticket)
 from adapters.dao.customer.abstract import CustomerDaoException

@@ -21,6 +21,7 @@
 """
     Report functions for worker
 """
+
 import hashlib
 from collections import Counter
 from datetime import datetime, timedelta
@@ -37,17 +38,17 @@ from abuse.models import (AttachedDocument, Defendant, Proof, Report,
                           ReportItem, ReportThreshold, Service, Ticket,
                           User, BusinessRules, BusinessRulesHistory)
 from adapters.services.search.abstract import SearchServiceException
+from factory import implementations
 from factory.cdnrequest import CDNRequestWorkflowFactory
-from factory.implementation import ImplementationFactory
-from factory.ticketanswerworkflow import TicketAnswerWorkflowFactory
 from parsing.parser import EmailParser
 from utils import pglocks, schema, utils
 from worker import Logger
-from .workflows.actions import ReportActions
+from .workflows.actions import EmailReplyActions, ReportActions
 from .workflows.engine import run
-from .workflows.variables import ReportVariables
+from .workflows.variables import EmailReplyVariables, ReportVariables
 
 Parser = EmailParser()
+STORAGE_DIR = settings.GENERAL_CONFIG['email_storage_dir']
 
 
 def create_from_email(email_content=None, filename=None, lang='EN', send_ack=False):
@@ -95,7 +96,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         return
 
     # Check if it's an answer to a ticket(s)
-    tickets = ImplementationFactory.instance.get_singleton_of(
+    tickets = implementations.get_singleton_of(
         'MailerServiceBase'
     ).is_email_ticket_answer(abuse_report)
     if tickets:
@@ -105,7 +106,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         return
 
     # Check if items are linked to customer and get corresponding services
-    services = ImplementationFactory.instance.get_singleton_of(
+    services = implementations.get_singleton_of(
         'CustomerDaoBase'
     ).get_services_from_items(
         urls=abuse_report.urls,
@@ -132,7 +133,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
             _send_ack(report, lang=lang)
 
     # Index to SearchService
-    if ImplementationFactory.instance.is_implemented('SearchServiceBase'):
+    if implementations.is_implemented('SearchServiceBase'):
         _index_report_to_searchservice(abuse_report, filename, [rep.id for rep in created_reports])
 
     Logger.info(unicode('All done successfully for email %s' % (filename)))
@@ -199,7 +200,7 @@ def _create_with_services(abuse_report, filename, services):
         if report.status == 'Archived':  # because autoarchive tag
             continue
 
-        _insert_items(report.id, data['items'])
+        _add_items(report.id, data['items'])
 
         # Looking for existing open ticket for same (service, defendant, category)
         ticket = None
@@ -237,11 +238,12 @@ def _apply_business_rules(parsed_email=None, report=None, ticket=None):
 
 
 def _index_report_to_searchservice(parsed_email, filename, reports_id):
-    """ Index a report to the SearchService
+    """
+        Index a report to the SearchService
     """
     try:
         Logger.debug(unicode('Pushing email %s document to SearchService' % (filename)))
-        ImplementationFactory.instance.get_singleton_of('SearchServiceBase').index_email(
+        implementations.get_singleton_of('SearchServiceBase').index_email(
             parsed_email,
             filename,
             reports_id
@@ -252,7 +254,8 @@ def _index_report_to_searchservice(parsed_email, filename, reports_id):
 
 
 def _send_ack(report, lang=None):
-    """ Send acknoledgement to provider
+    """
+        Send acknoledgement to provider
 
         :param `abuse.models.Report` report: A `abuse.models.Report` instance
         :param string lang: The langage to use
@@ -270,8 +273,9 @@ def _send_ack(report, lang=None):
     report.save()
 
 
-def _insert_items(report_id, items):
-    """ Insert report's items for to database
+def _add_items(report_id, items):
+    """
+        Insert report's items for to database
 
         :param int report_id: The id of the report
         :param dict items: A dict of list containing the items
@@ -290,10 +294,12 @@ def _insert_items(report_id, items):
 
 
 def _save_attachments(filename, attachments, reports=None, tickets=None):
-    """ Upload email attachments to StorageService and keep a reference in Cerberus
+    """
+        Upload email attachments to StorageService and keep a reference in Cerberus
 
         :param str filename: The filename of the email
-        :param list attachments: The `worker.parsing.parsed.ParsedEmail.attachments` list : [{'content': ..., 'content_type': ... ,'filename': ...}]
+        :param list attachments: The `worker.parsing.parsed.ParsedEmail.attachments` list :
+            - [{'content': ..., 'content_type': ... ,'filename': ...}]
         :param list reports: A list of `abuse.models.Report` instance
         :param list tickets: A list of `abuse.models.Ticket` instance
     """
@@ -303,7 +309,7 @@ def _save_attachments(filename, attachments, reports=None, tickets=None):
         storage_filename = storage_filename.encode('utf-8')
         storage_filename = storage_filename + attachment['filename']
 
-        with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
+        with implementations.get_instance_of('StorageServiceBase', STORAGE_DIR) as cnx:
             cnx.write(storage_filename, attachment['content'])
 
         attachment_obj = AttachedDocument.objects.create(
@@ -327,7 +333,7 @@ def _save_email(filename, email):
         :param str filename: The filename of the email
         :param str email: The content of the email
     """
-    with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
+    with implementations.get_instance_of('StorageServiceBase', STORAGE_DIR) as cnx:
         cnx.write(filename, email)
         Logger.info(unicode('Email %s pushed to Storage Service' % (filename)))
 
@@ -368,12 +374,6 @@ def _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename
             'ticket': ticket.id,
         }
     )
-    database.log_action_on_ticket(
-        ticket=ticket,
-        action='receive_email',
-        email=abuse_report.provider
-    )
-
     try:
         if ticket.treatedBy.operator.role.modelsAuthorizations['ticket'].get('unassignedOnAnswer'):
             ticket.treatedBy = None
@@ -387,14 +387,20 @@ def _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename
             tickets=[ticket],
         )
 
-    for workflow in TicketAnswerWorkflowFactory.instance.registered_instances:
-        if workflow.identify(ticket, abuse_report, recipient, category):
-            applied = workflow.apply(ticket, abuse_report, recipient, category)
-            if applied:
-                Logger.debug(unicode(
-                    'Specific workflow %s applied' % (str(workflow.__class__.__name__))
-                ))
-                return
+    for rule in BusinessRules.objects.filter(rulesType='EmailReply').order_by('orderId'):
+        rule_applied = run(
+            rule.config,
+            defined_variables=EmailReplyVariables(ticket, abuse_report, recipient, category),
+            defined_actions=EmailReplyActions(ticket, abuse_report, recipient, category)
+        )
+        if rule_applied:
+            BusinessRulesHistory.objects.create(
+                businessRules=rule,
+                defendant=ticket.defendant,
+                ticket=ticket
+            )
+            Logger.debug(unicode('Workflow %s applied' % str(rule.name)))
+            return
 
 
 def archive_if_timeout(report_id=None):
@@ -513,20 +519,6 @@ def _reparse_validated(report, user):
             Logger.debug(unicode('Specific workflow %s applied' % str(rule.name)))
             return
 
-    # Create ticket if trusted
-    if not ticket:
-        ticket = common.create_ticket(
-            report,
-            attach_new=True
-        )
-
-    if ticket:
-        report.ticket = Ticket.objects.get(id=ticket.id)
-        report.status = 'Attached'
-        report.save()
-        database.set_ticket_higher_priority(report.ticket)
-        _send_ack(report, lang='EN')
-
 
 @transaction.atomic
 def validate_without_defendant(report_id=None, user_id=None):
@@ -563,7 +555,7 @@ def _send_emails_invalid_report(report):
         )
         report.ticket.save()
         Logger.info(unicode('Mail sent to provider'))
-        ImplementationFactory.instance.get_singleton_of(
+        implementations.get_singleton_of(
             'MailerServiceBase'
         ).close_thread(report.ticket)
 

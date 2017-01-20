@@ -33,6 +33,12 @@ from factory.implementation import ImplementationFactory
 from utils import utils
 from parsing import regexp
 
+CDN_REQUEST_CACHE_EXPIRATION_DAYS = 15
+CDN_REQUEST_REDIS_QUEUE = 'cdnrequest:%s:request'
+CDN_REQUEST_LOCK = 'cdnrequest:lock'
+
+CLOUDFLARE_EMAIL = 'abusereply@cloudflare.com'
+
 
 def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report_id=None):
     """

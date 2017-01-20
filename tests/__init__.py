@@ -447,7 +447,7 @@ def set_business_rules():
     BusinessRules.objects.create(
         name='phishing_down',
         rulesType='Report',
-        orderId=5,
+        orderId=20,
         config={
             "conditions": {
                 "all": [
@@ -484,7 +484,7 @@ def set_business_rules():
     BusinessRules.objects.create(
         name='phishing_up',
         rulesType='Report',
-        orderId=6,
+        orderId=21,
         config={
             "conditions": {
                 "all": [
@@ -538,7 +538,7 @@ def set_business_rules():
     BusinessRules.objects.create(
         name='phishing_phishtocheck',
         rulesType='Report',
-        orderId=7,
+        orderId=22,
         config={
             "conditions": {
                 "all": [
@@ -575,7 +575,7 @@ def set_business_rules():
     BusinessRules.objects.create(
         name='phishing_ignore',
         rulesType='Report',
-        orderId=8,
+        orderId=23,
         config={
             "conditions": {
                 "all": [
@@ -612,7 +612,7 @@ def set_business_rules():
     BusinessRules.objects.create(
         name='copyright_trusted',
         rulesType='Report',
-        orderId=9,
+        orderId=40,
         config={
             "conditions": {
                 "all": [
@@ -664,7 +664,7 @@ def set_business_rules():
     BusinessRules.objects.create(
         name='copyright_foward_acns',
         rulesType='Report',
-        orderId=10,
+        orderId=41,
         config={
             "conditions": {
                 "all": [
@@ -720,7 +720,7 @@ def set_business_rules():
     BusinessRules.objects.create(
         name='defaul_defendant_trusted',
         rulesType='Report',
-        orderId=11,
+        orderId=100,
         config={
             "conditions": {
                 "all": [
@@ -743,6 +743,125 @@ def set_business_rules():
                         "attach_new": True,
                         "create_new": False,
                     }
+                }
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='mailer_daemon',
+        rulesType='EmailReply',
+        orderId=1,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "category",
+                        "operator": "equal_to",
+                        "value": "defendant",
+                    },
+                    {
+                        "name": "email_sender",
+                        "operator": "matches_regex",
+                        "value": "mailer-daemon@.*ovh.*",
+                    }
+                ]
+            },
+            "actions": [
+                {
+                    "name": "try_resend",
+                },
+                {
+                    "name": "attach_external_answer",
+                }
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='cdn_response_cloudflare',
+        rulesType='EmailReply',
+        orderId=10,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "ticket_in_cdn_cache",
+                        "operator": "equal_to",
+                        "value": 'True',
+                        "params": {
+                            "provider": "cloudflare"
+                        }
+                    },
+                    {
+                        "name": "email_sender",
+                        "operator": "equal_to",
+                        "value": "abusereply@cloudflare.com",
+                    }
+                ]
+            },
+            "actions": [
+                {
+                    "name": "cdn_response_update",
+                    "params": {
+                        "provider": "cloudflare"
+                    }
+                },
+                {
+                    "name": "attach_external_answer",
+                }
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='customer_answer',
+        rulesType='EmailReply',
+        orderId=50,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "category",
+                        "operator": "equal_to",
+                        "value": "defendant",
+                    },
+                ]
+            },
+            "actions": [
+                {
+                    "name": "set_ticket_status",
+                    "params": {
+                        "status": "Answered",
+                    }
+                },
+                {
+                    "name": "cancel_pending_jobs",
+                },
+                {
+                    "name": "attach_external_answer",
+                }
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='default',
+        rulesType='EmailReply',
+        orderId=50,
+        config={
+            "conditions": {
+                "all": []
+            },
+            "actions": [
+                {
+                    "name": "set_ticket_status",
+                    "params": {
+                        "status": "Answered",
+                    }
+                },
+                {
+                    "name": "attach_external_answer",
                 }
             ]
         }

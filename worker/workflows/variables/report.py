@@ -18,13 +18,14 @@ from worker.workflows.engine.variables import (numeric_rule_variable, boolean_ru
 
 class ReportVariables(BaseVariables):
     """
-        This class implements usefull functions required for rules
+        This class implements variables getters for Report `abuse.models.BusinessRules`
     """
     def __init__(self, parsed_email, report, ticket, is_trusted=False):
         """
             :param `worker.parsing.parser import ParsedEmail` email_report: The parsed abuse report
             :param `abuse.models.Report` report: A Cerberus report instance
             :param `abuse.models.Ticket` ticket: A Cerberus ticket instance
+            :param bool is_trusted: if the report is trusted
         """
         recipients = []
         self.trusted = report.provider.trusted or is_trusted
