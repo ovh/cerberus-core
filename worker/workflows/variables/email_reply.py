@@ -42,11 +42,11 @@ class EmailReplyVariables(BaseVariables):
         """
         return self.parsed_email.provider.lower()
 
-    @string_rule_variable(params=[{'fieldType': FIELD_TEXT, 'name': 'provider'}])
+    @boolean_rule_variable(params=[{'fieldType': FIELD_TEXT, 'name': 'provider'}])
     def ticket_in_cdn_cache(self, provider):
         """
         """
-        return str(check_if_ticket_in_cache(self.ticket.id, provider))
+        return check_if_ticket_in_cache(self.ticket.id, provider)
 
 
 @utils.redis_lock(CDN_REQUEST_LOCK)

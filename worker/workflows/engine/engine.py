@@ -57,7 +57,7 @@ def check_condition(condition, defined_variables):
     name, op, value = condition['name'], condition['operator'], condition['value']
     params = condition.get('params') or {}
     operator_type = _get_variable_value(defined_variables, name, params)
-    return _do_operator_comparison(operator_type, op, value, params)
+    return _do_operator_comparison(operator_type, op, value)
 
 
 def _get_variable_value(defined_variables, name, params):
@@ -76,7 +76,7 @@ def _get_variable_value(defined_variables, name, params):
     return method.field_type(val)
 
 
-def _do_operator_comparison(operator_type, operator_name, comparison_value, params):
+def _do_operator_comparison(operator_type, operator_name, comparison_value):
     """
         Finds the method on the given operator_type and compares it to the
         given comparison_value.
@@ -90,7 +90,7 @@ def _do_operator_comparison(operator_type, operator_name, comparison_value, para
             operator_name, operator_type.__class__.__name__))
     method = getattr(operator_type, operator_name, fallback)
     if getattr(method, 'input_type', '') == FIELD_NO_INPUT:
-        return method(**params)
+        return method()
     return method(comparison_value)
 
 
