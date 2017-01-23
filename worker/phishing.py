@@ -32,12 +32,10 @@ from django.db.models import ObjectDoesNotExist
 import common
 import database
 
-from abuse.models import Proof, Report, Tag, Ticket, User
+from abuse.models import Proof, Report, Tag, Ticket
 from adapters.services.phishing.abstract import PhishingServiceException
 from factory.implementation import ImplementationFactory
 from worker import Logger
-
-BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
 
 
 def check_if_all_down(report=None, last=5):

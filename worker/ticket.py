@@ -50,8 +50,6 @@ from factory.implementation import ImplementationFactory
 from utils import pglocks, schema, utils
 from worker import Logger
 
-BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
-
 ASYNC_JOB_TO_CANCEL = (
     'action.apply_if_no_reply',
     'action.apply_then_close',
@@ -137,7 +135,7 @@ def timeout(ticket_id=None):
             new_value=ticket.status
         )
         comment = Comment.objects.create(
-            user=BOT_USER,
+            user=common.BOT_USER,
             comment='None or multiple ip addresses for this ticket'
         )
         TicketComment.objects.create(ticket=ticket, comment=comment)
@@ -203,7 +201,7 @@ def _apply_timeout_action(ticket, ip_addr, action):
             'ticket_id': ticket.id,
             'action_id': action.id,
             'ip_addr': ip_addr,
-            'user_id': BOT_USER.id,
+            'user_id': common.BOT_USER.id,
         },
         interval=1,
         repeat=1,
@@ -624,7 +622,7 @@ def follow_the_sun():
     where = [~Q(status='Open'), ~Q(status='Reopened'), ~Q(status='Paused'), ~Q(status='Closed')]
     where = reduce(operator.and_, where)
 
-    for user in User.objects.filter(~Q(username=BOT_USER.username)):
+    for user in User.objects.filter(~Q(username=common.BOT_USER.username)):
         if now > mktime((user.last_login + timedelta(hours=24)).timetuple()):
             Logger.debug(
                 unicode('user %s logged out, set alarm to True' % (user.username)),

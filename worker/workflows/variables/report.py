@@ -27,6 +27,9 @@ class ReportVariables(BaseVariables):
             :param `abuse.models.Ticket` ticket: A Cerberus ticket instance
             :param bool is_trusted: if the report is trusted
         """
+        if not isinstance(is_trusted, bool):
+            is_trusted = False
+
         recipients = []
         self.trusted = report.provider.trusted or is_trusted
         self.existing_ticket = bool(ticket)

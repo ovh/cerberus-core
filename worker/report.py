@@ -39,13 +39,12 @@ from abuse.models import (AttachedDocument, Defendant, Proof, Report,
                           User, BusinessRules, BusinessRulesHistory)
 from adapters.services.search.abstract import SearchServiceException
 from factory import implementations
-from factory.cdnrequest import CDNRequestWorkflowFactory
 from parsing.parser import EmailParser
 from utils import pglocks, schema, utils
 from worker import Logger
-from .workflows.actions import EmailReplyActions, ReportActions
+from .workflows.actions import CDNRequestActions, EmailReplyActions, ReportActions
 from .workflows.engine import run
-from .workflows.variables import EmailReplyVariables, ReportVariables
+from .workflows.variables import CDNRequestVariables, EmailReplyVariables, ReportVariables
 
 Parser = EmailParser()
 STORAGE_DIR = settings.GENERAL_CONFIG['email_storage_dir']
@@ -171,7 +170,11 @@ def _create_without_services(abuse_report, filename):
 
     _add_report_tags(report, abuse_report.recipients)
     database.log_new_report(report)
-    _apply_business_rules(abuse_report, report)
+    _apply_business_rules(
+        parsed_email=abuse_report,
+        report=report,
+        rules_type='Report'
+    )
 
     return report
 
@@ -208,33 +211,102 @@ def _create_with_services(abuse_report, filename, services):
             ticket = database.search_ticket(report.defendant, report.category, report.service)
 
         # Running rules
-        rule_applied = _apply_business_rules(abuse_report, report, ticket)
+        rule_applied = _apply_business_rules(
+            parsed_email=abuse_report,
+            report=report,
+            ticket=ticket,
+            rules_type='Report'
+        )
         if rule_applied:
             continue
 
     return created_reports
 
 
-def _apply_business_rules(parsed_email=None, report=None, ticket=None):
+def _apply_business_rules(**kwargs):
 
-    for rule in BusinessRules.objects.filter(rulesType='Report').order_by('orderId'):
+    if not BusinessRules.objects.count():
+        return False
+
+    report = kwargs.get('report')
+    ticket = kwargs.get('ticket')
+    defendant = report.defendant if report else ticket.defendant
+
+    rules, variables, actions = _get_business_rules_config(**kwargs)
+    if not all((rules, variables, actions)):
+        raise Exception("Unable to retrieve rules with params: {}".format(kwargs))
+
+    for rule in rules:
         rule_applied = run(
             rule.config,
-            defined_variables=ReportVariables(parsed_email, report, ticket),
-            defined_actions=ReportActions(report, ticket),
+            defined_variables=variables,
+            defined_actions=actions,
         )
         if rule_applied:
             BusinessRulesHistory.objects.create(
                 businessRules=rule,
-                defendant=report.defendant,
+                defendant=defendant,
                 report=report,
-                ticket=report.ticket
+                ticket=ticket
             )
-            database.set_report_specificworkflow_tag(report, rule.name)
+            if report:
+                database.set_report_specificworkflow_tag(report, rule.name)
             Logger.debug(unicode('Workflow %s applied' % str(rule.name)))
             return True
 
     return False
+
+
+def _get_business_rules_config(**kwargs):
+
+    rules_type = kwargs['rules_type']
+    parsed_email = kwargs.get('parsed_email')
+    report = kwargs.get('report')
+    ticket = kwargs.get('ticket')
+    reply_recipient = kwargs.get('reply_recipient')
+    cdn_domain_to_request = kwargs.get('domain_to_request')
+    reply_category = kwargs.get('reply_category')
+    trusted = kwargs.get('is_trusted')
+
+    variables = actions = None
+    rules = BusinessRules.objects.filter(
+        rulesType=rules_type
+    ).order_by('orderId')
+
+    if rules_type == 'Report':
+        variables = ReportVariables(
+            parsed_email,
+            report,
+            ticket,
+            is_trusted=trusted
+        )
+        actions = ReportActions(
+            report,
+            ticket
+        )
+    elif rules_type == 'EmailReply':
+        variables = EmailReplyVariables(
+            ticket,
+            parsed_email,
+            reply_recipient,
+            reply_category
+        )
+        actions = EmailReplyActions(
+            ticket,
+            parsed_email,
+            reply_recipient,
+            reply_category
+        )
+    elif rules_type == 'CDNRequest':
+        variables = CDNRequestVariables(
+            cdn_domain_to_request
+        )
+        actions = CDNRequestActions(
+            report,
+            cdn_domain_to_request
+        )
+
+    return rules, variables, actions
 
 
 def _index_report_to_searchservice(parsed_email, filename, reports_id):
@@ -387,20 +459,13 @@ def _update_ticket_if_answer(ticket, category, recipient, abuse_report, filename
             tickets=[ticket],
         )
 
-    for rule in BusinessRules.objects.filter(rulesType='EmailReply').order_by('orderId'):
-        rule_applied = run(
-            rule.config,
-            defined_variables=EmailReplyVariables(ticket, abuse_report, recipient, category),
-            defined_actions=EmailReplyActions(ticket, abuse_report, recipient, category)
-        )
-        if rule_applied:
-            BusinessRulesHistory.objects.create(
-                businessRules=rule,
-                defendant=ticket.defendant,
-                ticket=ticket
-            )
-            Logger.debug(unicode('Workflow %s applied' % str(rule.name)))
-            return
+    return _apply_business_rules(
+        parsed_email=abuse_report,
+        ticket=ticket,
+        reply_recipient=recipient,
+        reply_category=category,
+        rules_type='EmailReply'
+    )
 
 
 def archive_if_timeout(report_id=None):
@@ -502,22 +567,12 @@ def _reparse_validated(report, user):
         ticket = database.search_ticket(report.defendant, report.category, report.service)
 
     # Checking specific processing workflow
-    for rule in BusinessRules.objects.filter(rulesType='Report').order_by('orderId'):
-        rule_applied = run(
-            rule.config,
-            defined_variables=ReportVariables(None, report, ticket, is_trusted=True),
-            defined_actions=ReportActions(report, ticket),
-        )
-        if rule_applied:
-            BusinessRulesHistory.objects.create(
-                businessRules=rule,
-                defendant=report.defendant,
-                report=report,
-                ticket=report.ticket
-            )
-            database.set_report_specificworkflow_tag(report, rule.name)
-            Logger.debug(unicode('Specific workflow %s applied' % str(rule.name)))
-            return
+    return _apply_business_rules(
+        report=report,
+        ticket=ticket,
+        is_trusted=True,
+        rules_type='Report'
+    )
 
 
 @transaction.atomic
@@ -576,9 +631,16 @@ def cdn_request(report_id=None, user_id=None, domain_to_request=None):
         :param int user_id: A Cerberus `abuse.models.User` id
         :param int domain_to_request: The domain to resolve
     """
+    if not domain_to_request:
+        raise Exception('No domain specified')
+
     report = Report.objects.get(id=report_id)
     user = User.objects.get(id=user_id)
     domain_to_request = domain_to_request.lower()
+
+    ips = utils.get_ips_from_fqdn(domain_to_request)
+    if not ips:
+        raise Exception('Domain %s does not resolve' % domain_to_request)
 
     ReportItem.objects.create(
         itemType='FQDN',
@@ -589,14 +651,11 @@ def cdn_request(report_id=None, user_id=None, domain_to_request=None):
     report.status = 'Attached'
     report.save()
 
-    for workflow in CDNRequestWorkflowFactory.instance.registered_instances:
-        if workflow.identify(report, domain_to_request):
-            is_workflow_applied = workflow.apply(report, domain_to_request)
-            if is_workflow_applied:
-                database.set_report_specificworkflow_tag(report, str(workflow.__class__.__name__))
-                Logger.debug(unicode(
-                    'Specific workflow %s applied' % str(workflow.__class__.__name__)
-                ))
-                return
+    rules_applied = _apply_business_rules(
+        report=report,
+        domain_to_request=domain_to_request,
+        rules_type='CDNRequest'
+    )
 
-    raise Exception('No workflow applied')
+    if not rules_applied:
+        raise Exception('No workflow applied')

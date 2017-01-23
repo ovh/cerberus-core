@@ -37,10 +37,6 @@ CUSTOM_SCHEDULING_ALGORITHMS = (
     'api.controllers.scheduling.limitedOpen.LimitedOpenSchedulingAlgorithm',
 )
 
-CUSTOM_CDN_REQUEST_WORKFLOWS = (
-    'worker.workflows.cdnrequest.cloudflare.CloudflareRequest',
-)
-
 QUEUE = {
     'default': {
         'name': 'default',
@@ -101,12 +97,7 @@ GENERAL_CONFIG = {
         'down_threshold': 75,
     },
     'magic_smtp_header': 'Test-Magic-Smtp-Header',
-    'report_timeout': 30,
     'ticket_high_count': 50,
-    'mailer_daemon_patterns': [
-        'mailer-daemon',
-        '@my.provider.com'
-    ],
 }
 
 DATABASES = {

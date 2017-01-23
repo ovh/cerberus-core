@@ -340,6 +340,12 @@ def set_business_rules():
                 {
                     "name": "do_nothing",
                 },
+                {
+                    "name": "set_report_timeout",
+                    "params": {
+                        "days": 30
+                    }
+                },
             ]
         }
     )
@@ -787,8 +793,8 @@ def set_business_rules():
                 "all": [
                     {
                         "name": "ticket_in_cdn_cache",
-                        "operator": "equal_to",
-                        "value": 'True',
+                        "operator": "is_true",
+                        "value": True,
                         "params": {
                             "provider": "cloudflare"
                         }
@@ -863,6 +869,34 @@ def set_business_rules():
                 {
                     "name": "attach_external_answer",
                 }
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='cdn_request_cloudflare',
+        rulesType='CDNRequest',
+        orderId=1,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "provider_ips_owner",
+                        "operator": "is_true",
+                        "value": True,
+                        "params": {
+                            "provider": "cloudflare"
+                        }
+                    },
+                ]
+            },
+            "actions": [
+                {
+                    "name": "do_cloudflare_request",
+                    "params": {
+                        "provider": "cloudflare",
+                    }
+                },
             ]
         }
     )

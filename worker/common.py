@@ -29,15 +29,15 @@ from django.core.validators import validate_email
 
 import database
 from abuse.models import Proof, Resolution, User
+from django.conf import settings
+from parsing import regexp
 from factory.implementation import ImplementationFactory
 from utils import utils
-from parsing import regexp
 
+BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
 CDN_REQUEST_CACHE_EXPIRATION_DAYS = 15
 CDN_REQUEST_REDIS_QUEUE = 'cdnrequest:%s:request'
 CDN_REQUEST_LOCK = 'cdnrequest:lock'
-
-CLOUDFLARE_EMAIL = 'abusereply@cloudflare.com'
 
 
 def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report_id=None):

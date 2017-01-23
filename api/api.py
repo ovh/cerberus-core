@@ -60,7 +60,6 @@ from flask import Flask, g, jsonify, request, Response
 from werkzeug.exceptions import (BadRequest, default_exceptions, Forbidden,
                                  HTTPException, Unauthorized)
 
-from factory.implementation import ImplementationFactory
 from utils import logger, utils
 
 
@@ -263,14 +262,6 @@ def create_app():
                 'http_code': http_code,
             }
         )
-        if ImplementationFactory.instance.is_implemented('KPIServiceBase'):
-            ImplementationFactory.instance.get_singleton_of(
-                'KPIServiceBase'
-            ).new_api_request(
-                g.endpoint,
-                http_code,
-                diff,
-            )
         return response
 
     @app.errorhandler(Exception)
