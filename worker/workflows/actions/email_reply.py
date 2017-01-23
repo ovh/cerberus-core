@@ -12,7 +12,7 @@ from utils import utils
 from worker.common import CDN_REQUEST_LOCK, CDN_REQUEST_REDIS_QUEUE
 from worker.workflows.engine.actions import rule_action, BaseActions
 from worker.workflows.engine.fields import FIELD_TEXT
-from worker import database
+from worker import common, database
 
 
 class EmailReplyActions(BaseActions):
@@ -42,7 +42,10 @@ class EmailReplyActions(BaseActions):
         )
 
         if len(services) != 1:
-            alarm_ticket(self.ticket)
+            common.set_ticket_status(
+                self.ticket,
+                'Alarm',
+            )
         else:
             update_ticket(services, self.ticket, provider)
 
@@ -80,17 +83,9 @@ class EmailReplyActions(BaseActions):
     def set_ticket_status(self, status):
         """
         """
-        self.ticket.previousStatus = self.ticket.status
-        self.ticket.status = status.title()
-        self.ticket.snoozeStart = None
-        self.ticket.snoozeDuration = None
-        self.ticket.save()
-
-        database.log_action_on_ticket(
-            ticket=self.ticket,
-            action='change_status',
-            previous_value=self.ticket.previousStatus,
-            new_value=self.ticket.status,
+        common.set_ticket_status(
+            self.ticket,
+            status,
         )
 
     @rule_action()
@@ -153,22 +148,6 @@ def update_redis_cache(ticket_id, defendant_id, service_id, provider):
                 json.dumps(entry)
             )
             return
-
-
-def alarm_ticket(ticket):
-    """
-        Set alarm to ticket
-    """
-    ticket.status = ticket.previousStatus
-    ticket.status = 'Alarm'
-    ticket.save()
-
-    database.log_action_on_ticket(
-        ticket=ticket,
-        action='change_status',
-        previous_value=ticket.previousStatus,
-        new_value=ticket.status
-    )
 
 
 def update_ticket(services, ticket, provider):

@@ -141,7 +141,7 @@ def close_because_all_down(report=None, denied_by=None):
         pass
 
     # Closing ticket and add tags
-    common.close_ticket(report, resolution_codename=settings.CODENAMES['no_more_content'])
+    common.close_ticket(report.ticket, resolution_codename=settings.CODENAMES['no_more_content'])
     report.ticket.tags.remove(Tag.objects.get(name=settings.TAGS['phishing_autoreopen']))
     report.ticket.tags.add(Tag.objects.get(name=settings.TAGS['phishing_autoclosed']))
     Logger.info(unicode('Ticket %d and report %d closed' % (report.ticket.id, report.id)))

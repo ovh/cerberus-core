@@ -589,7 +589,7 @@ def validate_without_defendant(report_id=None, user_id=None):
     report.ticket = common.create_ticket(report, attach_new=False)
     report.save()
     _send_emails_invalid_report(report)
-    common.close_ticket(report, resolution_codename=settings.CODENAMES['invalid'], user=user)
+    common.close_ticket(report.ticket, resolution_codename=settings.CODENAMES['invalid'], user=user)
     Logger.info(unicode('Ticket %d and report %d closed' % (report.ticket.id, report.id)))
 
 

@@ -7,9 +7,8 @@
 import re
 from datetime import datetime, timedelta
 
-from abuse.models import Proof, Resolution
+from abuse.models import Proof
 from config import settings
-from factory import implementations
 from utils import utils
 from worker.parsing import regexp
 from worker.workflows.engine.actions import rule_action, BaseActions
@@ -62,29 +61,12 @@ class ReportActions(BaseActions):
     def close_ticket(self, resolution=None, keep_update=False):
         """
         """
-        resolution_obj = close_reason = None
-        if resolution:
-            resolution_obj = Resolution.objects.get(codename=settings.CODENAMES[resolution])
-            close_reason = resolution_obj.codename
-
-        implementations.get_singleton_of(
-            'MailerServiceBase'
-        ).close_thread(self.ticket)
-
-        self.ticket.resolution = resolution_obj
-        self.ticket.previousStatus = self.ticket.status
-        self.ticket.status = 'Closed'
+        common.close_ticket(
+            self.ticket,
+            resolution_codename=settings.CODENAMES[resolution]
+        )
         self.ticket.update = keep_update
         self.ticket.save()
-        database.log_action_on_ticket(
-            ticket=self.ticket,
-            action='change_status',
-            previous_value=self.ticket.previousStatus,
-            new_value=self.ticket.status,
-            close_reason=close_reason
-        )
-        self.report.status = 'Archived'
-        self.report.save()
 
     @rule_action()
     def send_provider_ack(self):

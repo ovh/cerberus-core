@@ -103,27 +103,30 @@ def create_ticket(report, denied_by=None, attach_new=False):
     return ticket
 
 
-def close_ticket(report, resolution_codename=None, user=None):
+def close_ticket(ticket, resolution_codename=None, user=None):
     """
         Close a `abuse.models.Ticket`
     """
     resolution = Resolution.objects.get(codename=resolution_codename)
-    report.ticket.resolution = resolution
-    report.ticket.previousStatus = report.ticket.status
-    report.ticket.status = 'Closed'
-    report.status = 'Archived'
+    ticket.resolution = resolution
+    ticket.previousStatus = ticket.status
 
-    database.log_action_on_ticket(
-        ticket=report.ticket,
-        action='change_status',
+    set_ticket_status(
+        ticket,
+        'Closed',
+        reset_snooze=True,
         user=user,
-        previous_value=report.ticket.previousStatus,
-        new_value=report.ticket.status,
-        close_reason=report.ticket.resolution.codename
+        resolution_codename=resolution_codename
     )
 
-    report.ticket.save()
-    report.save()
+    ticket.reportTicket.all().update(
+        status='Archived'
+    )
+
+    if ticket.mailerId:
+        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
+
+    ticket.save()
 
 
 def get_temp_proofs(ticket, only_urls=False):
@@ -133,7 +136,8 @@ def get_temp_proofs(ticket, only_urls=False):
     temp_proofs = []
     for report in ticket.reportTicket.all():
         if only_urls:
-            content = '\n'.join([item.rawItem for item in report.reportItemRelatedReport.filter(itemType='URL')])
+            items = report.reportItemRelatedReport.filter(itemType='URL')
+            content = '\n'.join([item.rawItem for item in items])
         else:
             content = 'From: %s\nDate: %s\nSubject: %s\n\n%s\n'
             content = content % (
@@ -151,3 +155,27 @@ def get_temp_proofs(ticket, only_urls=False):
             )
         )
     return temp_proofs
+
+
+def set_ticket_status(ticket, status, resolution_codename=None,
+                      reset_snooze=False, user=None):
+    """
+        Update `abuse.models.Ticket` and log action
+    """
+    ticket.previousStatus = ticket.status
+    ticket.status = status.title()
+
+    if reset_snooze:
+        ticket.snoozeStart = None
+        ticket.snoozeDuration = None
+
+    ticket.save()
+
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='change_status',
+        user=user,
+        previous_value=ticket.previousStatus,
+        new_value=ticket.status,
+        close_reason=resolution_codename
+    )
