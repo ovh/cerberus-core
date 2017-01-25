@@ -163,7 +163,7 @@ def set_ticket_status(ticket, status, resolution_codename=None,
         Update `abuse.models.Ticket` and log action
     """
     ticket.previousStatus = ticket.status
-    ticket.status = status.title()
+    ticket.status = status
 
     if reset_snooze:
         ticket.snoozeStart = None

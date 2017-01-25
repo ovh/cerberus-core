@@ -1,0 +1,91 @@
+Received: from mx.domain.tld
+	by mx.domain.tld (Dovecot) with LMTP id lLgxJbRMQVUGMQAArOwUew
+	; Wed, 29 Apr 2015 23:27:25 +0200
+To: abuse@ovh.net
+From: BitNinja <incident-report@bitninja.io>
+Date: Thu, 05 Nov 2015 18:30:54 +0100
+Content-Type: multipart/alternative;
+ boundary="=_59189c37660d739e5f20d259ef793e3f"
+MIME-Version: 1.0
+
+--=_59189c37660d739e5f20d259ef793e3f
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Dear Provider,=0D=0AThe BitNinja team would like to inform you about an=
+ INCIDENT, COMING FROM YOUR NETWORK. (IP address 1.2.3.4). It mean=
+s someone intruded into your system, so please examine the case and do t=
+he neccessary security steps.=0D=0AYou can find the detailed logs about=
+ the detected malicious attempt in the incident report:=0D=0Ahttp://bitn=
+inja.io/incidentReport.php?details=3De881cd944b=0D=0AThis IP address 1.2=
+.3.4 has been placed to our greylist and all the servers protected=
+ by BitNinja will reject any communication from this IP address. If the=
+ attacks keep coming, the IP will stay in our greylist or will be placed=
+ to our blacklist for a longer period.=0D=0AIf you need further informat=
+ion about the issue, or you think this IP is listed incorrectly, do not=
+ hesitate to contact us at info@bitninja.io.=0D=0A=0D=0ATo prevent incid=
+ents (e.g. incoming and outgoing hacker attacks, cms /joomla, wordpress,=
+ drupal/ hacks, forum spammer bots, email harvesters and other harmful b=
+otnets) in the future, please take a look at our SERVER DEFENSE NETWORK.=
+ It works with no redirection and can be installed with one-line code. F=
+or more information about our server defense solution, visit our website=
+: http://bitninja.io=0D=0A______________________________________________=
+_________________=0D=0AAdditional information:=0D=0AAttackers usually us=
+e backdoors or proxy scripts and use the victim server=E2=80=99s resourc=
+es for cybercrime activities like DDoS attacks and spamming. Your system=
+ or a website you host, probably have been compromised this way.=0D=0APl=
+ease consider this particular machine may have a rootkit installed. So s=
+imply deleting some files or dirs or disabling cgi may not really solve=
+ the issue.=0D=0AThe server owner should be warned about this incident a=
+lso, so please forward this message to the administrator of the server w=
+ith 1.2.3.4.=0D=0A=0D=0AIf you need further information about our=
+ incident report, please do not hesitate to contact us.=0D=0A=0D=0ABest=
+ wishes,=0D=0ABitNinja Security team=0D=0ALet=E2=80=99s make the Interne=
+t a safer place
+
+--=_59189c37660d739e5f20d259ef793e3f
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<html><head><meta content=3D"text/html; charset=3DUTF-8" http-equiv=3D"C=
+ontent-Type" /></head><body style=3D""><div id=3D"cons_content_leveltorz=
+s" aria-hidden=3D"true"><p><span>Dear Provider,</span></p>=0D=0A<p>The B=
+itNinja team would like to inform you about an INCIDENT, COMING FROM YOU=
+R NETWORK. (IP address 1.2.3.4). It means someone intruded into yo=
+ur system, so please examine the case and do the neccessary security ste=
+ps.</p>=0D=0A<p>You can find the detailed logs about the detected malici=
+ous attempt in the incident report:</p>=0D=0A<p><a href=3D"http://bitnin=
+ja.io/incidentReport.php?details=3De881cd944b&amp;utm_source=3Dincident_=
+report&amp;utm_medium=3De-mail&amp;utm_campaign=3DIncident%20report" tab=
+index=3D"-1" target=3D"_blank">http://bitninja.io/incidentReport.php?det=
+ails=3De881cd944b</a></p>=0D=0A<p>This IP address 1.2.3.4 has been=
+ placed to our greylist and all the servers protected by BitNinja will r=
+eject any communication from this IP address. If the attacks keep coming=
+, the IP will stay in our greylist or will be placed to our blacklist fo=
+r a longer period.</p>=0D=0A<p>If you need further information about the=
+ issue, or you think this IP is listed incorrectly, do not hesitate to c=
+ontact us at <a href=3D"mailto:info@bitninja.io">info@bitninja.io</a>.</=
+p>=0D=0A<p></p>=0D=0A<p>To prevent incidents (e.g. incoming and outgoing=
+ hacker attacks, cms /joomla, wordpress, drupal/ hacks, forum spammer bo=
+ts, email harvesters and other harmful botnets) in the future, please ta=
+ke a look at our SERVER DEFENSE NETWORK. It works with no redirection an=
+d can be installed with one-line code. For more information about our se=
+rver defense solution, visit our website: <a href=3D"http://bitninja.io/=
+" target=3D"_blank">http://bitninja.io</a></p>=0D=0A<p><span>___________=
+____________________________________________________</span><span></span>=
+</p>=0D=0A<p>Additional information:</p>=0D=0A<p>Attackers usually use b=
+ackdoors or proxy scripts and use the victim server=E2=80=99s resources=
+ for cybercrime activities like DDoS attacks and spamming. Your system o=
+r a website you host, probably have been compromised this way.</p>=0D=0A=
+<p>Please consider this particular machine may have a rootkit installed.=
+ So simply deleting some files or dirs or disabling cgi may not really s=
+olve the issue.</p>=0D=0A<p>The server owner should be warned about this=
+ incident also, so please forward this message to the administrator of t=
+he server with 1.2.3.4.</p>=0D=0A<p>&nbsp;</p>=0D=0A<p>If you need=
+ further information about our incident report, please do not hesitate t=
+o contact us.</p>=0D=0A<p><span>&nbsp;</span></p>=0D=0A<p><span>Best wis=
+hes,</span></p>=0D=0A<p><span>BitNinja Security team</span></p>=0D=0A<p>=
+<em><span>Let=E2=80=99s make the Internet a safer place</span></em></p><=
+/div></body></html>
+
+--=_59189c37660d739e5f20d259ef793e3f--

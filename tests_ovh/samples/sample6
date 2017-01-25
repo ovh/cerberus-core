@@ -1,0 +1,15 @@
+Return-Path: <simon.vasseur@ovh.net>
+Received: from mx.domain.tld
+	by mx.domain.tld (Dovecot) with LMTP id lLgxJbRMQVUGMQAArOwUew
+	; Wed, 29 Apr 2015 23:27:25 +0200
+Test-Magic-Smtp-Header: it's here
+Delivered-To: <abuse@ovh.net>
+Date: Wed, 29 Apr 2015 23:26:14 +0200
+From: Simon Vasseur <simon.vasseur@ovh.net>
+MIME-Version: 1.0
+To: abuse@ovh.net
+Subject: Encoding test
+Content-Type: text/plain; charset=ISO-8859-1; format=flowed
+Content-Transfer-Encoding: 8bit
+
+http://www.example.com/phishing.html

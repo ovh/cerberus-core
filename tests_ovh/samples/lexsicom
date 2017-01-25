@@ -1,0 +1,22 @@
+Return-Path: <cert-socalexsi.com>
+Delivered-To: <abuseaovh.net>
+Received: from mx.domain.tld
+	by mx.abuse.ovh.net (Dovecot) with LMTP id gJ67Dufsz1aGZQAArOwUew
+	for <abuseaovh.net>; Fri, 26 Feb 2016 07:19:40 +0100
+MIME-Version: 1.0
+Content-Type: multipart/mixed; charset="utf-8";
+ boundary="===============2155499031110731175=="
+Content-Transfer-Encoding: base64
+From: cert-soc@lexsi.com
+Subject: [URGENT] SUSPENSION REQUISE - site FRAUDULEUX en activite sur http://evildomain.com/logo/system/service/ss/www/reactivation/
+To: abuseaovh.net
+Date: Fri, 26 Feb 2016 07:19:39 +0100 (CET)
+
+--===============2155499031110731175==
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Content-Type: text/html; charset="utf-8"
+
+<br />Bonjour,<br /><br />Nous avons decouvert un site de phishing*.<br /><br />Site concerne : http://evildomain.com/logo/system/service/ss/www/reactivation/ <br /><br />Adresse IP : 1.2.3.4<br /><br /><br />Nous avons verifie que ni ce site, ni cette adresse IP, n'appartenaient à  Credit Agricole (https://particuliers.secure.lcl.fr/index.html).<br /><br />Aussi, nous demandons votre cooperation afin de faire cesser cette malveillance recurrente au plus vite.<br /><br />Nous vous remercions egalement de conserver toute trace de connexion pertinente (logs, elements d'identite, ...), pour permettre de poursuivre l'enquete et d'appuyer un depà´t de plainte aupres des autorites competentes.<br /><br />Merci d'accuser reception de cet e-mail et de nous confirmer la prise en charge de cette fraude.<br /><br />Cordialement,<br /><br /><br />CERT-LEXSI - Cybercrime department<br />http://cert.lexsi.com<br />cert-socalexsi.com<br /><br />---<br />(*) Definition (wikipedia
+ ) : "Le phishing, ou hameconnage , et rarement filoutage, est une technique utilisee par des fraudeurs pour obtenir des renseignements personnels dans le but de perpetrer une usurpation d'identite. La technique consiste à  faire croire à  la victime qu'elle s'adresse à  un tiers de confiance banque, administration, etc. afin de lui soutirer des renseignements personnels : mot de passe, numero de carte de credit, date de naissance, etc."<br /><br /><br />---<br /><br />La societe LEXSI est un CSIRT (Computer Security Incident Response Team) qui mene des investigations sur la cybercriminalite et travaille en collaboration avec les autres CERTs mondiaux et les forces de Police.<br /><br />Notre mission consiste à  recueillir des informations afin d'aider au mieux les procedures legales<br />
+--===============2155499031110731175==--

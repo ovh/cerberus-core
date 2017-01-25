@@ -147,12 +147,13 @@ def _create_defendants_and_services(services):
 
 
 @transaction.atomic
-def _create_without_services(abuse_report, filename):
+def _create_without_services(abuse_report, filename, apply_rules=True):
     """
         Create report in Cerberus
 
         :param `worker.parsing.parser.ParsedEmail` abuse_report: The `worker.parsing.parser.ParsedEmail`
         :param str filename: The filename of the email
+        :param bool apply_rules: Run rules or not
         :rtype: `abuse.models.Report`
         :returns: The Cerberus `abuse.models.Report`
     """
@@ -170,11 +171,13 @@ def _create_without_services(abuse_report, filename):
 
     _add_report_tags(report, abuse_report.recipients)
     database.log_new_report(report)
-    _apply_business_rules(
-        parsed_email=abuse_report,
-        report=report,
-        rules_type='Report'
-    )
+
+    if apply_rules:
+        _apply_business_rules(
+            parsed_email=abuse_report,
+            report=report,
+            rules_type='Report'
+        )
 
     return report
 
@@ -194,7 +197,7 @@ def _create_with_services(abuse_report, filename, services):
 
     for data in services:  # For identified (service, defendant, items) tuple
 
-        report = _create_without_services(abuse_report, filename)
+        report = _create_without_services(abuse_report, filename, apply_rules=False)
         created_reports.append(report)
         report.defendant = data['defendant']
         report.service = data['service']

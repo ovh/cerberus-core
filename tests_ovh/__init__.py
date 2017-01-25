@@ -351,6 +351,71 @@ def set_business_rules():
     )
 
     BusinessRules.objects.create(
+        name='autoarchive_no_defendant',
+        rulesType='Report',
+        orderId=2,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_false",
+                        "value": True,
+                    },
+                    {
+                        "name": "autoarchive",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                ]
+            },
+            "actions": [
+                {
+                    "name": "set_report_status",
+                    "params": {
+                        "status": "Archived"
+                    }
+                },
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='autoarchive_defendant',
+        rulesType='Report',
+        orderId=3,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "autoarchive",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "has_ticket",
+                        "operator": "is_false",
+                        "value": True,
+                    },
+                ]
+            },
+            "actions": [
+                {
+                    "name": "set_report_status",
+                    "params": {
+                        "status": "Archived"
+                    }
+                },
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
         name='to_validate',
         rulesType='Report',
         orderId=4,
@@ -514,6 +579,151 @@ def set_business_rules():
     )
 
     BusinessRules.objects.create(
+        name='phishing_ignore',
+        rulesType='Report',
+        orderId=23,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "report_category",
+                        "operator": "equal_to",
+                        "value": "phishing",
+                    },
+                    {
+                        "name": "urls_down",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "avoid_phishtocheck",
+                        "operator": "is_true",
+                        "value": True,
+                    }
+                ]
+            },
+            "actions": [
+                {
+                    "name": "do_nothing",
+                },
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='copyright_trusted',
+        rulesType='Report',
+        orderId=40,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "report_category",
+                        "operator": "equal_to",
+                        "value": "copyright",
+                    },
+                    {
+                        "name": "report_provider",
+                        "operator": "shares_at_least_one_element_with",
+                        "value": ['supertrusted@copyrightprovider.com'],
+                    },
+                    {
+                        "name": "is_report_trusted",
+                        "operator": "is_true",
+                        "value": True,
+                    }
+                ]
+            },
+            "actions": [
+                {
+                    "name": "create_ticket",
+                },
+                {
+                    "name": "add_email_body_as_proof"
+                },
+                {
+                    "name": "send_provider_ack"
+                },
+                {
+                    "name": "send_defendant_first_alert"
+                },
+                {
+                    "name": "set_ticket_timeout",
+                    "params": {
+                        "seconds": 172800,
+                    }
+                }
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='copyright_foward_acns',
+        rulesType='Report',
+        orderId=41,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "report_category",
+                        "operator": "equal_to",
+                        "value": "copyright",
+                    },
+                    {
+                        "name": "report_body",
+                        "operator": "contains",
+                        "value": "www.acns.net/ACNS",
+                    },
+                    {
+                        "name": "is_report_trusted",
+                        "operator": "is_true",
+                        "value": True,
+                    }
+                ]
+            },
+            "actions": [
+                {
+                    "name": "create_ticket",
+                    "params": {
+                        "attach_new": False,
+                        "create_new": True,
+                    }
+                },
+                {
+                    "name": "add_ticket_acns_proof"
+                },
+                {
+                    "name": "send_provider_ack"
+                },
+                {
+                    "name": "send_defendant_first_alert"
+                },
+                {
+                    "name": "close_ticket",
+                    "params": {
+                        "resolution": "forward_acns",
+                    }
+                }
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
         name='default_defendant_trusted',
         rulesType='Report',
         orderId=100,
@@ -539,6 +749,36 @@ def set_business_rules():
                         "attach_new": True,
                         "create_new": False,
                     }
+                }
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='mailer_daemon',
+        rulesType='EmailReply',
+        orderId=1,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "category",
+                        "operator": "equal_to",
+                        "value": "defendant",
+                    },
+                    {
+                        "name": "email_sender",
+                        "operator": "matches_regex",
+                        "value": "mailer-daemon@.*ovh.*",
+                    }
+                ]
+            },
+            "actions": [
+                {
+                    "name": "try_resend",
+                },
+                {
+                    "name": "attach_external_answer",
                 }
             ]
         }
