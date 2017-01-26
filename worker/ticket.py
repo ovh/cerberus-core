@@ -46,7 +46,7 @@ from abuse.models import (Category, Comment, ContactedProvider,
                           Resolution, Tag, Ticket, TicketComment,
                           ServiceActionJob, User)
 from adapters.dao.customer.abstract import CustomerDaoException
-from factory.implementation import ImplementationFactory
+from factory import implementations
 from utils import pglocks, schema, utils
 from worker import Logger
 
@@ -98,7 +98,8 @@ def delay_jobs(ticket=None, delay=None, back=True):
 
 def timeout(ticket_id=None):
     """
-        If ticket timeout , apply action on service (if defendant not internal/VIP) and ticket is not assigned
+        If ticket timeout , apply action on service (if defendant not internal/VIP)
+        and ticket is not assigned
 
         :param int ticket_id: The id of the Cerberus `abuse.models.Ticket`
     """
@@ -111,9 +112,12 @@ def timeout(ticket_id=None):
     if not _check_timeout_ticket_conformance(ticket):
         return
 
-    action = ImplementationFactory.instance.get_singleton_of('ActionServiceBase').get_action_for_timeout(ticket)
+    action = implementations.get_singleton_of('ActionServiceBase').get_action_for_timeout(ticket)
     if not action:
-        Logger.error(unicode('Ticket %d service %s: action not found, exiting ...' % (ticket_id, ticket.service.componentType)))
+        Logger.error(unicode('Ticket {} service {}: action not found, exiting ...'.format(
+            ticket_id,
+            ticket.service.componentType
+        )))
         return
 
     # Maybe customer fixed, closing ticket
@@ -244,7 +248,12 @@ def _close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_b
         template = settings.CODENAMES['ticket_closed']
 
     # Send "ticket closed" email to defendant
-    _send_email(ticket, ticket.defendant.details.email, template, lang=ticket.defendant.details.lang)
+    _send_email(
+        ticket,
+        ticket.defendant.details.email,
+        template,
+        lang=ticket.defendant.details.lang
+    )
 
     common.close_ticket(ticket, resolution_codename=reason)
 
@@ -288,12 +297,15 @@ def _send_email(ticket, email, codename, lang='EN'):
     )
 
 
-def mass_contact(ip_address=None, category=None, campaign_name=None, email_subject=None, email_body=None, user_id=None):
+def mass_contact(ip_address=None, category=None, campaign_name=None,
+                 email_subject=None, email_body=None, user_id=None):
     """
         Try to identify customer based on `ip_address`, creates Cerberus ticket
         then send email to customer and finally close ticket.
 
-        The use case is: a trusted provider sent you a list of vulnerable DNS servers (DrDOS amp) for example.
+        The use case is: a trusted provider sent you
+        a list of vulnerable DNS servers (DrDOS amp) for example.
+
         To prevent abuse on your network, you notify customer of this vulnerability.
 
         :param str ip_address: The IP address
@@ -325,10 +337,14 @@ def mass_contact(ip_address=None, category=None, campaign_name=None, email_subje
 
     # Identify service for ip_address
     try:
-        services = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_services_from_items(ips=[ip_address])
+        services = implementations.get_singleton_of(
+            'CustomerDaoBase'
+        ).get_services_from_items(ips=[ip_address])
         schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
     except CustomerDaoException as ex:
-        Logger.error(unicode('Exception while identifying defendants for ip %s -> %s ' % (ip_address, str(ex))))
+        Logger.error(unicode(
+            'Exception while identifying defendants for ip %s -> %s ' % (ip_address, str(ex))
+        ))
         raise CustomerDaoException(ex)
 
     # Create report/ticket
@@ -430,7 +446,7 @@ def __send_mass_contact_email(ticket, email_subject, email_body):
     })
     body = template.render(context)
 
-    ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
+    implementations.get_singleton_of('MailerServiceBase').send_email(
         ticket,
         ticket.defendant.details.email,
         subject,
@@ -484,7 +500,7 @@ def __save_email(filename, email):
         :param str filename: The filename of the email
         :param str email: The content of the email
     """
-    with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
+    with implementations.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
         cnx.write(filename, email.encode('utf-8'))
         Logger.info(unicode('Email %s pushed to Storage Service' % (filename)))
 
@@ -515,7 +531,12 @@ def create_ticket_from_phishtocheck(report=None, user=None):
     new_ticket = False
 
     if not ticket:
-        ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority)
+        ticket = database.create_ticket(
+            report.defendant,
+            report.category,
+            report.service,
+            priority=report.provider.priority
+        )
         new_ticket = True
         utils.scheduler.enqueue_in(
             timedelta(seconds=settings.GENERAL_CONFIG['phishing']['wait']),
@@ -552,7 +573,11 @@ def create_ticket_from_phishtocheck(report=None, user=None):
             acknowledged_report_id=report.id,
         )
 
-    utils.default_queue.enqueue('phishing.block_url_and_mail', ticket_id=ticket.id, report_id=report.id)
+    utils.default_queue.enqueue(
+        'phishing.block_url_and_mail',
+        ticket_id=ticket.id,
+        report_id=report.id
+    )
     return ticket
 
 
@@ -589,7 +614,7 @@ def close_emails_thread(ticket_id=None):
         Logger.error(unicode('Ticket %d cannot be found in DB. Skipping...' % (ticket)))
         return
 
-    ImplementationFactory.instance.get_singleton_of(
+    implementations.get_singleton_of(
         'MailerServiceBase'
     ).close_thread(ticket)
 
@@ -644,7 +669,13 @@ def update_waiting():
 
 def _check_auto_unassignation(ticket):
 
-    history = ticket.ticketHistory.filter(actionType='ChangeStatus').order_by('-date').values_list('ticketStatus', flat=True)[:3]
+    history = ticket.ticketHistory.filter(
+        actionType='ChangeStatus'
+    ).order_by('-date').values_list(
+        'ticketStatus',
+        flat=True
+    )[:3]
+
     try:
         unassigned_on_multiple_alarm = ticket.treatedBy.operator.role.modelsAuthorizations['ticket']['unassignedOnMultipleAlarm']
         if unassigned_on_multiple_alarm and len(history) == 3 and all([STATUS_SEQUENCE[i] == history[i] for i in xrange(3)]):

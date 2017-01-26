@@ -56,6 +56,22 @@ class ReportActions(BaseActions):
         )
         database.set_ticket_higher_priority(self.ticket)
 
+    @rule_action()
+    def attach_report_to_ticket(self):
+        """
+        """
+        self.report.ticket = self.ticket
+        self.report.status = 'Attached'
+        self.report.save()
+
+        database.log_action_on_ticket(
+            ticket=self.ticket,
+            action='attach_report',
+            report=self.report,
+            new_ticket=not self.existing_ticket
+        )
+        database.set_ticket_higher_priority(self.ticket)
+
     @rule_action(params=[{'fieldType': FIELD_TEXT, 'name': 'resolution'},
                          {'fieldType': FIELD_NO_INPUT, 'name': 'keep_update'}])
     def close_ticket(self, resolution=None, keep_update=False):

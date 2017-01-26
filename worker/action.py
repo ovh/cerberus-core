@@ -32,7 +32,7 @@ import common
 from abuse.models import (ServiceActionJob, ContactedProvider, Resolution, Ticket,
                           User)
 from adapters.services.action.abstract import ActionServiceException
-from factory.implementation import ImplementationFactory
+from factory import implementations
 from worker import Logger
 
 
@@ -162,7 +162,7 @@ def apply_action(ticket_id=None, action_id=None, ip_addr=None, user_id=None):
 
     # Call action service
     try:
-        result = ImplementationFactory.instance.get_singleton_of(
+        result = implementations.get_singleton_of(
             'ActionServiceBase'
         ).apply_action_on_service(
             ticket_id,

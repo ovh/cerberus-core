@@ -31,7 +31,7 @@ import database
 from abuse.models import Proof, Resolution, User
 from django.conf import settings
 from parsing import regexp
-from factory.implementation import ImplementationFactory
+from factory import implementations
 from utils import utils
 
 BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
@@ -44,7 +44,7 @@ def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report
     """
         Wrapper to send email
     """
-    prefetched_email = ImplementationFactory.instance.get_singleton_of(
+    prefetched_email = implementations.get_singleton_of(
         'MailerServiceBase'
     ).prefetch_email_from_template(
         ticket,
@@ -59,7 +59,7 @@ def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report
         except ValidationError:
             continue
 
-        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
+        implementations.get_singleton_of('MailerServiceBase').send_email(
             ticket,
             email,
             prefetched_email.subject,
@@ -124,7 +124,7 @@ def close_ticket(ticket, resolution_codename=None, user=None):
     )
 
     if ticket.mailerId:
-        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
+        implementations.get_singleton_of('MailerServiceBase').close_thread(ticket)
 
     ticket.save()
 

@@ -28,10 +28,9 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from mock import patch
 
-from abuse.models import (ServiceAction, ContactedProvider, Report,
-                          Provider, Resolution, Ticket, User, UrlStatus,
-                          Service, Defendant, BusinessRules, BusinessRulesHistory)
-from adapters.services.phishing.abstract import PingResponse
+from abuse.models import (Report,
+                          Provider, Ticket,
+                          BusinessRulesHistory)
 from factory.implementation import ImplementationFactory
 from tests_ovh import GlobalTestCase
 
@@ -149,6 +148,66 @@ class TestWorkers(GlobalTestCase):
         Report.objects.all().delete()
         Ticket.objects.all().delete()
         content = content.replace("Test-Magic-Smtp-Header: it's here", "")
+        report.create_from_email(email_content=content, send_ack=False)
+        cerberus_report = Report.objects.last()
+        self.assertEqual('New', cerberus_report.status)
+
+    @patch('rq.queue.Queue.enqueue')
+    @patch('rq_scheduler.scheduler.Scheduler.schedule')
+    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
+    def test_copyright_trusted_cloudflare(self, mock_rq_enqueue_in, mock_rq_schedule, mock_rq_enqueue):
+        """
+            Test copyright workflow with cloudflare
+        """
+        from worker import report
+
+        mock_rq_enqueue_in.return_value = None
+        mock_rq_schedule.return_value = FakeJob()
+        mock_rq_enqueue.return_value = FakeJob()
+
+        sample = self._samples['cloudflare']
+        content = sample.read()
+        report.create_from_email(email_content=content, send_ack=False)
+        cerberus_report = Report.objects.last()
+        cerberus_report.reportItemRelatedReport.all().update(fqdnResolved='1.2.3.4')
+        self.assertEqual('Attached', cerberus_report.status)
+        self.assertTrue(cerberus_report.ticket)
+        self.assertIn('report:copyright_trusted', cerberus_report.tags.all().values_list('name', flat=True))
+        self.assertTrue(BusinessRulesHistory.objects.count())
+
+        cerberus_report.status = 'Attached'
+        cerberus_report.ticket.status = 'WaitingAnswer'
+        cerberus_report.ticket.snoozeDuration = 1
+        cerberus_report.ticket.snoozeStart = datetime.now() - timedelta(days=1)
+        cerberus_report.ticket.save()
+        cerberus_report.save()
+
+        from worker import ticket as ticket_func
+
+        ticket_func.update_waiting()
+
+        ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
+        self.assertEqual('Alarm', ticket.status)
+        ticket_func.timeout(ticket.id)
+        ticket = Ticket.objects.get(id=cerberus_report.ticket.id)
+        self.assertEqual('Closed', ticket.status)
+        self.assertEqual(settings.CODENAMES['fixed'], ticket.resolution.codename)
+
+        emails = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').get_emails(ticket)
+        self.assertEqual(4, len(emails))
+
+        Provider.objects.all().update(trusted=False)
+        Report.objects.all().update(status='Attached')
+        Ticket.objects.all().update(status='Open')
+
+        report.create_from_email(email_content=content, send_ack=False)
+        cerberus_report = Report.objects.last()
+        self.assertEqual('Attached', cerberus_report.status)
+        emails = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').get_emails(ticket)
+        self.assertEqual(4, len(emails))
+
+        Report.objects.all().delete()
+        Ticket.objects.all().delete()
         report.create_from_email(email_content=content, send_ack=False)
         cerberus_report = Report.objects.last()
         self.assertEqual('New', cerberus_report.status)

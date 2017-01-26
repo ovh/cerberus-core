@@ -1,0 +1,116 @@
+Return-Path: <bounce-md_10559331.58899e83.v1-670b0a5199cd40638de70dc69917b44f@mandrillapp.com>
+Delivered-To: <cerberus-prod@abuse.ovh.net>
+Received: from mx.abuse.ovh.net
+	by mx.abuse.ovh.net (Dovecot) with LMTP id gN9dA32diVjeFQAArOwUew
+	for <cerberus-prod@abuse.ovh.net>; Thu, 26 Jan 2017 08:00:27 +0100
+Received: by mx.abuse.ovh.net (Postfix, from userid 25001)
+	id 1CA0120087; Thu, 26 Jan 2017 08:00:27 +0100 (CET)
+Authentication-Results: mx.abuse.ovh.net; dkim=pass
+	reason="1024-bit key; insecure key"
+	header.d=cloudflare.com header.i=abuse@cloudflare.com
+	header.b=Wzp0ik9/; dkim-adsp=pass; dkim-atps=neutral
+X-Sieve: Pigeonhole Sieve 0.3.1
+X-Sieve-Redirected-From: robot@abuse.ovh.net
+Delivered-To: <robot@abuse.ovh.net>
+Received: from mx.abuse.ovh.net
+	by mx.abuse.ovh.net (Dovecot) with LMTP id uJb6JD2eiVjwFgAArOwUew
+	for <robot@abuse.ovh.net>; Thu, 26 Jan 2017 08:00:27 +0100
+Received: from 1.mo53.mail-out.ovh.net (1.mo53.mail-out.ovh.net [178.32.108.164])
+	by mx.abuse.ovh.net (Postfix) with ESMTPS id E31DF20083
+	for <robot@abuse.ovh.net>; Thu, 26 Jan 2017 08:00:26 +0100 (CET)
+Authentication-Results: mx.abuse.ovh.net; dkim=pass
+	reason="1024-bit key; insecure key"
+	header.d=cloudflare.com header.i=abuse@cloudflare.com
+	header.b=Wzp0ik9/; dkim-adsp=pass; dkim-atps=neutral
+Received: from mail122.ha.ovh.net (b9.ovh.net [213.186.33.59])
+	by mo53.mail-out.ovh.net (Postfix) with SMTP id BC3493738B
+	for <robot@abuse.ovh.net>; Thu, 26 Jan 2017 08:00:26 +0100 (CET)
+Received: from localhost (HELO queueout) (127.0.0.1)
+	by localhost with SMTP; 26 Jan 2017 09:00:26 +0200
+Delivered-To: ovh.net-abuse@ovh.net
+Received: from localhost (HELO queue) (127.0.0.1)
+	by localhost with SMTP; 26 Jan 2017 09:00:26 +0200
+Received: from output17.mail.ovh.net (164.132.34.17)
+  by mx1.ovh.net with AES256-GCM-SHA384 encrypted SMTP; 26 Jan 2017 09:00:26 +0200
+Received: from vr13.mail.ovh.net (unknown [10.101.8.13])
+	by out17.mail.ovh.net (Postfix) with ESMTP id 659D925A52
+	for <abuse@ovh.net>; Thu, 26 Jan 2017 08:00:26 +0100 (CET)
+Received: from in20.mail.ovh.net (unknown [10.101.4.20])
+	by vr13.mail.ovh.net (Postfix) with ESMTP id 310F23CA0062
+	for <abuse@ovh.net>; Thu, 26 Jan 2017 08:00:26 +0100 (CET)
+Received-SPF: Pass (sender SPF authorized) identity=mailfrom; client-ip=205.201.136.17; helo=mail17.us4.mandrillapp.com; envelope-from=bounce-md_10559331.58899e83.v1-670b0a5199cd40638de70dc69917b44f@mandrillapp.com; receiver=abuse@ovh.net 
+Received: from mail17.us4.mandrillapp.com (mail17.us4.mandrillapp.com [205.201.136.17])
+	by in20.mail.ovh.net (Postfix) with ESMTPS id ECB9AB7A0
+	for <abuse@ovh.net>; Thu, 26 Jan 2017 08:00:25 +0100 (CET)
+DKIM-Signature: v=1; a=rsa-sha1; c=relaxed/relaxed; s=mandrill; d=cloudflare.com;
+ h=From:Subject:Reply-To:Message-Id:To:Date:MIME-Version:Content-Type:Content-Transfer-Encoding; i=abuse@cloudflare.com;
+ bh=MudVqPm483ACeAvqtSES48mXHQM=;
+ b=Wzp0ik9/NY5yxHar2/nWhZCffTbSAtn6MO3p0aimARR4AV/HKlUI5rC+LT9rIrxgEIPQlfvdopZx
+   hgJ4EtEjaaJ+aQgzzTMzyAslVWb6WDiGraHoWaKP6IaSuOIMLjaxzN/z/C6jn3A0CCnVq7nvkOih
+   s/DgpBym+RlX21CaHm8=
+Received: from pmta07.mandrill.prod.suw01.rsglab.com (127.0.0.1) by mail17.us4.mandrillapp.com id hh6f8k174e0p for <abuse@ovh.net>; Thu, 26 Jan 2017 07:00:19 +0000 (envelope-from <bounce-md_10559331.58899e83.v1-670b0a5199cd40638de70dc69917b44f@mandrillapp.com>)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=mandrillapp.com; 
+ i=@mandrillapp.com; q=dns/txt; s=mandrill; t=1485414019; h=From : 
+ Subject : Reply-To : Message-Id : To : Date : MIME-Version : 
+ Content-Type : Content-Transfer-Encoding : From : Subject : Date : 
+ X-Mandrill-User : List-Unsubscribe; 
+ bh=CZThehVm9FH8C0ivot6bmuFEKsdF1AWtPXgy06FbemI=; 
+ b=TI8IACnagEJ9ySE/W0yT/1bRtPDmvFdxMeDn/jBw+AnTuFse5+0qB67IxZ7LFYtwhPNg/o
+ URsY2d11H03mA4XM+qqH4zOCF1Kr5G3m450wTMroZJ4FnWSH0oZwMXdedkvuPFRxSO81sjfN
+ OCf3yIYA57y8iH+MEzy7/mlHv5+oY=
+From: CloudFlare <abuse@cloudflare.com>
+Subject: [08b419686f43c8cb]: Cloudflare received a DMCA copyright infringement complaint regarding one of your customers.
+Received: from [173.245.57.120] by mandrillapp.com id 670b0a5199cd40638de70dc69917b44f; Thu, 26 Jan 2017 07:00:19 +0000
+X-Php-Originating-Script: 0:email.php
+Reply-To: <abusereply@cloudflare.com>
+Message-Id: <20170126070018.DBA8E8713A3C0@smtpout1.cloudflare.com>
+To: <abuse@ovh.net>
+X-Report-Abuse: Please forward a copy of this message, including all headers, to abuse@mandrill.com
+X-Report-Abuse: You can also report abuse here: http://mandrillapp.com/contact/abuse?id=10559331.670b0a5199cd40638de70dc69917b44f
+X-Mandrill-User: md_10559331
+Date: Thu, 26 Jan 2017 07:00:19 +0000
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+X-Ovh-Tracer-Id: 11423943406285190994
+X-VR-SPAMSTATE: OK
+X-VR-SPAMSCORE: 0
+X-VR-SPAMCAUSE: gggruggvucftvghtrhhoucdtuddrfeelgedrheeggddutdekucetufdoteggodetrfdotffvucfrrhhofhhilhgvmecuqfggjfdpvefjgfevmfevgfenuceurghilhhouhhtmecufedttdenuc
+X-Ovh-Spam-Status: OK
+X-Ovh-Spam-Reason: vr: OK; dkim: disabled; spf: disabled
+X-Ovh-Message-Type: OK
+X-VR-SPAMSTATE: OK
+X-VR-SPAMSCORE: 0
+X-VR-SPAMCAUSE: gggruggvucftvghtrhhoucdtuddrfeelgedrheeggdduuddtucetufdoteggodetrfdotffvucfrrhhofhhilhgvmecuqfggjfdpvefjgfevmfevgfenuceurghilhhouhhtmecufedttdenuc
+
+Cloudflare received a DMCA copyright infringement complaint regarding:
+libroporvenir.com
+
+Please be aware Cloudflare is a network provider offering a reverse proxy, pass-through security service. We are not a hosting provider. Cloudflare does not control the content of our customers.
+
+The actual host for libroporvenir.com is 188.165.254.226. Using the following command, you can confirm the site in question is hosted at that IP address: curl -v -H "Host: libroporvenir.com" 188.165.254.226/
+
+Below is the complaint we received:
+
+Reporter's Name: Devon E. E. Weston
+Copyright Holder's Name: Penguin US
+Reporter's Email Address: guardian.support@digimarc.com
+Reporter's Company Name: Attributor Corporation
+Reporter's Telephone Number: 6503409601
+Reporter's Address: 1825 S. Grant Street Suite 600 San Mateo, CA US
+Reported URLs:
+	http://libroporvenir.com/pdf/doctor-who-travels-in-time-coloring-book-by-price-stern-sloan-2016-07-26
+	http://libroporvenir.com/pdf/doctor-who-travels-in-time-coloring-book
+Original Work: Rights Holder: Penguin US
+
+Original Work: Doctor Who Travels in Time Coloring Book
+
+Infringing URL: http://libroporvenir.com/pdf/doctor-who-travels-in-time-coloring-book-by-price-stern-sloan-2016-07-26
+Infringing URL: http://libroporvenir.com/pdf/doctor-who-travels-in-time-coloring-book
+
+
+Please address this issue with your customer.
+
+Regards,
+
+Cloudflare Abuse

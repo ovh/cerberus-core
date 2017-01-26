@@ -34,7 +34,7 @@ import database
 
 from abuse.models import Proof, Report, Tag, Ticket
 from adapters.services.phishing.abstract import PhishingServiceException
-from factory.implementation import ImplementationFactory
+from factory import implementations
 from worker import Logger
 
 
@@ -89,7 +89,7 @@ def __update_item_status(item, country='FR'):
 
     try:
         Logger.debug(unicode('Checking status for url %s' % (item.rawItem,)))
-        response = ImplementationFactory.instance.get_singleton_of('PhishingServiceBase').ping_url(item.rawItem, country=country)
+        response = implementations.get_singleton_of('PhishingServiceBase').ping_url(item.rawItem, country=country)
         database.insert_url_status(
             item,
             response.direct_status,
@@ -132,7 +132,7 @@ def close_because_all_down(report=None, denied_by=None):
         __send_email(report.ticket, report.provider.email, settings.CODENAMES['no_more_content'])
         report.ticket.save()
         Logger.info(unicode('Mail sent to provider'))
-        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(report.ticket)
+        implementations.get_singleton_of('MailerServiceBase').close_thread(report.ticket)
 
         # Delete temp proof(s)
         for proof in temp_proofs:
@@ -188,7 +188,7 @@ def block_url_and_mail(ticket_id=None, report_id=None):
         report = report_id
 
     for item in report.reportItemRelatedReport.filter(itemType='URL'):
-        ImplementationFactory.instance.get_singleton_of('PhishingServiceBase').block_url(item.rawItem, item.report)
+        implementations.get_singleton_of('PhishingServiceBase').block_url(item.rawItem, item.report)
 
     database.add_phishing_blocked_tag(report)
     __send_email(ticket, report.defendant.details.email, settings.CODENAMES['phishing_blocked'], report.defendant.details.lang)
@@ -214,7 +214,7 @@ def unblock_url(url=None):
     if not url:
         return
 
-    ImplementationFactory.instance.get_singleton_of('PhishingServiceBase').unblock_url(url)
+    implementations.get_singleton_of('PhishingServiceBase').unblock_url(url)
 
 
 def is_all_down_for_ticket(ticket, last=5, url_only=False):
@@ -246,5 +246,5 @@ def feedback_to_phishing_service(screenshot_id=None, feedback=None):
         :param str screenshot_id: The uuid of the screenshot_id
         :param bool feedback: Yes or not it's a phishing url
     """
-    ImplementationFactory.instance.get_singleton_of('PhishingServiceBase').post_feedback(screenshot_id, feedback)
+    implementations.get_singleton_of('PhishingServiceBase').post_feedback(screenshot_id, feedback)
     Logger.debug(unicode('Feedback %s sent for %s' % (feedback, screenshot_id)))

@@ -73,6 +73,7 @@ class GlobalTestCase(TestCase):
         Provider.objects.create(email='normal@provider.com', priority='Normal')
         Provider.objects.create(email='critical@provider.com', priority='Critical')
         Provider.objects.create(email='trusted.phishing@provider.com', priority='Critical', apiKey='token')
+        Provider.objects.create(email='abuse@cloudflare.com', trusted=True)
 
         set_email_templates()
         set_business_rules()
@@ -635,7 +636,10 @@ def set_business_rules():
                     {
                         "name": "report_provider",
                         "operator": "shares_at_least_one_element_with",
-                        "value": ['supertrusted@copyrightprovider.com'],
+                        "value": [
+                            'supertrusted@copyrightprovider.com',
+                            'abuse@cloudflare.com'
+                        ],
                     },
                     {
                         "name": "is_report_trusted",
@@ -750,6 +754,76 @@ def set_business_rules():
                         "create_new": False,
                     }
                 }
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='default_defendant_not_trusted_ticket',
+        rulesType='Report',
+        orderId=101,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "is_report_trusted",
+                        "operator": "is_false",
+                        "value": True,
+                    },
+                    {
+                        "name": "has_ticket",
+                        "operator": "is_true",
+                        "value": True,
+                    }
+                ]
+            },
+            "actions": [
+                {
+                    "name": "attach_report_to_ticket",
+                }
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='default_defendant_not_trusted_no_ticket',
+        rulesType='Report',
+        orderId=102,
+        config={
+            "conditions": {
+                "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "is_report_trusted",
+                        "operator": "is_false",
+                        "value": True,
+                    },
+                    {
+                        "name": "has_ticket",
+                        "operator": "is_false",
+                        "value": True,
+                    }
+                ]
+            },
+            "actions": [
+                {
+                    "name": "do_nothing",
+                },
+                {
+                    "name": "set_report_timeout",
+                    "params": {
+                        "days": 30
+                    }
+                },
             ]
         }
     )

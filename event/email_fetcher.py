@@ -61,7 +61,7 @@ except ImproperlyConfigured:
     django.setup()
 
 from adapters.services.storage.abstract import StorageServiceException
-from factory.implementation import ImplementationFactory
+from factory import implementations
 from utils import utils
 from utils.logger import get_logger
 
@@ -103,7 +103,7 @@ def _push_to_storage_service(filename, email):
         :param str filename: The filename of the email
         :param str email: The content of the email
     """
-    with ImplementationFactory.instance.get_instance_of('StorageServiceBase', STORAGE_DIR) as cnx:
+    with implementations.get_instance_of('StorageServiceBase', STORAGE_DIR) as cnx:
         try:
             cnx.read(filename)
             Logger.error(unicode('Email %s already in Storage Service' % (filename)))
