@@ -38,6 +38,7 @@ BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
 CDN_REQUEST_CACHE_EXPIRATION_DAYS = 15
 CDN_REQUEST_REDIS_QUEUE = 'cdnrequest:%s:request'
 CDN_REQUEST_LOCK = 'cdnrequest:lock'
+STORAGE_DIR = settings.GENERAL_CONFIG['email_storage_dir']
 
 
 def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report_id=None):

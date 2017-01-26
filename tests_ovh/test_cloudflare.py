@@ -19,19 +19,15 @@
 
 
 """
-    Unit tests for workers functions
+    Unit tests cloudflare workflow
 """
 
 import os
-from datetime import datetime, timedelta
 
 from django.conf import settings
 from mock import patch
 
-from abuse.models import (ServiceAction, ContactedProvider, Report,
-                          Provider, Resolution, Ticket, User, UrlStatus,
-                          Service, Defendant, BusinessRules, BusinessRulesHistory)
-from adapters.services.phishing.abstract import PingResponse
+from abuse.models import Report, Ticket, User
 from factory.implementation import ImplementationFactory
 from tests_ovh import GlobalTestCase
 

@@ -23,15 +23,12 @@
 """
 
 import os
-from datetime import datetime, timedelta
 
-from django.conf import settings
 from mock import patch
 
-from abuse.models import (ServiceAction, ContactedProvider, Report,
-                          Provider, Resolution, Ticket, User, UrlStatus,
-                          Service, Defendant, BusinessRules, BusinessRulesHistory)
-from adapters.services.phishing.abstract import PingResponse
+from abuse.models import (Report,
+                          Provider,
+                          BusinessRules)
 from factory.implementation import ImplementationFactory
 from tests_ovh import GlobalTestCase
 

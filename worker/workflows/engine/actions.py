@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+
+"""
+    Actions functions for Business Rules
+"""
+
 import inspect
 
 from .utils import fn_name_to_pretty_label, validate_parameters

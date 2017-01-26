@@ -47,7 +47,6 @@ from .workflows.engine import run
 from .workflows.variables import CDNRequestVariables, EmailReplyVariables, ReportVariables
 
 Parser = EmailParser()
-STORAGE_DIR = settings.GENERAL_CONFIG['email_storage_dir']
 
 
 def create_from_email(email_content=None, filename=None, lang='EN', send_ack=False):
@@ -155,7 +154,7 @@ def _create_without_services(abuse_report, filename, apply_rules=True):
         :param str filename: The filename of the email
         :param bool apply_rules: Run rules or not
         :rtype: `abuse.models.Report`
-        :returns: The Cerberus `abuse.models.Report`
+        :return: The Cerberus `abuse.models.Report`
     """
     provider = database.get_or_create_provider(abuse_report.provider)
 
@@ -191,7 +190,7 @@ def _create_with_services(abuse_report, filename, services):
         :param str filename: The filename of the email
         :param dict services: The identified service(s) (see adapters/dao/customer/abstract.py)
         :rtype: list
-        :returns: The list of Cerberus `abuse.models.Report` created
+        :return: The list of Cerberus `abuse.models.Report` created
     """
     created_reports = []
 
@@ -384,7 +383,7 @@ def _save_attachments(filename, attachments, reports=None, tickets=None):
         storage_filename = storage_filename.encode('utf-8')
         storage_filename = storage_filename + attachment['filename']
 
-        with implementations.get_instance_of('StorageServiceBase', STORAGE_DIR) as cnx:
+        with implementations.get_instance_of('StorageServiceBase', common.STORAGE_DIR) as cnx:
             cnx.write(storage_filename, attachment['content'])
 
         attachment_obj = AttachedDocument.objects.create(
@@ -408,7 +407,7 @@ def _save_email(filename, email):
         :param str filename: The filename of the email
         :param str email: The content of the email
     """
-    with implementations.get_instance_of('StorageServiceBase', STORAGE_DIR) as cnx:
+    with implementations.get_instance_of('StorageServiceBase', common.STORAGE_DIR) as cnx:
         cnx.write(filename, email)
         Logger.info(unicode('Email %s pushed to Storage Service' % (filename)))
 

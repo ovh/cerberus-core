@@ -51,6 +51,10 @@ class ReportVariables(BaseVariables):
     @boolean_rule_variable()
     def has_ticket(self):
         """
+            Check if there already an existing `abuse.models.Ticket`
+
+            :return: is there is an existing ticket
+            :rtype: bool
         """
         return self.existing_ticket
 
@@ -156,13 +160,13 @@ class ReportVariables(BaseVariables):
     def defendant_legal_form(self):
         """
         """
-        return self.report.defendant.details.legalForm
+        return [self.report.defendant.details.legalForm]
 
     @select_rule_variable()
     def defendant_country(self):
         """
         """
-        return [self.report.defendant.details.country]
+        return [self.report.defendant.details.country.upper()]
 
     @numeric_rule_variable()
     def report_count(self):

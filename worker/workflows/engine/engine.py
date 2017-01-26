@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+
+"""
+    Engine for Business Rules
+"""
+
+from worker.worker import Logger
 from .fields import FIELD_NO_INPUT
 
 
@@ -19,6 +26,11 @@ def run_all(rule_list,
 def run(rule, defined_variables, defined_actions):
     conditions, actions = rule['conditions'], rule['actions']
     rule_triggered = check_conditions_recursively(conditions, defined_variables)
+
+    if rule.get('log_only') and rule_triggered:
+        Logger.debug(unicode("rule will be triggered for {}".format(rule['log_only'])))
+        return False
+
     if rule_triggered:
         do_actions(actions, defined_actions)
         return True

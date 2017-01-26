@@ -67,7 +67,7 @@ class ActionServiceBase(object):
 
             :param `abuse.models.Ticket` ticket: A Cerberus `abuse.models.Ticket` instance
             :rtype: `abuse.models.ServiceAction`
-            :returns: The `abuse.models.ServiceAction` to apply
+            :return: The `abuse.models.ServiceAction` to apply
             :raises `adapters.services.action.abstract.ActionServiceException`: if any error occur
         """
         cls = self.__class__.__name__
@@ -80,7 +80,7 @@ class ActionServiceBase(object):
 
             :param `abuse.models.Ticket` ticket: A Cerberus `abuse.models.Ticket` instance
             :rtype list:
-            :returns: The list of possible `abuse.models.ServiceAction` for given ticket
+            :return: The list of possible `abuse.models.ServiceAction` for given ticket
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'list_actions_for_ticket'" % (cls))

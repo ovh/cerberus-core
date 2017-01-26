@@ -19,7 +19,7 @@
 
 
 """
-    Unit tests for workers functions
+    Unit tests phishing workflows
 """
 
 import os
@@ -29,8 +29,8 @@ from django.conf import settings
 from mock import patch
 
 from abuse.models import (ServiceAction, ContactedProvider, Report,
-                          Provider, Resolution, Ticket, User, UrlStatus,
-                          Service, Defendant, BusinessRules, BusinessRulesHistory)
+                          Resolution, Ticket, User, UrlStatus,
+                          BusinessRules)
 from adapters.services.phishing.abstract import PingResponse
 from factory.implementation import ImplementationFactory
 from tests_ovh import GlobalTestCase

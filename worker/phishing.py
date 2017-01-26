@@ -225,7 +225,7 @@ def is_all_down_for_ticket(ticket, last=5, url_only=False):
         :param int last: Check for the 'last' entries
         :param bool url_only: Check only report containing URL
         :rtype: bool
-        :returns: if all items are down
+        :return: if all items are down
     """
     results = []
     # Check if there are still items up

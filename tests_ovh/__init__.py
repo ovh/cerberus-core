@@ -26,8 +26,6 @@ from abuse.models import (AbusePermission, ServiceAction, Category, MailTemplate
 from django.conf import settings
 from django.test import TestCase
 
-SAMPLES_DIRECTORY = 'tests/samples'
-
 
 class GlobalTestCase(TestCase):
     """
@@ -659,7 +657,10 @@ def set_business_rules():
                     "name": "send_provider_ack"
                 },
                 {
-                    "name": "send_defendant_first_alert"
+                    "name": "send_defendant_email",
+                    "params": {
+                        "template_codename": settings.CODENAMES['first_alert']
+                    }
                 },
                 {
                     "name": "set_ticket_timeout",
@@ -697,7 +698,15 @@ def set_business_rules():
                         "name": "is_report_trusted",
                         "operator": "is_true",
                         "value": True,
-                    }
+                    },
+                    {
+                        "name": "report_provider",
+                        "operator": "shares_no_elements_with",
+                        "value": [
+                            'operations@friendmts.com',
+                            'operations@friendmediatech.com'
+                        ],
+                    },
                 ]
             },
             "actions": [
@@ -715,7 +724,10 @@ def set_business_rules():
                     "name": "send_provider_ack"
                 },
                 {
-                    "name": "send_defendant_first_alert"
+                    "name": "send_defendant_email",
+                    "params": {
+                        "template_codename": settings.CODENAMES['first_alert']
+                    }
                 },
                 {
                     "name": "close_ticket",
@@ -723,6 +735,250 @@ def set_business_rules():
                         "resolution": "forward_acns",
                     }
                 }
+            ]
+        }
+    )
+
+    blacklisted = ['AE', 'AF', 'AL', 'AM', 'AO', 'AW', 'AZ', 'BD', 'BF', 'BH', 'BI', 'BJ', 'BN', 'BO', 'BT', 'BW', 'BY', 'CD', 'CG', 'CM', 'CN', 'CU', 'CV', 'DJ', 'DM', 'DO', 'DZ', 'EC', 'EG', 'EH', 'ER', 'ET', 'GA', 'GE', 'GH', 'GM', 'GN', 'GQ', 'GT', 'GU', 'GW', 'GY', 'HT', 'ID', 'IN', 'IQ', 'IR', 'JO', 'KE', 'KG', 'KH', 'KI', 'KP', 'KW', 'KY', 'KZ', 'LA', 'LB', 'LK', 'LS', 'LY', 'MA', 'MD', 'MG', 'MK', 'ML', 'MM', 'MN', 'MO', 'MR', 'MS', 'MU', 'MW', 'MY', 'MZ', 'NA', 'NE', 'NG', 'NI', 'NP', 'NR', 'NU', 'OM', 'PA', 'PE', 'PG', 'PH', 'PK', 'PS', 'PW', 'PY', 'QA', 'RU', 'RW', 'SA', 'SC', 'SD', 'SJ', 'SO', 'SR', 'SV', 'SY', 'SZ', 'TD', 'TG', 'TJ', 'TK', 'TL', 'TM', 'TN', 'TO', 'TR', 'TV', 'TW', 'TZ', 'UA', 'UG', 'UY', 'UZ', 'VN', 'VU', 'YE', 'ZM', 'ZW']
+
+    BusinessRules.objects.create(
+        name='copyright_iptv_level_5',
+        rulesType='Report',
+        orderId=51,
+        config={
+            "debug_only": "copyright_iptv_level_5",
+            "conditions": {
+                "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "report_category",
+                        "operator": "equal_to",
+                        "value": "copyright",
+                    },
+                    {
+                        "name": "report_provider",
+                        "operator": "shares_at_least_one_element_with",
+                        "value": [
+                            'operations@friendmts.com',
+                            'operations@friendmediatech.com'
+                        ],
+                    },
+                    {
+                        "name": "report_body",
+                        "operator": "contains",
+                        "value": "pageUrl",
+                    },
+                    {
+                        "name": "is_report_trusted",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "has_urls",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "customer_since",
+                        "operator": "less_than_or_equal_to",
+                        "value": 7,
+                    },
+                    {
+                        "name": "defendant_country",
+                        "operator": "shares_at_least_one_element_with",
+                        "value": blacklisted,
+                    }
+
+                ]
+            },
+            "actions": [
+                {
+                    "name": "create_ticket",
+                    "params": {
+                        "attach_new": True,
+                    }
+                },
+                {
+                    "name": "send_provider_ack"
+                },
+                {
+                    "name": "close_defendant"
+                },
+                {
+                    "name": "send_defendant_email",
+                    "params": {
+                        "template_codename": "rupture"
+                    }
+                },
+                {
+                    "name": "close_ticket",
+                    "params": {
+                        "resolution": "fixed",
+                    }
+                }
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='copyright_iptv_level_4',
+        rulesType='Report',
+        orderId=52,
+        config={
+            "debug_only": "copyright_iptv_level_4",
+            "conditions": {
+                "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "report_category",
+                        "operator": "equal_to",
+                        "value": "copyright",
+                    },
+                    {
+                        "name": "report_provider",
+                        "operator": "shares_at_least_one_element_with",
+                        "value": [
+                            'operations@friendmts.com',
+                            'operations@friendmediatech.com'
+                        ],
+                    },
+                    {
+                        "name": "report_body",
+                        "operator": "contains",
+                        "value": "pageUrl",
+                    },
+                    {
+                        "name": "is_report_trusted",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "has_urls",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "customer_since",
+                        "operator": "less_than_or_equal_to",
+                        "value": 30,
+                    },
+                    {
+                        "name": "defendant_country",
+                        "operator": "shares_at_least_one_element_with",
+                        "value": blacklisted,
+                    }
+
+                ]
+            },
+            "actions": [
+                {
+                    "name": "create_ticket",
+                    "params": {
+                        "attach_new": True,
+                    }
+                },
+                {
+                    "name": "send_provider_ack"
+                },
+                {
+                    "name": "close_service"
+                },
+                {
+                    "name": "send_defendant_email",
+                    "params": {
+                        "template_codename": "close_service",
+                    }
+                },
+                {
+                    "name": "close_ticket",
+                    "params": {
+                        "resolution": "fixed",
+                    }
+                }
+            ]
+        }
+    )
+
+    BusinessRules.objects.create(
+        name='copyright_iptv_level_3',
+        rulesType='Report',
+        orderId=53,
+        config={
+            "debug_only": "copyright_iptv_level_3",
+            "conditions": {
+                "all": [
+                    {
+                        "name": "has_defendant",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "report_category",
+                        "operator": "equal_to",
+                        "value": "copyright",
+                    },
+                    {
+                        "name": "report_provider",
+                        "operator": "shares_at_least_one_element_with",
+                        "value": [
+                            'operations@friendmts.com',
+                            'operations@friendmediatech.com'
+                        ],
+                    },
+                    {
+                        "name": "report_body",
+                        "operator": "contains",
+                        "value": "pageUrl",
+                    },
+                    {
+                        "name": "is_report_trusted",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "has_urls",
+                        "operator": "is_true",
+                        "value": True,
+                    },
+                    {
+                        "name": "customer_since",
+                        "operator": "less_than_or_equal_to",
+                        "value": 90,
+                    },
+                    {
+                        "name": "defendant_legal_form",
+                        "operator": "shares_at_least_one_element_with",
+                        "value": [None, 'undefined', 'individual']
+                    },
+                    {
+                        "name": "defendant_country",
+                        "operator": "shares_at_least_one_element_with",
+                        "value": blacklisted,
+                    }
+
+                ]
+            },
+            "actions": [
+                {
+                    "name": "create_ticket",
+                    "params": {
+                        "attach_new": True,
+                    }
+                },
+                {
+                    "name": "send_provider_ack"
+                },
+                {
+                    "name": "apply_timeout_action"
+                },
             ]
         }
     )

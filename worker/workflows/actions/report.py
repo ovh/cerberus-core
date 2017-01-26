@@ -15,7 +15,7 @@ from worker.workflows.engine.actions import rule_action, BaseActions
 from worker.workflows.engine.fields import (FIELD_TEXT,
                                             FIELD_NO_INPUT,
                                             FIELD_NUMERIC)
-from worker import common, database, phishing
+from worker import common, database, phishing, ticket
 
 
 class ReportActions(BaseActions):
@@ -96,17 +96,44 @@ class ReportActions(BaseActions):
             acknowledged_report_id=self.report.id,
         )
 
-    @rule_action()
-    def send_defendant_first_alert(self):
+    @rule_action(params=[{'fieldType': FIELD_TEXT, 'name': 'template_codename'}])
+    def send_defendant_email(self, template_codename=None):
         """
         """
         common.send_email(
             self.ticket,
             [self.report.defendant.details.email],
-            settings.CODENAMES['first_alert'],
+            template_codename,
             lang=self.report.defendant.details.lang,
             acknowledged_report_id=self.report.id
         )
+
+    @rule_action()
+    def close_defendant(self):
+        """
+            Breach of contract
+        """
+        pass
+
+    @rule_action()
+    def close_all_services(self):
+        """
+            Close all ̀`abuse.models.Defendant` `abuse.models.Service`
+        """
+        pass
+
+    @rule_action()
+    def close_service(self):
+        """
+            Close `abuse.models.Ticket` `abuse.models.Service`
+        """
+        pass
+
+    @rule_action()
+    def apply_timeout_action(self):
+        """
+        """
+        ticket.timeout(self.ticket.id)
 
     @rule_action()
     def add_ticket_acns_proof(self):

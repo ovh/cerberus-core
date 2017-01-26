@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+
+"""
+    Operators functions for Business Rules
+"""
+
 import inspect
 import re
 

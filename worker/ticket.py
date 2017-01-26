@@ -156,6 +156,41 @@ def timeout(ticket_id=None):
     _close_ticket(ticket, reason=settings.CODENAMES['fixed'], service_blocked=True)
 
 
+def _get_ip_for_action(ticket):
+    """
+        Return the IP address attached to given ̀`abuse.models.Ticket`.
+        If multiple are detected, return None
+
+        :param `abuse.models.Ticket` ticket: The `abuse.models.Ticket` instance
+        :return: The IP address
+        :rtype: str
+    """
+    reports = ticket.reportTicket.all()
+
+    ips = []
+    for rep in reports:
+        items = rep.reportItemRelatedReport.filter(
+            ~Q(ip=None),
+            itemType='IP'
+        )
+        for itm in items:
+            ips.append(itm.ip)
+        items = rep.reportItemRelatedReport.filter(
+            ~Q(fqdnResolved=None),
+            itemType__in=('FQDN', 'URL')
+        )
+        for itm in items:
+            ips.append(itm.fqdnResolved)
+
+    ips = list(set(ips))
+
+    if len(ips) != 1:
+        Logger.error(unicode('Multiple or no IP on this ticket'))
+        return
+
+    return ips[0]
+
+
 def _check_timeout_ticket_conformance(ticket):
 
     if not ticket.defendant or not ticket.service:
@@ -255,34 +290,28 @@ def _close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_b
         lang=ticket.defendant.details.lang
     )
 
+    _add_timeout_tag(ticket)
     common.close_ticket(ticket, resolution_codename=reason)
 
-    tag_name = settings.TAGS['phishing_autoclosed'] if ticket.category.name.lower() == 'phishing' else settings.TAGS['copyright_autoclosed']
-    ticket.tags.add(Tag.objects.get(name=tag_name))
-    ticket.save()
 
-    database.log_action_on_ticket(
-        ticket=ticket,
-        action='add_tag',
-        tag_name=tag_name
-    )
+def _add_timeout_tag(ticket):
 
+    tag_name = None
 
-def _get_ip_for_action(ticket):
-    """
-        Extract and check IP address
-    """
-    # Get ticket IP(s)
-    reports = ticket.reportTicket.all()
-    ips_on_ticket = [itm.ip for rep in reports for itm in rep.reportItemRelatedReport.filter(~Q(ip=None), itemType='IP')]
-    ips_on_ticket.extend([itm.fqdnResolved for rep in reports for itm in rep.reportItemRelatedReport.filter(~Q(fqdnResolved=None), itemType__in=['FQDN', 'URL'])])
-    ips_on_ticket = list(set(ips_on_ticket))
+    if ticket.category.name.lower() == 'phishing':
+        tag_name = settings.TAGS['phishing_autoclosed']
+    elif ticket.category.name.lower() == 'copyright':
+        tag_name = settings.TAGS['copyright_autoclosed']
 
-    if len(ips_on_ticket) != 1:
-        Logger.error(unicode('Multiple or no IP on this ticket'))
-        return
+    if tag_name:
+        ticket.tags.add(Tag.objects.get(name=tag_name))
+        ticket.save()
 
-    return ips_on_ticket[0]
+        database.log_action_on_ticket(
+            ticket=ticket,
+            action='add_tag',
+            tag_name=tag_name
+        )
 
 
 def _send_email(ticket, email, codename, lang='EN'):
@@ -351,7 +380,7 @@ def mass_contact(ip_address=None, category=None, campaign_name=None,
     if services:
         Logger.debug(unicode('creating report/ticket for ip address %s' % (ip_address)))
         with pglocks.advisory_lock('cerberus_lock'):
-            __create_contact_tickets(services, campaign_name, ip_address, category, email_subject, email_body, user)
+            _create_contact_tickets(services, campaign_name, ip_address, category, email_subject, email_body, user)
         return True
     else:
         Logger.debug(unicode('no service found for ip address %s' % (ip_address)))
@@ -359,7 +388,7 @@ def mass_contact(ip_address=None, category=None, campaign_name=None,
 
 
 @transaction.atomic
-def __create_contact_tickets(services, campaign_name, ip_address, category, email_subject, email_body, user):
+def _create_contact_tickets(services, campaign_name, ip_address, category, email_subject, email_body, user):
 
     # Create fake report
     report_subject = 'Campaign %s for ip %s' % (campaign_name, ip_address)
@@ -472,7 +501,9 @@ def check_mass_contact_result(result_campaign_id=None, jobs=None):
         try:
             campaign_result = MassContactResult.objects.get(id=result_campaign_id)
         except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-            Logger.error(unicode('MassContactResult %d cannot be found in DB. Skipping...' % (result_campaign_id)))
+            Logger.error(unicode('MassContactResult {} cannot be found in DB. Skipping...'.format(
+                result_campaign_id
+            )))
             return
 
     result = []
@@ -500,7 +531,7 @@ def __save_email(filename, email):
         :param str filename: The filename of the email
         :param str email: The content of the email
     """
-    with implementations.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
+    with implementations.get_instance_of('StorageServiceBase', common.STORAGE_DIR) as cnx:
         cnx.write(filename, email.encode('utf-8'))
         Logger.info(unicode('Email %s pushed to Storage Service' % (filename)))
 

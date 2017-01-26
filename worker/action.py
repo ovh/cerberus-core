@@ -130,7 +130,7 @@ def apply_action(ticket_id=None, action_id=None, ip_addr=None, user_id=None):
         :param int action_id: The id of the Cerberus `ServiceAction`
         :param int user_id: The id of the Cerberus `User`
         :rtype: bool
-        :returns: if action has been applied
+        :return: if action has been applied
     """
     current_job = get_current_job()
 

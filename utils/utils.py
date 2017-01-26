@@ -158,7 +158,7 @@ class RoleCache(object):
             :param str method: The HTTP method
             :param str endpoint: The API endpoint
             :rtype: bool
-            :returns: if allowed or not
+            :return: if allowed or not
         """
         return (method, endpoint) in self.routes[role]
 
@@ -248,7 +248,7 @@ def get_url_hostname(url):
 
         :param str url: The url to extract hostname
         :rtype: str
-        :returns: the hostname or None
+        :return: the hostname or None
     """
     try:
         validate = URLValidator()
@@ -266,7 +266,7 @@ def get_ips_from_url(url):
 
         :param str url: The url to resolve
         :rtype: list
-        :returns: the list of resolved IP address for given url
+        :return: the list of resolved IP address for given url
     """
     try:
         parsed = urlparse(url)
@@ -284,7 +284,7 @@ def get_ips_from_fqdn(fqdn):
 
         :param str fqdn: The FQDN to resolve
         :rtype: list
-        :returns: the list of resolved IP address for given FQDN
+        :return: the list of resolved IP address for given FQDN
     """
     try:
         socket.setdefaulttimeout(5)
@@ -302,7 +302,7 @@ def get_reverses_for_item(item, nature='IP', replace_exception=False):
         :param str nature: The nature of the item
         :param bool replace_exception: Replace socket error by NXDOMAIN or TIMEOUT
         :rtype: dict
-        :returns: a dict containing reverse infos
+        :return: a dict containing reverse infos
     """
     hostname = None
     reverses = {}
@@ -372,7 +372,7 @@ def get_user_notifications(username, limit=3):
         :param str username: The username of the user
         :param int limit: The number of notifications to return
         :rtype: list
-        :returns: A list of dict
+        :return: A list of dict
     """
     notification_queue = 'cerberus:notification:%s' % (username)
     response = []
@@ -395,7 +395,7 @@ def dehtmlify(body):
 
         :param str body: The html content
         :rtype: str
-        :returns: The dehtmlified content
+        :return: The dehtmlified content
     """
     html = html2text.HTML2Text()
     html.body_width = 0
@@ -412,7 +412,7 @@ def decode_every_charset_in_the_world(content, supposed_charset=None):
         :param str content: The content to decode
         :param str supposed_charset: A supposed encoding for given content
         :rtype: str
-        :returns: The decoded content
+        :return: The decoded content
     """
     try:
         guessed_charset = chardet.detect(content)['encoding']
@@ -439,7 +439,7 @@ def get_ip_network(ip_str):
 
         :param str ip_str: The IP address
         :rtype: str
-        :returns: The owner if find else None
+        :return: The owner if find else None
     """
     try:
         ip_addr = netaddr.IPAddress(ip_str)
@@ -459,7 +459,7 @@ def is_ipaddr_ignored(ip_str):
 
         :param str ip_str: The IP address
         :rtype: bool
-        :returns: If the ip_addr has to be ignored
+        :return: If the ip_addr has to be ignored
     """
     ip_addr = netaddr.IPAddress(ip_str)
 
@@ -475,7 +475,7 @@ def is_valid_ipaddr(ip_addr):
 
         :param str ip_str: The IP address
         :rtype: bool
-        :returns: If the ip_addr is valid
+        :return: If the ip_addr is valid
     """
     try:
         validate_ipv46_address(ip_addr)
@@ -490,7 +490,7 @@ def string_to_underscore_case(string):
 
         :param str string: The sting to convert
         :rtype: str
-        :returns: The converted string
+        :return: The converted string
     """
     tmp = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', tmp).lower()

@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+
+"""
+    Utils for Business Rules
+"""
+
 import inspect
 from decimal import Decimal, Inexact, Context
 

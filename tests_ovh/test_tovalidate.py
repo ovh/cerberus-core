@@ -19,20 +19,15 @@
 
 
 """
-    Unit tests for workers functions
+    Unit tests for tovalidate workflows
 """
 
 import os
-from datetime import datetime, timedelta
 
 from django.conf import settings
 from mock import patch
 
-from abuse.models import (ServiceAction, ContactedProvider, Report,
-                          Provider, Resolution, Ticket, User, UrlStatus,
-                          Service, Defendant, BusinessRules, BusinessRulesHistory)
-from adapters.services.phishing.abstract import PingResponse
-from factory.implementation import ImplementationFactory
+from abuse.models import Defendant, Report, Service, User
 from tests_ovh import GlobalTestCase
 
 SAMPLES_DIRECTORY = 'tests_ovh/samples'

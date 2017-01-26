@@ -94,7 +94,7 @@ class EmailParser(object):
 
             :param str content: The raw email
             :rtype: `worker.parsing.parser.ParsedEmail`
-            :returns: The parsed email
+            :return: The parsed email
         """
 
         parsed_email = ParsedEmail()
@@ -172,7 +172,7 @@ class EmailParser(object):
 
             :param str raw: The raw email
             :rtype: tuple
-            :returns: The decoded body and a list of attachments
+            :return: The decoded body and a list of attachments
         """
         messages = self._parser.parsestr(raw)
         attachments = []
@@ -215,7 +215,7 @@ class EmailParser(object):
 
             :param str provider: The email of the provider
             :rtype: dict:
-            :returns: The corresponding parsing template if exists
+            :return: The corresponding parsing template if exists
         """
         template = None
         try:
@@ -255,7 +255,7 @@ class EmailParser(object):
             Loads provider template from TEMPLATE_DIR
 
             :rtype: dict:
-            :returns: All templates available in TEMPLATE_DIR
+            :return: All templates available in TEMPLATE_DIR
         """
         template_base = os.path.dirname(os.path.realpath(__file__)) + TEMPLATE_DIR
         modules = glob.glob(os.path.join(template_base, '*.py'))
@@ -275,7 +275,7 @@ class EmailParser(object):
 
             :param str content: The content to parse
             :rtype: str
-            :returns: The category (or None if not identified)
+            :return: The category (or None if not identified)
 
         """
         if isinstance(content, tuple):
@@ -300,7 +300,7 @@ def get_sender_from_headers(headers):
 
         :param `Message` headers: The SMTP headers of the email
         :rtype: str
-        :returns: The email of the sender
+        :return: The email of the sender
     """
     provider = 'unknown@provider.com'
     from_part = []
@@ -326,7 +326,7 @@ def get_recipients_from_headers(headers):
 
         :param `Message` headers: The SMTP headers of the email
         :rtype: list
-        :returns: The list of recipients
+        :return: The list of recipients
     """
     recipients = []
 
@@ -349,7 +349,7 @@ def get_date_from_headers(headers):
 
         :param `Message` headers: The SMTP headers of the email
         :rtype: datetime
-        :returns: The datetime
+        :return: The datetime
     """
     try:
         date = headers.get('Received')
@@ -366,7 +366,7 @@ def get_subject_from_headers(headers):
 
         :param `Message` headers: The SMTP headers of the email
         :rtype: str
-        :returns: The subject of the email
+        :return: The subject of the email
     """
     subject = ''
     subject_part = []
@@ -390,7 +390,7 @@ def get_received_from_headers(headers):
 
         :param `Message` headers: The SMTP headers of the email
         :rtype: list
-        :returns: The list of received emails
+        :return: The list of received emails
     """
     result = []
     if headers.get('Received'):
@@ -410,7 +410,7 @@ def is_provider_trusted(headers):
 
         :param `Message` headers: The SMTP headers of the email
         :rtype: bool
-        :returns: If the header is present or not
+        :return: If the header is present or not
     """
     if not settings.GENERAL_CONFIG.get('magic_smtp_header'):
         return False
@@ -424,7 +424,7 @@ def parse_attachment(part):
 
         :param `Message` part: A `Message`
         :rtype: list
-        :returns: The list of attachments
+        :return: The list of attachments
     """
     attachment = {}
     attachment['content_type'] = part.get_content_type()
@@ -480,7 +480,7 @@ def __clean_item(item, attrib):
 
         :param str item: A `worker.parsing.parser.ParsedEmail` item
         :rtype: str
-        :returns: The cleaned item
+        :return: The cleaned item
     """
     item = item.strip()
     item = item.replace(' ', '')
@@ -505,7 +505,7 @@ def get_online_logs(logs):
 
         :param `worker.parsing.parser.ParsedEmail` parsed_email: The parsed email
         :rtype: dict
-        :returns: The attachment of None if failed to retreive
+        :return: The attachment of None if failed to retreive
     """
     attachment = {'content_type': 'text/plain', 'filename': 'online_logs.txt'}
     try:
@@ -530,7 +530,7 @@ def is_email_ack(provider, subject, body):
         :param str subject: The subject of the email
         :param str body: The body of the email
         :rtype: bool
-        :returns: If it's a automatic answer
+        :return: If it's a automatic answer
     """
     resp = False
     if provider in regexp.ACK_RE:

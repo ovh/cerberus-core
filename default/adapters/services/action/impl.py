@@ -66,7 +66,7 @@ class DefaultActionService(ActionServiceBase):
 
             :param `abuse.models.Ticket` ticket: A Cerberus Ticket instance
             :rtype: `abuse.models.ServiceAction`
-            :returns: The `abuse.models.ServiceAction` to apply
+            :return: The `abuse.models.ServiceAction` to apply
         """
         if not isinstance(ticket, Ticket):
             try:
@@ -87,7 +87,7 @@ class DefaultActionService(ActionServiceBase):
 
             :param `abuse.models.Ticket` ticket: A Cerberus `abuse.models.Ticket` instance
             :rtype list:
-            :returns: The list of possible `abuse.models.ServiceAction` for given ticket
+            :return: The list of possible `abuse.models.ServiceAction` for given ticket
         """
         if not isinstance(ticket, Ticket):
             try:

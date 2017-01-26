@@ -728,7 +728,7 @@ def get_notifications(user):
 
         :param `abuse.models.User` user: An instance of `abuse.models.User`
         :rtype: tuple
-        :returns: The status code and the notifications
+        :return: The status code and the notifications
     """
     response = utils.get_user_notifications(user.username)
     return response

@@ -19,7 +19,7 @@
 
 
 """
-    Unit tests for workers functions
+    Unit tests copyright workflows
 """
 
 import os
