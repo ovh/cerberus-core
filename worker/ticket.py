@@ -119,21 +119,14 @@ def timeout(ticket_id=None):
     # Maybe customer fixed, closing ticket
     if ticket.category.name.lower() == 'phishing' and phishing.is_all_down_for_ticket(ticket):
         Logger.info(unicode('All items are down for ticket %d, closing ticket' % (ticket_id)))
-        close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False)
+        _close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False)
         return
 
     # Getting ip for action
     ip_addr = _get_ip_for_action(ticket)
     if not ip_addr:
         Logger.error(unicode('Error while getting IP for action, exiting'))
-        ticket.status = ticket.previousStatus
-        ticket.status = 'ActionError'
-        database.log_action_on_ticket(
-            ticket=ticket,
-            action='change_status',
-            previous_value=ticket.previousStatus,
-            new_value=ticket.status
-        )
+        common.set_ticket_status(ticket, 'ActionError', reset_snooze=True)
         comment = Comment.objects.create(
             user=common.BOT_USER,
             comment='None or multiple ip addresses for this ticket'
@@ -156,7 +149,7 @@ def timeout(ticket_id=None):
     ticket = Ticket.objects.get(id=ticket.id)
 
     # Closing ticket
-    close_ticket(ticket, reason=settings.CODENAMES['fixed'], service_blocked=True)
+    _close_ticket(ticket, reason=settings.CODENAMES['fixed'], service_blocked=True)
 
 
 def _check_timeout_ticket_conformance(ticket):
@@ -224,7 +217,7 @@ def _apply_timeout_action(ticket, ip_addr, action):
     return async_job
 
 
-def close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False):
+def _close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False):
     """
         Close ticket and add autoclosed Tag
     """
@@ -252,26 +245,13 @@ def close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_bl
 
     # Send "ticket closed" email to defendant
     _send_email(ticket, ticket.defendant.details.email, template, lang=ticket.defendant.details.lang)
-    if ticket.mailerId:
-        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
 
-    resolution = Resolution.objects.get(codename=reason)
-    ticket.resolution = resolution
-    ticket.previousStatus = ticket.status
-    ticket.status = 'Closed'
-    ticket.reportTicket.all().update(status='Archived')
+    common.close_ticket(ticket, resolution_codename=reason)
 
     tag_name = settings.TAGS['phishing_autoclosed'] if ticket.category.name.lower() == 'phishing' else settings.TAGS['copyright_autoclosed']
     ticket.tags.add(Tag.objects.get(name=tag_name))
     ticket.save()
 
-    database.log_action_on_ticket(
-        ticket=ticket,
-        action='change_status',
-        previous_value=ticket.previousStatus,
-        new_value=ticket.status,
-        close_reason=ticket.resolution.codename
-    )
     database.log_action_on_ticket(
         ticket=ticket,
         action='add_tag',
@@ -656,18 +636,7 @@ def update_waiting():
                     }
                 )
                 _check_auto_unassignation(ticket)
-                ticket.status = ALARM
-                ticket.snoozeStart = None
-                ticket.snoozeDuration = None
-                ticket.previousStatus = WAITING
-                ticket.reportTicket.all().update(status='Attached')
-                ticket.save()
-                database.log_action_on_ticket(
-                    ticket=ticket,
-                    action='change_status',
-                    previous_value=ticket.previousStatus,
-                    new_value=ticket.status
-                )
+                common.set_ticket_status(ticket, ALARM, reset_snooze=True)
 
         except (AttributeError, ValueError) as ex:
             Logger.debug(unicode('Error while updating ticket %d : %s' % (ticket.id, ex)))
@@ -715,17 +684,10 @@ def update_paused():
                 if ticket.previousStatus == WAITING and ticket.snoozeDuration and ticket.snoozeStart:
                     ticket.snoozeDuration = ticket.snoozeDuration + (datetime.now() - ticket.pauseStart).seconds
 
-                ticket.status = ticket.previousStatus
+                common.set_ticket_status(ticket, ticket.previousStatus)
                 ticket.pauseStart = None
                 ticket.pauseDuration = None
-                ticket.previousStatus = PAUSED
                 ticket.save()
-                database.log_action_on_ticket(
-                    ticket=ticket,
-                    action='change_status',
-                    previous_value=ticket.previousStatus,
-                    new_value=ticket.status
-                )
 
         except (AttributeError, ValueError) as ex:
             Logger.debug(unicode('Error while updating ticket %d : %s' % (ticket.id, ex)))
