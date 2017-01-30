@@ -7,10 +7,10 @@
 
 from datetime import datetime, timedelta
 
-from abuse.models import Report, Ticket
+from abuse.models import BusinessRulesHistory, Report, Ticket
 from config import settings
 from worker import database, phishing
-from worker.workflows.engine.fields import FIELD_NUMERIC
+from worker.workflows.engine.fields import FIELD_NO_INPUT, FIELD_NUMERIC, FIELD_TEXT
 from worker.workflows.engine.variables import (numeric_rule_variable, boolean_rule_variable,
                                                select_multiple_rule_variable, string_rule_variable,
                                                BaseVariables)
@@ -108,14 +108,17 @@ class ReportVariables(BaseVariables):
                 return True
         return False
 
-    @boolean_rule_variable()
-    def urls_down(self):
+    @boolean_rule_variable(params=[{'fieldType': FIELD_NO_INPUT, 'name': 'try_screenshot'}])
+    def urls_down(self, try_screenshot=True):
         """
         """
         if not self.has_urls():
             return False
 
-        return phishing.check_if_all_down(report=self.report)
+        return phishing.check_if_all_down(
+            report=self.report,
+            try_screenshot=try_screenshot
+        )
 
     @boolean_rule_variable()
     def all_items_phishing(self):
@@ -184,6 +187,12 @@ class ReportVariables(BaseVariables):
             defendant=self.report.defendant
         ).count()
 
+    @select_multiple_rule_variable()
+    def service_type(self):
+        """
+        """
+        return [self.report.service.componentType.lower()]
+
     @numeric_rule_variable()
     def service_action_count(self):
         """
@@ -200,3 +209,13 @@ class ReportVariables(BaseVariables):
             jobs__executionDate__gte=datetime.now() - timedelta(days=last_days),
             defendant=self.report.defendant
         ).values_list('jobs').count()
+
+    @numeric_rule_variable(params=[{'fieldType': FIELD_NUMERIC, 'name': 'last_days'},
+                                   {'fieldType': FIELD_TEXT, 'name': 'rule_codename'}])
+    def rules_applied(self, rule_codename=None, last_days=30):
+        """
+        """
+        return BusinessRulesHistory.objects.filter(
+            businessRules__name=rule_codename,
+            date__gte=datetime.now() - timedelta(days=last_days)
+        ).count()

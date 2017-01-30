@@ -53,12 +53,13 @@ class PhishingServiceBase(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def ping_url(self, url, country=None):
+    def ping_url(self, url, country=None, try_screenshot=True):
         """
             Ping given url
 
             :param str url: The url to ping.
             :param str country: A country, usefull for geo-phishing
+            :param bool try_screenshot: Try to take a screenshot for the url
             :return: A PingResponse object containing these infos:
                 direct_status, proxied_status, http_code, score (0 for 'UP' to 100 for 'DOWN') and is_phishing (computed by your solution)
             :rtype: PingResponse

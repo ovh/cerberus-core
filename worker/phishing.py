@@ -37,12 +37,15 @@ from adapters.services.phishing.abstract import PhishingServiceException
 from factory import implementations
 from worker import Logger
 
+DOWN_THRESHOLD = settings.GENERAL_CONFIG['phishing']['down_threshold']
 
-def check_if_all_down(report=None, last=5):
+
+def check_if_all_down(report=None, last=5, try_screenshot=True):
     """ Check if all urls items for a report (phishing for example) are 'down'.
 
         :param `abuse.models.Report` report: A Cerberus `abuse.models.Report` instance to ping
         :param int last: Look for the n last record in db
+        :param bool try_screenshot: Try to take a screenshot for the url
         :return: the result
         :rtype: bool
     """
@@ -61,7 +64,7 @@ def check_if_all_down(report=None, last=5):
     country = report.defendant.details.country if report.defendant else 'FR'
 
     for item in items:
-        __update_item_status(item, country)
+        _update_item_status(item, country, try_screenshot)
 
     items = report.reportItemRelatedReport.all()
     items = list(set([item for item in items if item.itemType == 'URL']))
@@ -72,7 +75,7 @@ def check_if_all_down(report=None, last=5):
         for score in status_score:
             scoring[item.id] += score
 
-    if all(v >= settings.GENERAL_CONFIG['phishing']['down_threshold'] for v in scoring.itervalues()):
+    if all(v >= DOWN_THRESHOLD for v in scoring.itervalues()):
         Logger.error(unicode('All urls are down for report %d' % (report.id)))
         return True
 
@@ -80,16 +83,20 @@ def check_if_all_down(report=None, last=5):
     return False
 
 
-def __update_item_status(item, country='FR'):
-    """
-        Update item status
-    """
+def _update_item_status(item, country='FR', try_screenshot=True):
+
     if item.itemType != 'URL':
         return
 
     try:
         Logger.debug(unicode('Checking status for url %s' % (item.rawItem,)))
-        response = implementations.get_singleton_of('PhishingServiceBase').ping_url(item.rawItem, country=country)
+        response = implementations.get_singleton_of(
+            'PhishingServiceBase'
+        ).ping_url(
+            item.rawItem,
+            country=country,
+            try_screenshot=try_screenshot
+        )
         database.insert_url_status(
             item,
             response.direct_status,
@@ -107,7 +114,8 @@ def close_because_all_down(report=None, denied_by=None):
         Create and close a ticket when all report's items are down
 
         :param `abuse.models.Report` report: A Cerberus `abuse.models.Report` instance
-        :param int denied_by: The id of the `abuse.models.User` who takes the decision to close the ticket
+        :param int denied_by: The id of the `abuse.models.User`
+            who takes the decision to close the ticket
     """
     if not isinstance(report, Report):
         try:
@@ -129,7 +137,7 @@ def close_because_all_down(report=None, denied_by=None):
     try:
         validate_email(report.provider.email.strip())
         Logger.info(unicode('Sending email to provider'))
-        __send_email(report.ticket, report.provider.email, settings.CODENAMES['no_more_content'])
+        _send_email(report.ticket, report.provider.email, settings.CODENAMES['no_more_content'])
         report.ticket.save()
         Logger.info(unicode('Mail sent to provider'))
         implementations.get_singleton_of('MailerServiceBase').close_thread(report.ticket)
@@ -147,7 +155,7 @@ def close_because_all_down(report=None, denied_by=None):
     Logger.info(unicode('Ticket %d and report %d closed' % (report.ticket.id, report.id)))
 
 
-def __send_email(ticket, email, codename, lang='EN'):
+def _send_email(ticket, email, codename, lang='EN'):
     """
         Wrapper to send email
     """
@@ -191,18 +199,22 @@ def block_url_and_mail(ticket_id=None, report_id=None):
         implementations.get_singleton_of('PhishingServiceBase').block_url(item.rawItem, item.report)
 
     database.add_phishing_blocked_tag(report)
-    __send_email(ticket, report.defendant.details.email, settings.CODENAMES['phishing_blocked'], report.defendant.details.lang)
+    _send_email(
+        ticket,
+        report.defendant.details.email,
+        settings.CODENAMES['phishing_blocked'],
+        report.defendant.details.lang
+    )
     ticket = Ticket.objects.get(id=ticket.id)
 
     ticket_snooze = settings.GENERAL_CONFIG['phishing']['wait']
-    if not ticket.status == 'WaitingAnswer' and not ticket.snoozeDuration and not ticket.snoozeStart:
+    if not any((ticket.status == 'WaitingAnswer', ticket.snoozeDuration, ticket.snoozeStart)):
         ticket.previousStatus = ticket.status
         ticket.status = 'WaitingAnswer'
         ticket.snoozeDuration = ticket_snooze
         ticket.snoozeStart = datetime.now()
 
     ticket.save()
-    Logger.info(unicode('Ticket %d now with status WaitingAnswer for %d' % (ticket.id, ticket_snooze)))
 
 
 def unblock_url(url=None):
