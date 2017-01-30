@@ -1,0 +1,29 @@
+{
+    "config": {
+        "actions": [
+            {
+                "name": "try_resend"
+            }, 
+            {
+                "name": "attach_external_answer"
+            }
+        ], 
+        "conditions": {
+            "all": [
+                {
+                    "name": "category", 
+                    "operator": "equal_to", 
+                    "value": "defendant"
+                }, 
+                {
+                    "name": "email_sender", 
+                    "operator": "matches_regex", 
+                    "value": "mailer-daemon@.*ovh.*"
+                }
+            ]
+        }
+    }, 
+    "name": "mailer_daemon", 
+    "orderId": 1, 
+    "rulesType": "EmailReply"
+}

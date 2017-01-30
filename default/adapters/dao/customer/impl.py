@@ -37,6 +37,7 @@ JOHN_DOE = {
     'city': 'Paris',
     'country': 'FR',
     'address': '1 rue de la mer',
+    'legalForm': 'individual',
     'zip': '75000',
     'lang': 'FR',
     'creationDate': datetime.fromtimestamp(1444336416),

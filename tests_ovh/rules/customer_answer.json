@@ -1,0 +1,30 @@
+{
+    "config": {
+        "actions": [
+            {
+                "name": "set_ticket_status", 
+                "params": {
+                    "status": "Answered"
+                }
+            }, 
+            {
+                "name": "cancel_pending_jobs"
+            }, 
+            {
+                "name": "attach_external_answer"
+            }
+        ], 
+        "conditions": {
+            "all": [
+                {
+                    "name": "category", 
+                    "operator": "equal_to", 
+                    "value": "defendant"
+                }
+            ]
+        }
+    }, 
+    "name": "customer_answer", 
+    "orderId": 50, 
+    "rulesType": "EmailReply"
+}

@@ -1,0 +1,27 @@
+{
+    "config": {
+        "actions": [
+            {
+                "name": "do_cloudflare_request", 
+                "params": {
+                    "provider": "cloudflare"
+                }
+            }
+        ], 
+        "conditions": {
+            "all": [
+                {
+                    "name": "provider_ips_owner", 
+                    "operator": "is_true", 
+                    "params": {
+                        "provider": "cloudflare"
+                    }, 
+                    "value": true
+                }
+            ]
+        }
+    }, 
+    "name": "cdn_request_cloudflare", 
+    "orderId": 1, 
+    "rulesType": "CDNRequest"
+}

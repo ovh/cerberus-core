@@ -27,8 +27,8 @@ def run(rule, defined_variables, defined_actions):
     conditions, actions = rule['conditions'], rule['actions']
     rule_triggered = check_conditions_recursively(conditions, defined_variables)
 
-    if rule.get('log_only') and rule_triggered:
-        Logger.debug(unicode("rule will be triggered for {}".format(rule['log_only'])))
+    if rule.get('debug_only') and rule_triggered:
+        Logger.debug(unicode("rule {} will be triggered".format(rule['debug_only'])))
         return False
 
     if rule_triggered:

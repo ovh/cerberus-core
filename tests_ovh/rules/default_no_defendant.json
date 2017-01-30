@@ -1,0 +1,37 @@
+{
+    "config": {
+        "actions": [
+            {
+                "name": "do_nothing"
+            }, 
+            {
+                "name": "set_report_timeout", 
+                "params": {
+                    "days": 30
+                }
+            }
+        ], 
+        "conditions": {
+            "all": [
+                {
+                    "name": "has_defendant", 
+                    "operator": "is_false", 
+                    "value": true
+                }, 
+                {
+                    "name": "is_report_trusted", 
+                    "operator": "is_false", 
+                    "value": true
+                }, 
+                {
+                    "name": "autoarchive", 
+                    "operator": "is_false", 
+                    "value": true
+                }
+            ]
+        }
+    }, 
+    "name": "default_no_defendant", 
+    "orderId": 1, 
+    "rulesType": "Report"
+}

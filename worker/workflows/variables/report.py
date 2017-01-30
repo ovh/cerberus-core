@@ -13,7 +13,7 @@ from worker import database, phishing
 from worker.workflows.engine.fields import FIELD_NUMERIC
 from worker.workflows.engine.variables import (numeric_rule_variable, boolean_rule_variable,
                                                select_multiple_rule_variable, string_rule_variable,
-                                               select_rule_variable, BaseVariables)
+                                               BaseVariables)
 
 
 class ReportVariables(BaseVariables):
@@ -156,13 +156,13 @@ class ReportVariables(BaseVariables):
         """
         return self.report.defendant.details.creationDate >= datetime.now()
 
-    @string_rule_variable()
+    @select_multiple_rule_variable()
     def defendant_legal_form(self):
         """
         """
         return [self.report.defendant.details.legalForm]
 
-    @select_rule_variable()
+    @select_multiple_rule_variable()
     def defendant_country(self):
         """
         """

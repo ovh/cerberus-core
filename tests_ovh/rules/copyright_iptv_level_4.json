@@ -1,0 +1,206 @@
+{
+    "config": {
+        "actions": [
+            {
+                "name": "create_ticket", 
+                "params": {
+                    "attach_new": true
+                }
+            }, 
+            {
+                "name": "send_provider_ack"
+            }, 
+            {
+                "name": "close_service"
+            }, 
+            {
+                "name": "send_defendant_email", 
+                "params": {
+                    "template_codename": "close_service"
+                }
+            }, 
+            {
+                "name": "close_ticket", 
+                "params": {
+                    "resolution": "fixed"
+                }
+            }
+        ], 
+        "conditions": {
+            "all": [
+                {
+                    "name": "has_defendant", 
+                    "operator": "is_true", 
+                    "value": true
+                }, 
+                {
+                    "name": "report_category", 
+                    "operator": "equal_to", 
+                    "value": "copyright"
+                }, 
+                {
+                    "name": "report_provider", 
+                    "operator": "shares_at_least_one_element_with", 
+                    "value": [
+                        "operations@friendmts.com", 
+                        "operations@friendmediatech.com"
+                    ]
+                }, 
+                {
+                    "name": "report_body", 
+                    "operator": "contains", 
+                    "value": "pageUrl"
+                }, 
+                {
+                    "name": "is_report_trusted", 
+                    "operator": "is_true", 
+                    "value": true
+                }, 
+                {
+                    "name": "has_urls", 
+                    "operator": "is_true", 
+                    "value": true
+                }, 
+                {
+                    "name": "customer_since", 
+                    "operator": "less_than_or_equal_to", 
+                    "value": 30
+                }, 
+                {
+                    "name": "defendant_country", 
+                    "operator": "shares_at_least_one_element_with", 
+                    "value": [
+                        "AE", 
+                        "AF", 
+                        "AL", 
+                        "AM", 
+                        "AO", 
+                        "AW", 
+                        "AZ", 
+                        "BD", 
+                        "BF", 
+                        "BH", 
+                        "BI", 
+                        "BJ", 
+                        "BN", 
+                        "BO", 
+                        "BT", 
+                        "BW", 
+                        "BY", 
+                        "CD", 
+                        "CG", 
+                        "CM", 
+                        "CN", 
+                        "CU", 
+                        "CV", 
+                        "DJ", 
+                        "DM", 
+                        "DO", 
+                        "DZ", 
+                        "EC", 
+                        "EG", 
+                        "EH", 
+                        "ER", 
+                        "ET", 
+                        "GA", 
+                        "GE", 
+                        "GH", 
+                        "GM", 
+                        "GN", 
+                        "GQ", 
+                        "GT", 
+                        "GU", 
+                        "GW", 
+                        "GY", 
+                        "HT", 
+                        "ID", 
+                        "IN", 
+                        "IQ", 
+                        "IR", 
+                        "JO", 
+                        "KE", 
+                        "KG", 
+                        "KH", 
+                        "KI", 
+                        "KP", 
+                        "KW", 
+                        "KY", 
+                        "KZ", 
+                        "LA", 
+                        "LB", 
+                        "LK", 
+                        "LS", 
+                        "LY", 
+                        "MA", 
+                        "MD", 
+                        "MG", 
+                        "MK", 
+                        "ML", 
+                        "MM", 
+                        "MN", 
+                        "MO", 
+                        "MR", 
+                        "MS", 
+                        "MU", 
+                        "MW", 
+                        "MY", 
+                        "MZ", 
+                        "NA", 
+                        "NE", 
+                        "NG", 
+                        "NI", 
+                        "NP", 
+                        "NR", 
+                        "NU", 
+                        "OM", 
+                        "PA", 
+                        "PE", 
+                        "PG", 
+                        "PH", 
+                        "PK", 
+                        "PS", 
+                        "PW", 
+                        "PY", 
+                        "QA", 
+                        "RU", 
+                        "RW", 
+                        "SA", 
+                        "SC", 
+                        "SD", 
+                        "SJ", 
+                        "SO", 
+                        "SR", 
+                        "SV", 
+                        "SY", 
+                        "SZ", 
+                        "TD", 
+                        "TG", 
+                        "TJ", 
+                        "TK", 
+                        "TL", 
+                        "TM", 
+                        "TN", 
+                        "TO", 
+                        "TR", 
+                        "TV", 
+                        "TW", 
+                        "TZ", 
+                        "UA", 
+                        "UG", 
+                        "UY", 
+                        "UZ", 
+                        "VN", 
+                        "VU", 
+                        "YE", 
+                        "ZM", 
+                        "ZW"
+                    ]
+                }
+            ]
+        }, 
+        "debug_only": "copyright_iptv_level_4"
+    }, 
+    "name": "copyright_iptv_level_4", 
+    "orderId": 52, 
+    "rulesType": "Report"
+}

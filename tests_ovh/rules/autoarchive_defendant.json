@@ -1,0 +1,34 @@
+{
+    "config": {
+        "actions": [
+            {
+                "name": "set_report_status", 
+                "params": {
+                    "status": "Archived"
+                }
+            }
+        ], 
+        "conditions": {
+            "all": [
+                {
+                    "name": "has_defendant", 
+                    "operator": "is_true", 
+                    "value": true
+                }, 
+                {
+                    "name": "autoarchive", 
+                    "operator": "is_true", 
+                    "value": true
+                }, 
+                {
+                    "name": "has_ticket", 
+                    "operator": "is_false", 
+                    "value": true
+                }
+            ]
+        }
+    }, 
+    "name": "autoarchive_defendant", 
+    "orderId": 3, 
+    "rulesType": "Report"
+}
