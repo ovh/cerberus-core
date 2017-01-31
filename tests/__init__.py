@@ -85,8 +85,9 @@ def set_email_templates():
     MailTemplate.objects.create(
         codename='ack_report_received',
         name='Test template',
-        subject='Abuse dectected, Ticket #{{ publicId }}',
-        body='Abuse dectected, Ticket #{{ publicId }}',
+        subject='Abuse received, Ticket #{{ publicId }}',
+        body='Abuse received, Ticket #{{ publicId }}',
+        recipientType='Plaintiff',
     )
 
     MailTemplate.objects.create(
@@ -94,6 +95,7 @@ def set_email_templates():
         name='No more content',
         subject='No more content',
         body='No more content',
+        recipientType='Plaintiff',
     )
 
     MailTemplate.objects.create(
@@ -101,13 +103,18 @@ def set_email_templates():
         name='Fixed',
         subject='Fixed',
         body='Fixed',
+        recipientType='Defendant',
     )
 
     MailTemplate.objects.create(
-        codename='first_alert',
-        name='First Alert',
-        subject='First Alert',
-        body='First Alert',
+        codename='customer_notification',
+        name='Abuse detected',
+        subject='Abuse detected',
+        body="""-- start of the technical details --
+            {% if proof|length == 1 %}{% for p in proof %}{{ p }}{% endfor %}{% else %}{% for p in proof %}
+            {{ p }}
+            ----------{% endfor %}{% endif %}""",
+        recipientType='Defendant',
     )
 
     MailTemplate.objects.create(
@@ -115,6 +122,7 @@ def set_email_templates():
         name='Case closed',
         subject='Case closed',
         body='Case closed',
+        recipientType='Plaintiff',
     )
 
     MailTemplate.objects.create(
@@ -122,6 +130,7 @@ def set_email_templates():
         name='Service blocked',
         subject='Service blocked',
         body='Service blocked',
+        recipientType='Defendant',
     )
 
     MailTemplate.objects.create(
@@ -129,6 +138,7 @@ def set_email_templates():
         name='not_managed_ip',
         subject='not_managed_ip',
         body='not_managed_ip',
+        recipientType='Plaintiff',
     )
 
     MailTemplate.objects.create(
@@ -136,6 +146,7 @@ def set_email_templates():
         name='ticket closed',
         subject='ticket closed',
         body='ticket closed',
+        recipientType='Defendant',
     )
 
     MailTemplate.objects.create(
@@ -143,6 +154,7 @@ def set_email_templates():
         name='Cloudflare ip request',
         subject='Cloudflare ip request',
         body='Cloudflare ip request',
+        recipientType='Other',
     )
 
     MailTemplate.objects.create(
@@ -155,6 +167,7 @@ def set_email_templates():
               \n* {{ url }}
               {% endfor %}
               {% endif %}""",
+        recipientType='Defendant',
     )
 
 

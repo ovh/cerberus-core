@@ -8,7 +8,7 @@
 from datetime import datetime, timedelta
 
 from abuse.models import BusinessRulesHistory, Report, Ticket
-from config import settings
+from django.conf import settings
 from worker import database, phishing
 from worker.workflows.engine.fields import FIELD_NO_INPUT, FIELD_NUMERIC, FIELD_TEXT
 from worker.workflows.engine.variables import (numeric_rule_variable, boolean_rule_variable,
@@ -157,7 +157,7 @@ class ReportVariables(BaseVariables):
             :return: defendant age in days
             :rtype: int
         """
-        return self.report.defendant.details.creationDate >= datetime.now()
+        return (datetime.now() - self.report.defendant.details.creationDate).days
 
     @select_multiple_rule_variable()
     def defendant_legal_form(self):
@@ -216,6 +216,8 @@ class ReportVariables(BaseVariables):
         """
         """
         return BusinessRulesHistory.objects.filter(
+            defendant=self.report.defendant,
+            service=self.report.service,
             businessRules__name=rule_codename,
             date__gte=datetime.now() - timedelta(days=last_days)
         ).count()

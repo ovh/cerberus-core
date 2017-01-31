@@ -2253,9 +2253,9 @@
 {
   "fields": {
     "lang": "EN",
-    "body": "First Alert",
-    "name": "[customer-auto] FIRST_ALERT",
-    "codename": "first_alert",
+    "body": "Notification",
+    "name": "[customer-auto] Customer nofitication",
+    "codename": "customer_notification",
     "subject": "[Abuse #{{ publicId }}]",
     "recipientType": "Defendant"
   },

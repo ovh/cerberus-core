@@ -8,7 +8,8 @@ import re
 from datetime import datetime, timedelta
 
 from abuse.models import Proof
-from config import settings
+from django.conf import settings
+from factory import implementations
 from utils import utils
 from worker.parsing import regexp
 from worker.workflows.engine.actions import rule_action, BaseActions
@@ -77,6 +78,9 @@ class ReportActions(BaseActions):
     def close_ticket(self, resolution=None, keep_update=False):
         """
         """
+        from worker import Logger
+        Logger.debug(resolution)
+        Logger.debug(settings.CODENAMES[resolution])
         common.close_ticket(
             self.ticket,
             resolution_codename=settings.CODENAMES[resolution]
@@ -113,21 +117,33 @@ class ReportActions(BaseActions):
         """
             Breach of contract
         """
-        pass
+        implementations.get_singleton_of(
+            'ActionServiceBase'
+        ).close_defendant(
+            ticket=self.ticket
+        )
 
     @rule_action()
     def close_all_services(self):
         """
             Close all ̀`abuse.models.Defendant` `abuse.models.Service`
         """
-        pass
+        implementations.get_singleton_of(
+            'ActionServiceBase'
+        ).close_all_services(
+            ticket=self.ticket
+        )
 
     @rule_action()
     def close_service(self):
         """
             Close `abuse.models.Ticket` `abuse.models.Service`
         """
-        pass
+        implementations.get_singleton_of(
+            'ActionServiceBase'
+        ).close_service(
+            ticket=self.ticket
+        )
 
     @rule_action()
     def apply_timeout_action(self):

@@ -74,7 +74,7 @@ TAGS = {
 CODENAMES = {
     'ack_received': 'ack_report_received',
     'case_closed': 'case_closed',
-    'first_alert': 'first_alert',
+    'customer_notification': 'customer_notification',
     'fixed_customer': 'fixed_by_customer',
     'fixed': 'fixed',
     'forward_acns': 'forward_acns',

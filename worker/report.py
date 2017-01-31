@@ -217,6 +217,7 @@ def _create_with_services(abuse_report, filename, services):
             parsed_email=abuse_report,
             report=report,
             ticket=ticket,
+            service=report.service,
             rules_type='Report'
         )
         if rule_applied:
@@ -233,6 +234,7 @@ def _apply_business_rules(**kwargs):
     report = kwargs.get('report')
     ticket = kwargs.get('ticket')
     defendant = report.defendant if report else ticket.defendant
+    service = kwargs.get('service')
 
     rules, variables, actions = _get_business_rules_config(**kwargs)
     if not all((rules, variables, actions)):
@@ -249,7 +251,8 @@ def _apply_business_rules(**kwargs):
                 businessRules=rule,
                 defendant=defendant,
                 report=report,
-                ticket=ticket
+                ticket=ticket,
+                service=service
             )
             if report:
                 database.set_report_specificworkflow_tag(report, rule.name)
@@ -572,6 +575,7 @@ def _reparse_validated(report, user):
     return _apply_business_rules(
         report=report,
         ticket=ticket,
+        service=report.service,
         is_trusted=True,
         rules_type='Report'
     )
