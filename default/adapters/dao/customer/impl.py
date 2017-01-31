@@ -53,6 +53,10 @@ DEFAULT_SERVICE = {
     'reference': 'hosting.pro.2016',
 }
 
+SERVICES = {
+    'john.doe.42': [DEFAULT_SERVICE]
+}
+
 
 class DefaultCustomerDao(CustomerDaoBase):
     """
@@ -145,16 +149,12 @@ class DefaultCustomerDao(CustomerDaoBase):
             :rtype: list
             :raises `adapters.dao.customer.abstract.CustomerDaoException`: if any error occur
         """
+        if customer_id != JOHN_DOE['customerId']:
+            raise CustomerDaoException('Customer not found')
+
         response = [{
             'zone': 'EMEA',
-            'services': [{
-                'name': 'test',
-                'reference': 'vps.test',
-                'componentType': 'VPS',
-                'creationDate': 1452686304,
-                'expirationDate': 1453686304,
-                'state': 'active',
-            }]
+            'services': SERVICES[JOHN_DOE['customerId']]
         }]
         return response
 

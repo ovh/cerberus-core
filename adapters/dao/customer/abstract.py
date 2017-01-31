@@ -205,6 +205,8 @@ class CustomerDaoBase(object):
 ###
 #     A DefendantClass : (see abuse.models to customize your DEFENDANT_REVISION_FIELDS)
 #
+#     E.g:
+#
 #     {
 #         'customerId': 'john.doe.123456',  # reference to customer uid in enterprise CRM/DB
 #         'email': 'john.doe@example.com',  <-- REVISION_FIELDS (actual infos in your enterprise CRM/DB)
@@ -254,6 +256,8 @@ class DefendantClass(dict):
 
 ###
 #    A Service : (see abuse.models to customize your SERVICE_FIELDS)
+#
+#    E.g:
 #
 #    {
 #        'serviceId': '123456',  # reference to service uid in enterprise CRM/DB

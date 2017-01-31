@@ -649,6 +649,7 @@ class BusinessRulesHistory(models.Model):
     """
     businessRules = models.ForeignKey(BusinessRules, null=False)
     defendant = models.ForeignKey(Defendant, null=True)
+    service = models.ForeignKey(Service, null=True)
     report = models.ForeignKey(Report, null=True)
     ticket = models.ForeignKey(Ticket, null=True)
     date = models.DateTimeField(auto_now=True)

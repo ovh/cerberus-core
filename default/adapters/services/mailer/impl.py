@@ -63,7 +63,8 @@ class DefaultMailerService(MailerServiceBase):
     """
         Handling basic mailer interactions. Store emails in a naive sqlite DB.
 
-        For this default implementation, emails are not send. You can easily fill the method send_email_with_backend()
+        For this default implementation, emails are not send.
+        You can easily fill the method send_email_with_backend()
     """
     def __init__(self):
         """
@@ -97,14 +98,17 @@ class DefaultMailerService(MailerServiceBase):
             :param str body: The body of the email
             :param str category: `adapters.services.mailer.abstract.EMAIL_VALID_CATEGORIES`
             :param str sender: Eventually the sender of the email (From)
-            :param list attachments: The `worker.parsing.parsed.ParsedEmail.attachments` list : [{'content': ..., 'content_type': ... ,'filename': ...}]
+            :param list attachments: The `worker.parsing.parsed.ParsedEmail.attachments` list:
+                                     [{'content': ..., 'content_type': ... ,'filename': ...}]
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         if not isinstance(ticket, Ticket):
             try:
                 ticket = Ticket.objects.get(id=ticket)
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-                raise MailerServiceException('Ticket %s cannot be found in DB. Skipping...' % (str(ticket)))
+                raise MailerServiceException(
+                    'Ticket %s cannot be found in DB. Skipping...' % (str(ticket))
+                )
         try:
             validate_email(recipient.strip())
         except (AttributeError, TypeError, ValueError, ValidationError):
@@ -116,14 +120,26 @@ class DefaultMailerService(MailerServiceBase):
                 raise MailerServiceException('Invalid email category %s' % category)
 
         # Save contacted provider
-        ticket_providers = list(set(ticket.reportTicket.all().values_list('provider__email', flat=True).distinct()))
+        ticket_providers = list(set(ticket.reportTicket.all().values_list(
+            'provider__email',
+            flat=True
+        ).distinct()))
+
         if recipient in ticket_providers:
             provider = Provider.objects.get(email=recipient)
             if not ticket.contactedProviders.filter(provider__email=recipient).exists():
                 ContactedProvider.objects.create(ticket=ticket, provider=provider)
 
-        sender = settings.EMAIL_FETCHER['cerberus_email'] % (ticket.publicId, category) if not sender else sender
-        self.__update_emails_db(ticket.publicId, sender, recipient, subject, body, category, int(time()))
+        sender = sender or settings.EMAIL_FETCHER['cerberus_email'] % (ticket.publicId, category)
+        self._update_emails_db(
+            ticket.publicId,
+            sender,
+            recipient,
+            subject,
+            body,
+            category,
+            int(time())
+        )
 
         # You can fill this method
         send_email_with_backend(ticket)
@@ -141,9 +157,11 @@ class DefaultMailerService(MailerServiceBase):
             try:
                 ticket = Ticket.objects.get(id=ticket)
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-                raise MailerServiceException('Ticket %s cannot be found in DB. Skipping...' % (str(ticket)))
+                raise MailerServiceException(
+                    'Ticket %s cannot be found in DB. Skipping...' % (str(ticket))
+                )
 
-        self.__check_ticket_emails(ticket)
+        self._check_ticket_emails(ticket)
 
         cursor = self._db_conn.cursor()
         param = (ticket.publicId,)
@@ -166,7 +184,8 @@ class DefaultMailerService(MailerServiceBase):
         emails = sorted(emails, key=lambda k: k.created)
         return emails
 
-    def attach_external_answer(self, ticket, sender, recipient, subject, body, category, attachments=None):
+    def attach_external_answer(self, ticket, sender, recipient, subject,
+                               body, category, attachments=None):
         """
             Can be usefull if an answer for a ticket come from Phone/CRM/API/CustomerUX ...
 
@@ -176,22 +195,33 @@ class DefaultMailerService(MailerServiceBase):
             :param str subject: The subject of the email
             :param str body: The body of the email
             :param str category: `adapters.services.mailer.abstract.EMAIL_VALID_CATEGORIES`
-            :param list attachments: The `worker.parsing.parsed.ParsedEmail.attachments` list : [{'content': ..., 'content_type': ... ,'filename': ...}]
+            :param list attachments: The `worker.parsing.parsed.ParsedEmail.attachments` list:
+                                     [{'content': ..., 'content_type': ... ,'filename': ...}]
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
         """
         if not isinstance(ticket, Ticket):
             try:
                 ticket = Ticket.objects.get(id=ticket)
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-                raise MailerServiceException('Ticket %s cannot be found in DB. Skipping...' % (str(ticket)))
+                raise MailerServiceException(
+                    'Ticket %s cannot be found in DB. Skipping...' % (str(ticket))
+                )
 
         if category:
             category = category.title()
             if category not in EMAIL_VALID_CATEGORIES:
                 raise MailerServiceException('Invalid email category %s' % category)
 
-        self.__check_ticket_emails(ticket)
-        self.__update_emails_db(ticket.publicId, sender, recipient, subject, body, category, int(time()))
+        self._check_ticket_emails(ticket)
+        self._update_emails_db(
+            ticket.publicId,
+            sender,
+            recipient,
+            subject,
+            body,
+            category,
+            int(time())
+        )
 
     def is_email_ticket_answer(self, email):
         """
@@ -218,7 +248,8 @@ class DefaultMailerService(MailerServiceBase):
             :param 'abuse.models.Ticket` ticket: A Cerberus 'abuse.models.Ticket` instance.
             :param str template_codename: The codename of the template
             :param str lang: The langage to use
-            :param int acknowledged_report: Eventually add a report body to the email body (in case of acknowledgment)
+            :param int acknowledged_report: Eventually add a report body to
+                                            the email body (in case of acknowledgment)
             :return: The prefetched email
             :rtype: `adapters.services.mailer.abstract.PrefetchedEmail`
             :raises `adapters.services.mailer.abstract.MailerServiceException`: if any error occur
@@ -227,14 +258,20 @@ class DefaultMailerService(MailerServiceBase):
             try:
                 ticket = Ticket.objects.get(id=ticket)
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-                raise MailerServiceException('Ticket %s cannot be found in DB. Skipping...' % (str(ticket)))
+                raise MailerServiceException(
+                    'Ticket %s cannot be found in DB. Skipping...' % (str(ticket))
+                )
         try:
             mail_template = MailTemplate.objects.get(codename=template_codename)
         except (ObjectDoesNotExist, ValueError):
-            raise MailerServiceException('Email template %s can not be found in DB. Skipping...' % (template_codename))
+            raise MailerServiceException(
+                'Email template %s can not be found in DB. Skipping...' % (template_codename)
+            )
 
         reps = ticket.reportTicket.all().order_by('-receivedDate')[:10]
         phishing_urls = list(set([itm.rawItem for rep in reps for itm in rep.reportItemRelatedReport.filter(itemType='URL')]))
+
+        proof = ticket.proof.filter().values_list('content', flat=True).distinct()
 
         try:
             template = loader.get_template_from_string(mail_template.subject)
@@ -246,6 +283,7 @@ class DefaultMailerService(MailerServiceBase):
             context = Context({
                 'publicId': ticket.publicId,
                 'phishingUrls': phishing_urls,
+                'proof': proof,
             })
             body = template.render(context)
         except (TemplateEncodingError, TemplateSyntaxError):
@@ -267,11 +305,11 @@ class DefaultMailerService(MailerServiceBase):
         """
         pass
 
-    def __check_ticket_emails(self, ticket):
+    def _check_ticket_emails(self, ticket):
         """
             check if emails exist for given ticket
 
-            :raises `adapters.services.mailer.abstract.MailerServiceException`: if no emails are found
+            :raises `adapters.services.mailer.abstract.MailerServiceException`: if no emails
         """
         cursor = self._db_conn.cursor()
         param = (ticket.publicId,)
@@ -279,7 +317,7 @@ class DefaultMailerService(MailerServiceBase):
         if not cursor.fetchone()[0]:
             raise MailerServiceException('No emails found for this ticket')
 
-    def __update_emails_db(self, public_id, sender, recipient, subject, body, category, timestamp):
+    def _update_emails_db(self, public_id, sender, recipient, subject, body, category, timestamp):
         """
             Insert emails infos in db
         """
