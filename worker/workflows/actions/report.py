@@ -112,6 +112,11 @@ class ReportActions(BaseActions):
             acknowledged_report_id=self.report.id
         )
 
+        common.set_ticket_status(self.ticket, 'WaitingAnswer')
+        self.ticket.snoozeDuration = 172800
+        self.ticket.snoozeStart = datetime.now()
+        self.ticket.save()
+
     @rule_action()
     def close_defendant(self):
         """
@@ -217,8 +222,9 @@ class ReportActions(BaseActions):
         """
         """
         if not self.existing_ticket:
-            self.ticket.previousStatus = self.ticket.status
-            self.ticket.status = 'WaitingAnswer'
+            if self.ticket.status != 'WaitingAnswer':
+                self.ticket.previousStatus = self.ticket.status
+                self.ticket.status = 'WaitingAnswer'
             self.ticket.snoozeDuration = seconds
             self.ticket.snoozeStart = datetime.now()
             self.ticket.save()
