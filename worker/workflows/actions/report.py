@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 from abuse.models import Proof
 from django.conf import settings
-from factory import implementations
+from factory.implementation import ImplementationFactory as implementations
 from utils import utils
 from worker.parsing import regexp
 from worker.workflows.engine.actions import rule_action, BaseActions
@@ -117,7 +117,7 @@ class ReportActions(BaseActions):
         """
             Breach of contract
         """
-        implementations.get_singleton_of(
+        implementations.instance.get_singleton_of(
             'ActionServiceBase'
         ).close_defendant(
             ticket=self.ticket
@@ -128,7 +128,7 @@ class ReportActions(BaseActions):
         """
             Close all ̀`abuse.models.Defendant` `abuse.models.Service`
         """
-        implementations.get_singleton_of(
+        implementations.instance.get_singleton_of(
             'ActionServiceBase'
         ).close_all_services(
             ticket=self.ticket
@@ -139,7 +139,7 @@ class ReportActions(BaseActions):
         """
             Close `abuse.models.Ticket` `abuse.models.Service`
         """
-        implementations.get_singleton_of(
+        implementations.instance.get_singleton_of(
             'ActionServiceBase'
         ).close_service(
             ticket=self.ticket

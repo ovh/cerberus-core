@@ -7,7 +7,7 @@
 import json
 from collections import OrderedDict
 
-from factory import implementations
+from factory.implementation import ImplementationFactory as implementations
 from utils import utils
 from worker.common import CDN_REQUEST_LOCK, CDN_REQUEST_REDIS_QUEUE
 from worker.workflows.engine.actions import rule_action, BaseActions
@@ -35,7 +35,7 @@ class EmailReplyActions(BaseActions):
     def cdn_response_update(self, provider):
         """
         """
-        services = implementations.get_singleton_of(
+        services = implementations.instance.get_singleton_of(
             'CustomerDaoBase'
         ).get_services_from_items(
             ips=self.parsed_email.ips,
@@ -59,7 +59,7 @@ class EmailReplyActions(BaseActions):
             email=self.parsed_email.provider
         )
 
-        implementations.get_singleton_of('MailerServiceBase').attach_external_answer(
+        implementations.instance.get_singleton_of('MailerServiceBase').attach_external_answer(
             self.ticket,
             self.parsed_email.provider,
             self.email_recipient,
@@ -91,7 +91,7 @@ class EmailReplyActions(BaseActions):
     @rule_action()
     def try_resend(self):
 
-        emails = implementations.get_singleton_of(
+        emails = implementations.instance.get_singleton_of(
             'MailerServiceBase'
         ).get_emails(self.ticket)
         emails = [email for email in emails if email.category.lower() == 'defendant']
@@ -110,7 +110,7 @@ class EmailReplyActions(BaseActions):
                 self.ticket.defendant.details.spareEmail == self.ticket.defendant.details.email)):
             self.set_ticket_status('Alarm')
         else:  # or retry
-            implementations.get_singleton_of('MailerServiceBase').send_email(
+            implementations.instance.get_singleton_of('MailerServiceBase').send_email(
                 self.ticket,
                 self.ticket.defendant.details.spareEmail,
                 email_to_resend.subject,

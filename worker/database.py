@@ -39,7 +39,7 @@ from abuse.models import (Category, DefendantRevision, Defendant, EmailFilterTag
 
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.kpi.abstract import KPIServiceException
-from factory import implementations
+from factory.implementation import ImplementationFactory as implementations
 from parsing import regexp
 from utils import schema, utils
 from worker import Logger
@@ -141,7 +141,7 @@ def log_action_on_ticket(ticket=None, action=None, user=None, **kwargs):
         ticketStatus=ticket.status,
     )
 
-    if implementations.is_implemented('KPIServiceBase'):
+    if implementations.instance.is_implemented('KPIServiceBase'):
         _generates_kpi_infos(ticket, log_msg)
 
     Logger.debug(
@@ -240,7 +240,7 @@ def _generates_onassign_kpi(ticket):
         Kpi on ticket assignation
     """
     try:
-        implementations.get_singleton_of('KPIServiceBase').new_ticket_assign(ticket)
+        implementations.instance.get_singleton_of('KPIServiceBase').new_ticket_assign(ticket)
     except KPIServiceException as ex:
         Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
 
@@ -250,7 +250,7 @@ def _generates_onclose_kpi(ticket):
         Kpi on ticket close
     """
     try:
-        implementations.get_singleton_of('KPIServiceBase').close_ticket(ticket)
+        implementations.instance.get_singleton_of('KPIServiceBase').close_ticket(ticket)
     except KPIServiceException as ex:
         Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
 
@@ -269,7 +269,7 @@ def _genereates_oncreate_kpi(ticket):
     )
 
     try:
-        implementations.get_singleton_of('KPIServiceBase').new_ticket(ticket)
+        implementations.instance.get_singleton_of('KPIServiceBase').new_ticket(ticket)
     except KPIServiceException as ex:
         Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
 
@@ -494,7 +494,7 @@ def refresh_defendant_infos(defendant_id=None):
     fresh_defendant_infos = None
 
     try:
-        fresh_defendant_infos = implementations.get_singleton_of(
+        fresh_defendant_infos = implementations.instance.get_singleton_of(
             'CustomerDaoBase'
         ).get_customer_infos(
             defendant.customerId
@@ -529,9 +529,9 @@ def log_new_report(report):
         }
     )
 
-    if implementations.is_implemented('KPIServiceBase'):
+    if implementations.instance.is_implemented('KPIServiceBase'):
         try:
-            implementations.get_singleton_of('KPIServiceBase').new_report(report)
+            implementations.instance.get_singleton_of('KPIServiceBase').new_report(report)
         except KPIServiceException as ex:
             Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
 

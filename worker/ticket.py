@@ -46,7 +46,7 @@ from abuse.models import (Category, Comment, ContactedProvider,
                           Resolution, Tag, Ticket, TicketComment,
                           ServiceActionJob, User)
 from adapters.dao.customer.abstract import CustomerDaoException
-from factory import implementations
+from factory.implementation import ImplementationFactory as implementations
 from utils import pglocks, schema, utils
 from worker import Logger
 
@@ -113,7 +113,9 @@ def timeout(ticket_id=None):
     if not _check_timeout_ticket_conformance(ticket):
         return
 
-    action = implementations.get_singleton_of('ActionServiceBase').get_action_for_timeout(ticket)
+    action = implementations.instance.get_singleton_of(
+        'ActionServiceBase'
+    ).get_action_for_timeout(ticket)
     if not action:
         Logger.error(unicode('Ticket {} service {}: action not found, exiting ...'.format(
             ticket_id,
@@ -373,7 +375,7 @@ def mass_contact(ip_address=None, category=None, campaign_name=None,
 
     # Identify service for ip_address
     try:
-        services = implementations.get_singleton_of(
+        services = implementations.instance.get_singleton_of(
             'CustomerDaoBase'
         ).get_services_from_items(ips=[ip_address])
         schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
@@ -491,7 +493,7 @@ def __send_mass_contact_email(ticket, email_subject, email_body):
     })
     body = template.render(context)
 
-    implementations.get_singleton_of('MailerServiceBase').send_email(
+    implementations.instance.get_singleton_of('MailerServiceBase').send_email(
         ticket,
         ticket.defendant.details.email,
         subject,
@@ -547,7 +549,7 @@ def __save_email(filename, email):
         :param str filename: The filename of the email
         :param str email: The content of the email
     """
-    with implementations.get_instance_of('StorageServiceBase', common.STORAGE_DIR) as cnx:
+    with implementations.instance.get_instance_of('StorageServiceBase', common.STORAGE_DIR) as cnx:
         cnx.write(filename, email.encode('utf-8'))
         Logger.info(unicode('Email %s pushed to Storage Service' % (filename)))
 
@@ -661,7 +663,7 @@ def close_emails_thread(ticket_id=None):
         Logger.error(unicode('Ticket %d cannot be found in DB. Skipping...' % (ticket)))
         return
 
-    implementations.get_singleton_of(
+    implementations.instance.get_singleton_of(
         'MailerServiceBase'
     ).close_thread(ticket)
 

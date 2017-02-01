@@ -128,8 +128,6 @@ class ImplementationFactory(object):
     def __register_impl(self, base, class_obj):
         self._registered_implementations[base.__name__] = class_obj
 
-implementations = ImplementationFactory()
-
 # Before instantiate the singleton, check it has not already been done.
 if not hasattr(ImplementationFactory, 'instance'):
     ImplementationFactory.instance = ImplementationFactory()

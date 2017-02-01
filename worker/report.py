@@ -38,13 +38,13 @@ from abuse.models import (AttachedDocument, Defendant, Proof, Report,
                           ReportItem, ReportThreshold, Service, Ticket,
                           User, BusinessRules, BusinessRulesHistory)
 from adapters.services.search.abstract import SearchServiceException
-from factory import implementations
+from factory.implementation import ImplementationFactory as implementations
 from parsing.parser import EmailParser
 from utils import pglocks, schema, utils
+from worker.workflows.actions import CDNRequestActions, EmailReplyActions, ReportActions
+from worker.workflows.engine import run
+from worker.workflows.variables import CDNRequestVariables, EmailReplyVariables, ReportVariables
 from worker import Logger
-from .workflows.actions import CDNRequestActions, EmailReplyActions, ReportActions
-from .workflows.engine import run
-from .workflows.variables import CDNRequestVariables, EmailReplyVariables, ReportVariables
 
 Parser = EmailParser()
 
@@ -94,7 +94,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         return
 
     # Check if it's an answer to a ticket(s)
-    tickets = implementations.get_singleton_of(
+    tickets = implementations.instance.get_singleton_of(
         'MailerServiceBase'
     ).is_email_ticket_answer(abuse_report)
     if tickets:
@@ -104,7 +104,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
         return
 
     # Check if items are linked to customer and get corresponding services
-    services = implementations.get_singleton_of(
+    services = implementations.instance.get_singleton_of(
         'CustomerDaoBase'
     ).get_services_from_items(
         urls=abuse_report.urls,
@@ -131,7 +131,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
             _send_ack(report, lang=lang)
 
     # Index to SearchService
-    if implementations.is_implemented('SearchServiceBase'):
+    if implementations.instance.is_implemented('SearchServiceBase'):
         _index_report_to_searchservice(abuse_report, filename, [rep.id for rep in created_reports])
 
     Logger.info(unicode('All done successfully for email %s' % (filename)))
@@ -320,7 +320,7 @@ def _index_report_to_searchservice(parsed_email, filename, reports_id):
     """
     try:
         Logger.debug(unicode('Pushing email %s document to SearchService' % (filename)))
-        implementations.get_singleton_of('SearchServiceBase').index_email(
+        implementations.instance.get_singleton_of('SearchServiceBase').index_email(
             parsed_email,
             filename,
             reports_id
@@ -386,7 +386,7 @@ def _save_attachments(filename, attachments, reports=None, tickets=None):
         storage_filename = storage_filename.encode('utf-8')
         storage_filename = storage_filename + attachment['filename']
 
-        with implementations.get_instance_of('StorageServiceBase', common.STORAGE_DIR) as cnx:
+        with implementations.instance.get_instance_of('StorageServiceBase', common.STORAGE_DIR) as cnx:
             cnx.write(storage_filename, attachment['content'])
 
         attachment_obj = AttachedDocument.objects.create(
@@ -410,7 +410,7 @@ def _save_email(filename, email):
         :param str filename: The filename of the email
         :param str email: The content of the email
     """
-    with implementations.get_instance_of('StorageServiceBase', common.STORAGE_DIR) as cnx:
+    with implementations.instance.get_instance_of('StorageServiceBase', common.STORAGE_DIR) as cnx:
         cnx.write(filename, email)
         Logger.info(unicode('Email %s pushed to Storage Service' % (filename)))
 
@@ -616,7 +616,7 @@ def _send_emails_invalid_report(report):
         )
         report.ticket.save()
         Logger.info(unicode('Mail sent to provider'))
-        implementations.get_singleton_of(
+        implementations.instance.get_singleton_of(
             'MailerServiceBase'
         ).close_thread(report.ticket)
 

@@ -34,7 +34,7 @@ import database
 
 from abuse.models import Proof, Report, Tag, Ticket
 from adapters.services.phishing.abstract import PhishingServiceException
-from factory import implementations
+from factory.implementation import ImplementationFactory as implementations
 from worker import Logger
 
 DOWN_THRESHOLD = settings.GENERAL_CONFIG['phishing']['down_threshold']
@@ -90,7 +90,7 @@ def _update_item_status(item, country='FR', try_screenshot=True):
 
     try:
         Logger.debug(unicode('Checking status for url %s' % (item.rawItem,)))
-        response = implementations.get_singleton_of(
+        response = implementations.instance.get_singleton_of(
             'PhishingServiceBase'
         ).ping_url(
             item.rawItem,
@@ -140,7 +140,7 @@ def close_because_all_down(report=None, denied_by=None):
         _send_email(report.ticket, report.provider.email, settings.CODENAMES['no_more_content'])
         report.ticket.save()
         Logger.info(unicode('Mail sent to provider'))
-        implementations.get_singleton_of('MailerServiceBase').close_thread(report.ticket)
+        implementations.instance.get_singleton_of('MailerServiceBase').close_thread(report.ticket)
 
         # Delete temp proof(s)
         for proof in temp_proofs:
@@ -196,7 +196,7 @@ def block_url_and_mail(ticket_id=None, report_id=None):
         report = report_id
 
     for item in report.reportItemRelatedReport.filter(itemType='URL'):
-        implementations.get_singleton_of('PhishingServiceBase').block_url(item.rawItem, item.report)
+        implementations.instance.get_singleton_of('PhishingServiceBase').block_url(item.rawItem, item.report)
 
     database.add_phishing_blocked_tag(report)
     _send_email(
@@ -226,7 +226,7 @@ def unblock_url(url=None):
     if not url:
         return
 
-    implementations.get_singleton_of('PhishingServiceBase').unblock_url(url)
+    implementations.instance.get_singleton_of('PhishingServiceBase').unblock_url(url)
 
 
 def is_all_down_for_ticket(ticket, last=5, url_only=False):
@@ -258,5 +258,5 @@ def feedback_to_phishing_service(screenshot_id=None, feedback=None):
         :param str screenshot_id: The uuid of the screenshot_id
         :param bool feedback: Yes or not it's a phishing url
     """
-    implementations.get_singleton_of('PhishingServiceBase').post_feedback(screenshot_id, feedback)
+    implementations.instance.get_singleton_of('PhishingServiceBase').post_feedback(screenshot_id, feedback)
     Logger.debug(unicode('Feedback %s sent for %s' % (feedback, screenshot_id)))
