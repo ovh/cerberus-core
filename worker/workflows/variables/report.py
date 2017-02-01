@@ -165,6 +165,18 @@ class ReportVariables(BaseVariables):
         """
         return [self.report.defendant.details.legalForm]
 
+    @boolean_rule_variable()
+    def defendant_is_vip(self):
+        """
+        """
+        return self.report.defendant.details.isVIP
+
+    @boolean_rule_variable()
+    def defendant_is_internal(self):
+        """
+        """
+        return self.report.defendant.details.isInternal
+
     @select_multiple_rule_variable()
     def defendant_country(self):
         """

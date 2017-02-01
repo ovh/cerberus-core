@@ -102,6 +102,12 @@ def create_request_ticket(report, domain_to_request, provider):
     report.ticket = ticket
     report.status = 'Attached'
 
+    # Clear old entries
+    for entry in utils.redis.lrange(common.CDN_REQUEST_REDIS_QUEUE % provider, 0, -1):
+        entry_json = json.loads(entry)
+        if entry_json['domain'] == domain_to_request:
+            utils.redis.lrem(common.CDN_REQUEST_REDIS_QUEUE % provider, entry)
+
     utils.redis.rpush(
         common.CDN_REQUEST_REDIS_QUEUE % provider,
         json.dumps({

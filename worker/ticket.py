@@ -84,7 +84,8 @@ def delay_jobs(ticket=None, delay=None, back=True):
             return
 
     # a job is here a tuple (Job instance, datetime instance)
-    pending_jobs = {job[0].id: job for job in utils.scheduler.get_jobs(until=timedelta(days=7), with_times=True)}
+    pending_jobs = utils.scheduler.get_jobs(until=timedelta(days=7), with_times=True)
+    pending_jobs = {job[0].id: job for job in pending_jobs}
 
     for job in ticket.jobs.all():
         if pending_jobs.get(job.asynchronousJobId):
@@ -127,7 +128,7 @@ def timeout(ticket_id=None):
         return
 
     # Getting ip for action
-    ip_addr = _get_ip_for_action(ticket)
+    ip_addr = get_ip_for_action(ticket)
     if not ip_addr:
         Logger.error(unicode('Error while getting IP for action, exiting'))
         common.set_ticket_status(ticket, 'ActionError', reset_snooze=True)
@@ -156,7 +157,7 @@ def timeout(ticket_id=None):
     _close_ticket(ticket, reason=settings.CODENAMES['fixed'], service_blocked=True)
 
 
-def _get_ip_for_action(ticket):
+def get_ip_for_action(ticket):
     """
         Return the IP address attached to given ̀`abuse.models.Ticket`.
         If multiple are detected, return None
@@ -194,15 +195,21 @@ def _get_ip_for_action(ticket):
 def _check_timeout_ticket_conformance(ticket):
 
     if not ticket.defendant or not ticket.service:
-        Logger.error(unicode('Ticket %d is invalid (no defendant/service), skipping...' % (ticket.id)))
+        Logger.error(unicode(
+            'Ticket %d is invalid (no defendant/service), skipping...' % (ticket.id))
+        )
         return False
 
     if ticket.status.lower() in ['closed', 'answered']:
-        Logger.error(unicode('Ticket %d is invalid (no defendant/service or not Alarm), Skipping...' % (ticket.id)))
+        Logger.error(unicode(
+            'Ticket %d is invalid (no defendant/service or not Alarm), Skipping...' % (ticket.id))
+        )
         return False
 
     if ticket.category.name.lower() not in ['phishing', 'copyright']:
-        Logger.error(unicode('Ticket %d is in wrong category (%s, Skipping...' % (ticket.id, ticket.category.name)))
+        Logger.error(unicode(
+            'Ticket %d is in wrong category (%s, Skipping...' % (ticket.id, ticket.category.name))
+        )
         return False
 
     if ticket.treatedBy:
@@ -380,7 +387,15 @@ def mass_contact(ip_address=None, category=None, campaign_name=None,
     if services:
         Logger.debug(unicode('creating report/ticket for ip address %s' % (ip_address)))
         with pglocks.advisory_lock('cerberus_lock'):
-            _create_contact_tickets(services, campaign_name, ip_address, category, email_subject, email_body, user)
+            _create_contact_tickets(
+                services,
+                campaign_name,
+                ip_address,
+                category,
+                email_subject,
+                email_body,
+                user
+            )
         return True
     else:
         Logger.debug(unicode('no service found for ip address %s' % (ip_address)))
@@ -388,7 +403,8 @@ def mass_contact(ip_address=None, category=None, campaign_name=None,
 
 
 @transaction.atomic
-def _create_contact_tickets(services, campaign_name, ip_address, category, email_subject, email_body, user):
+def _create_contact_tickets(services, campaign_name, ip_address, category,
+                            email_subject, email_body, user):
 
     # Create fake report
     report_subject = 'Campaign %s for ip %s' % (campaign_name, ip_address)
