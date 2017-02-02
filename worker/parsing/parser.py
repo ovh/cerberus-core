@@ -58,7 +58,8 @@ TEMPLATE_DIR = '/templates'
 
 class ParsedEmail(dict):
     """
-        An abuse parsed_email (syntactic sugar of dict), not using namedtuple because of dynamic setattr
+        An abuse parsed_email (syntactic sugar of dict),
+        not using namedtuple because of dynamic setattr
     """
     def __init__(self):
         self.category = 'Other'
@@ -86,7 +87,7 @@ class EmailParser(object):
 
     def __init__(self):
         self._parser = Parser()
-        self._templates = self.__load_templates()
+        self._templates = self._load_templates()
 
     def parse(self, content):
         """
@@ -130,17 +131,17 @@ class EmailParser(object):
         # Checking if a default category is set for this provider
         try:
             prov = Provider.objects.get(email=parsed_email.provider)
-            parsed_email.category = prov.defaultCategory_id if prov.defaultCategory_id else parsed_email.category
+            parsed_email.category = prov.defaultCategory_id or parsed_email.category
         except (KeyError, ObjectDoesNotExist):
             pass
 
         # If no category, checking if provider email match a generic provider
         if parsed_email.category not in CATEGORIES:
-            for reg, val in regexp.PROVIDERS_GENERIC.iteritems():  # For 123854689@spamcop for example
+            for reg, val in regexp.PROVIDERS_GENERIC.iteritems():  # E.g: 123854689@spamcop
                 if reg.match(parsed_email.provider):
                     try:
                         prov = Provider.objects.get(email=val)
-                        parsed_email.category = prov.defaultCategory_id if prov.defaultCategory_id else DEFAULT_CATEGORY
+                        parsed_email.category = prov.defaultCategory_id or DEFAULT_CATEGORY
                         break
                     except (KeyError, ObjectDoesNotExist):
                         parsed_email.category = DEFAULT_CATEGORY
@@ -202,7 +203,10 @@ class EmailParser(object):
                 content = message.as_string()
 
             if content:
-                body += utils.decode_every_charset_in_the_world(content, message.get_content_charset())
+                body += utils.decode_every_charset_in_the_world(
+                    content,
+                    message.get_content_charset()
+                )
 
         return body, attachments
 
@@ -243,14 +247,14 @@ class EmailParser(object):
                         res = re.findall(val['pattern'], content, re.IGNORECASE)
                     if res:
                         if 'transform' in val:
-                            res = self.__transform(res[0])
+                            res = self._transform(res[0])
                         setattr(parsed_email, key, res)
                 elif 'value' in val:
                     setattr(parsed_email, key, val['value'])
         except AttributeError:
             pass
 
-    def __load_templates(self):
+    def _load_templates(self):
         """
             Loads provider template from TEMPLATE_DIR
 
@@ -269,7 +273,7 @@ class EmailParser(object):
 
         return templates
 
-    def __transform(self, content):
+    def _transform(self, content):
         """
             Try to get parsed_email category with defined keywords
 
@@ -398,7 +402,8 @@ def get_received_from_headers(headers):
             if re.search('^from', current):
                 # Only keep dns and ip once
                 current = utils.decode_every_charset_in_the_world(current)
-                final = current.splitlines()[0].split(";")[0].replace("from ", "").replace("localhost", "").replace("by", "")
+                final = current.splitlines()[0].split(";")[0].replace("from ", "")
+                final = final.replace("localhost", "").replace("by", "")
                 result.append(final)
 
     return result
@@ -454,7 +459,7 @@ def clean_parsed_email_items(parsed_email):
         :param `worker.parsing.parser.ParsedEmail` parsed_email: The parsed email
     """
     for attrib in [a for a in ['urls', 'ips', 'fqdn'] if getattr(parsed_email, a)]:
-        setattr(parsed_email, attrib, [__clean_item(item, attrib) for item in getattr(parsed_email, attrib)])
+        setattr(parsed_email, attrib, [_clean_item(item, attrib) for item in getattr(parsed_email, attrib)])
 
     # Clean duplicates
     for att in parsed_email.keys():
@@ -475,7 +480,7 @@ def clean_parsed_email_items(parsed_email):
             parsed_email.fqdn = [fqdn for fqdn in parsed_email.fqdn if not re.search(regexp.PROTO_RE + re.escape(fqdn), urls, re.I)]
 
 
-def __clean_item(item, attrib):
+def _clean_item(item, attrib):
     """ Remove extra stuff from item
 
         :param str item: A `worker.parsing.parser.ParsedEmail` item
