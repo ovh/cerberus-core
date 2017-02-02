@@ -41,9 +41,16 @@ from adapters.services.search.abstract import SearchServiceException
 from factory.implementation import ImplementationFactory as implementations
 from parsing.parser import EmailParser
 from utils import pglocks, schema, utils
-from worker.workflows.actions import CDNRequestActions, EmailReplyActions, ReportActions
-from worker.workflows.engine import run
-from worker.workflows.variables import CDNRequestVariables, EmailReplyVariables, ReportVariables
+
+try:
+    from worker.workflows.actions import CDNRequestActions, EmailReplyActions, ReportActions
+    from worker.workflows.engine import run
+    from worker.workflows.variables import CDNRequestVariables, EmailReplyVariables, ReportVariables
+except ImportError:
+    from .workflows.actions import CDNRequestActions, EmailReplyActions, ReportActions
+    from .workflows.engine import run
+    from .workflows.variables import CDNRequestVariables, EmailReplyVariables, ReportVariables
+
 from worker import Logger
 
 Parser = EmailParser()
