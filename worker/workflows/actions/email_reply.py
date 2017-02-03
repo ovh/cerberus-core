@@ -86,6 +86,7 @@ class EmailReplyActions(BaseActions):
         common.set_ticket_status(
             self.ticket,
             status,
+            reset_snooze=True
         )
 
     @rule_action()
