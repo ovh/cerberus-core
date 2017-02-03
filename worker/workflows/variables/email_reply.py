@@ -42,6 +42,18 @@ class EmailReplyVariables(BaseVariables):
         """
         return self.parsed_email.provider.lower()
 
+    @string_rule_variable()
+    def email_body(self):
+        """
+        """
+        return self.parsed_email.body
+
+    @string_rule_variable()
+    def email_subject(self):
+        """
+        """
+        return self.parsed_email.subject
+
     @boolean_rule_variable(params=[{'fieldType': FIELD_TEXT, 'name': 'provider'}])
     def ticket_in_cdn_cache(self, provider):
         """

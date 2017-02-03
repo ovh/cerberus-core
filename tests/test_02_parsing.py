@@ -142,7 +142,6 @@ class TestParser(GlobalTestCase):
         parsed_email = self.email_parser.parse(content)
 
         self.assertEqual('Other', parsed_email.category)
-        self.assertEqual(False, parsed_email.ack)
         self.assertEqual(True, parsed_email.trusted)
         self.assertIn(u'é"', parsed_email.body)
         self.assertEqual([], parsed_email.attachments)
@@ -196,7 +195,6 @@ class TestParser(GlobalTestCase):
         parsed_email = self.email_parser.parse(content)
 
         self.assertEqual('Spam', parsed_email.category)
-        self.assertEqual(False, parsed_email.ack)
         self.assertEqual(False, parsed_email.trusted)
         self.assertEqual([], parsed_email.attachments)
         self.assertEqual(1, len(parsed_email.ips))
@@ -248,7 +246,6 @@ class TestParser(GlobalTestCase):
         parsed_email = self.email_parser.parse(content)
 
         self.assertEqual('Copyright', parsed_email.category)
-        self.assertEqual(False, parsed_email.ack)
         self.assertEqual([], parsed_email.attachments)
         self.assertEqual(None, parsed_email.ips)
         self.assertIn('http://re.ldh.be/image/1e/55755fc935709a87ac80251e.jpg', parsed_email.urls)
@@ -300,7 +297,6 @@ class TestParser(GlobalTestCase):
         parsed_email = self.email_parser.parse(content)
 
         self.assertEqual('Copyright', parsed_email.category)
-        self.assertEqual(False, parsed_email.ack)
         self.assertNotIn(u'é"', parsed_email.body)
         self.assertEqual(2, len(parsed_email.attachments))
         self.assertIn('content', parsed_email.attachments[0])
@@ -354,7 +350,6 @@ class TestParser(GlobalTestCase):
         parsed_email = self.email_parser.parse(content)
 
         self.assertEqual('Copyright', parsed_email.category)
-        self.assertEqual(False, parsed_email.ack)
         self.assertEqual(0, len(parsed_email.attachments))
         self.assertEqual(None, parsed_email.ips)
         self.assertIn('http://www.example.com/share/file/AAAAAAAAAAAAAAAAAAAAAAAAAA/', parsed_email.urls)

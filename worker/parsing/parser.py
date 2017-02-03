@@ -114,7 +114,6 @@ class EmailParser(object):
         setattr(parsed_email, 'recipients', get_recipients_from_headers(headers))
         setattr(parsed_email, 'subject', get_subject_from_headers(headers))
         setattr(parsed_email, 'trusted', is_provider_trusted(headers))
-        setattr(parsed_email, 'ack', is_email_ack(parsed_email.provider, parsed_email.subject, body))
 
         content_to_parse = parsed_email.subject + '\n' + parsed_email.body
         templates = get_ordered_template_names_list(parsed_email, content_to_parse)
@@ -127,6 +126,14 @@ class EmailParser(object):
             self.update_parsed_email(parsed_email, content_to_parse, template)
             if any((parsed_email.urls, parsed_email.ips, parsed_email.fqdn)) or template.get('fallback') is False:
                 break
+
+        # Try attachments
+        if not any((parsed_email.urls, parsed_email.ips, parsed_email.fqdn)):
+            template = self.get_template('default')
+            for attachment in parsed_email.attachments:
+                self.update_parsed_email(parsed_email, attachment['content'], template)
+                if any((parsed_email.urls, parsed_email.ips, parsed_email.fqdn)):
+                    break
 
         # Checking if a default category is set for this provider
         try:
@@ -539,26 +546,6 @@ def get_online_logs(logs):
         return attachment
     except (UnicodeDecodeError, UnicodeEncodeError, utils.RequestException):
         return None
-
-
-def is_email_ack(provider, subject, body):
-    """
-        Checking if email is not an automatic answer
-
-        :param str provider: The email of the provider
-        :param str subject: The subject of the email
-        :param str body: The body of the email
-        :rtype: bool
-        :return: If it's a automatic answer
-    """
-    resp = False
-    if provider in regexp.ACK_RE:
-        subject_re = regexp.ACK_RE[provider]['SUBJECT']
-        body_re = regexp.ACK_RE[provider]['BODY']
-        if re.search(body_re, body, re.IGNORECASE) and re.search(subject_re, subject, re.IGNORECASE):
-            resp = True
-
-    return resp
 
 
 def get_ordered_template_names_list(parsed_email, content_to_parse):

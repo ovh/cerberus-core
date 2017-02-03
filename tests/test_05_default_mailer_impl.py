@@ -72,7 +72,7 @@ class TestDefaultMailerImpl(GlobalTestCase):
         emails = self._impl.get_emails(self._ticket)
         self.assertEqual(2, len(emails))
         self.assertRaises(MailerServiceException, lambda: self._impl.send_email(self._ticket, 'test@test.com', 'test', 'test', 'InvalidCategory'))
-        self._ticket.publicId = 'BBBBBBBBBB'
+        self._ticket.publicId = 'ZZZZZZZZZZ'
         self.assertRaises(MailerServiceException, lambda: self._impl.get_emails(self._ticket))
         self.assertRaises(MailerServiceException, lambda: self._impl.send_email(self._ticket, 'test', 'test', 'test', 'Defendant'))
 

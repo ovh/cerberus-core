@@ -64,12 +64,4 @@ PROVIDERS_GENERIC = {
     re.compile(r'(.*@alpa\.asso\.fr)', re.IGNORECASE): '*@alpa.asso.fr',
 }
 
-ACK_RE = {
-    'robot@spamhaus.org': {
-        'SUBJECT': r'\[SBL\s*ACK\]',
-        'BODY': r'Ack\s*to\s*Message\s*ID',
-    }
-}
-
-
 ACNS_PROOF = re.compile(r'(?:Dear Sir or Madam|On behalf of)(\n|.|\s)*?(<|---\s*Start)', re.MULTILINE)

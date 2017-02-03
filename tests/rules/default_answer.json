@@ -12,10 +12,16 @@
             }
         ], 
         "conditions": {
-            "all": []
+            "all": [
+                {
+                    "name": "category", 
+                    "operator": "non_empty", 
+                    "value": "true"
+                }
+            ]
         }
     }, 
-    "name": "default", 
-    "orderId": 50, 
+    "name": "default_answer", 
+    "orderId": 100, 
     "rulesType": "EmailReply"
 }
