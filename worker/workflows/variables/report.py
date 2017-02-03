@@ -30,12 +30,12 @@ class ReportVariables(BaseVariables):
         if not isinstance(is_trusted, bool):
             is_trusted = False
 
-        recipients = []
+        self.recipients = []
         self.trusted = report.provider.trusted or is_trusted
         self.existing_ticket = bool(ticket)
 
         if parsed_email:
-            recipients = parsed_email.recipients
+            self.recipients = parsed_email.recipients
             self.trusted = parsed_email.trusted or self.trusted
 
         self.parsed_email = parsed_email
@@ -43,7 +43,7 @@ class ReportVariables(BaseVariables):
         self.ticket = ticket
         self.attibutes_tags = database.get_tags(
             report.provider,
-            recipients,
+            self.recipients,
             report.subject,
             report.body
         )
@@ -75,6 +75,12 @@ class ReportVariables(BaseVariables):
         """
         """
         return [self.report.provider.email.lower()]
+
+    @select_multiple_rule_variable()
+    def report_recipients(self):
+        """
+        """
+        return self.recipients
 
     @string_rule_variable()
     def report_body(self):
