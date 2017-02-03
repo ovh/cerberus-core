@@ -643,15 +643,15 @@ def cancel_rq_scheduler_jobs(ticket_id=None, status='answered'):
         Logger.error(unicode('Ticket %d cannot be found in DB. Skipping...' % (ticket)))
         return
 
-    for job in utils.scheduler.get_jobs():
-        if job.func_name in ASYNC_JOB_TO_CANCEL and job.kwargs['ticket_id'] == ticket.id:
-            utils.scheduler.cancel(job.id)
-
     for job in ticket.jobs.all():
         if job.asynchronousJobId in utils.scheduler:
             utils.scheduler.cancel(job.asynchronousJobId)
             job.status = 'cancelled by %s' % status
             job.save()
+
+    for job in utils.scheduler.get_jobs():
+        if job.func_name in ASYNC_JOB_TO_CANCEL and job.kwargs['ticket_id'] == ticket.id:
+            utils.scheduler.cancel(job.id)
 
 
 def close_emails_thread(ticket_id=None):
