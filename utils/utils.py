@@ -251,7 +251,7 @@ def get_url_hostname(url):
         :return: the hostname or None
     """
     try:
-        validate = URLValidator()
+        validate = URLValidator(schemes=('http', 'https', 'ftp', 'ftps', 'rtsp', 'rtmp'))
         validate(url)
     except (ValueError, ValidationError):
         return None

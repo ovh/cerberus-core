@@ -382,7 +382,7 @@ def _get_item_ip_hostname_url(item):
     """
     ip_addr = hostname = url = None
     try:
-        validate = URLValidator()
+        validate = URLValidator(schemes=('http', 'https', 'ftp', 'ftps', 'rtsp', 'rtmp'))
         validate(item['rawItem'])
         item['itemType'] = 'URL'
         url = item['rawItem']
@@ -484,7 +484,7 @@ def get_http_headers(url):
 
     url = _get_deobfuscate_item(url)
     try:
-        validate = URLValidator()
+        validate = URLValidator(schemes=('http', 'https', 'ftp', 'ftps', 'rtsp', 'rtmp'))
         validate(url)
     except ValidationError:
         raise BadRequest('Not a valid URL')
