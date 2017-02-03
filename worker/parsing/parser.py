@@ -459,7 +459,10 @@ def clean_parsed_email_items(parsed_email):
         :param `worker.parsing.parser.ParsedEmail` parsed_email: The parsed email
     """
     for attrib in [a for a in ['urls', 'ips', 'fqdn'] if getattr(parsed_email, a)]:
-        setattr(parsed_email, attrib, [_clean_item(item, attrib) for item in getattr(parsed_email, attrib)])
+        items = []
+        for item in getattr(parsed_email, attrib):
+            items.append(_clean_item(item, attrib))
+        setattr(parsed_email, attrib, items)
 
     # Clean duplicates
     for att in parsed_email.keys():
@@ -468,16 +471,27 @@ def clean_parsed_email_items(parsed_email):
 
     # Remove unwanted ip_addr
     if getattr(parsed_email, 'ips') and len(parsed_email.ips):
-        parsed_email.ips = [ip_addr for ip_addr in parsed_email.ips if utils.is_valid_ipaddr(ip_addr)]
-        parsed_email.ips = [ip_addr for ip_addr in parsed_email.ips if not utils.is_ipaddr_ignored(ip_addr)]
+        valid = []
+        for ip_addr in parsed_email.ips:
+            if utils.is_valid_ipaddr(ip_addr) and not utils.is_ipaddr_ignored(ip_addr):
+                valid.append(ip_addr)
+        parsed_email.ips = valid
 
     # If parsed ip/fqdn are present in url, only keeping url
     if getattr(parsed_email, 'urls') and len(parsed_email.urls):
         urls = ' '.join(parsed_email.urls)
         if getattr(parsed_email, 'ips'):
-            parsed_email.ips = [ip_addr for ip_addr in parsed_email.ips if not re.search(regexp.PROTO_RE + re.escape(ip_addr), urls, re.I)]
+            valid = []
+            for ip_addr in parsed_email.ips:
+                if not re.search(regexp.PROTO_RE + re.escape(ip_addr), urls, re.I):
+                    valid.append(ip_addr)
+            parsed_email.ips = valid
         if getattr(parsed_email, 'fqdn'):
-            parsed_email.fqdn = [fqdn for fqdn in parsed_email.fqdn if not re.search(regexp.PROTO_RE + re.escape(fqdn), urls, re.I)]
+            valid = []
+            for fqdn in parsed_email.fqdn:
+                if not re.search(regexp.PROTO_RE + re.escape(fqdn), urls, re.I):
+                    valid.append(fqdn)
+            parsed_email.fqdn = valid
 
 
 def _clean_item(item, attrib):

@@ -28,10 +28,10 @@ TEMPLATE = {
     'email': 'operations@friendmts.com',
     'regexp': {
         'ips': {
-            'pattern': r'(?:ip\s*address\s*:\s*)' + regexp.IPV4,
+            'pattern': r'(?:ip\s*address\s*:\s*|IP_Address\s*>\s*)' + regexp.IPV4,
         },
         'urls': {
-            'pattern': r'(?:tcUrl\s*:\s*)' + regexp.URL,
+            'pattern': r'(?:tcUrl\s*:\s*|URL_Base\s*>\s*)' + regexp.URL,
         },
         'category': {
             'value': 'Copyright'
