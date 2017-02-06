@@ -7,6 +7,7 @@
 import json
 from collections import OrderedDict
 
+from abuse.models import ReportItem
 from factory.implementation import ImplementationFactory as implementations
 from utils import utils
 from worker.common import CDN_REQUEST_LOCK, CDN_REQUEST_REDIS_QUEUE
@@ -47,7 +48,7 @@ class EmailReplyActions(BaseActions):
                 'Alarm',
             )
         else:
-            update_ticket(services, self.ticket, provider)
+            update_ticket(services, self.ticket, self.parsed_email.ips, provider)
 
     @rule_action()
     def attach_external_answer(self):
@@ -151,7 +152,7 @@ def update_redis_cache(ticket_id, defendant_id, service_id, provider):
             return
 
 
-def update_ticket(services, ticket, provider):
+def update_ticket(services, ticket, ips, provider):
     """
         Update ticket with defendant/service infos
     """
@@ -170,3 +171,14 @@ def update_ticket(services, ticket, provider):
         defendant=defendant,
         service=service
     )
+
+    ip_addr = ips[0]
+
+    item_dict = {
+        'itemType': 'IP',
+        'report_id': ticket.reportTicket.first().id,
+        'rawItem': ip_addr,
+    }
+
+    item_dict.update(utils.get_reverses_for_item(ip_addr, nature='IP'))
+    ReportItem.objects.create(**item_dict)

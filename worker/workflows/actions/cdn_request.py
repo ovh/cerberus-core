@@ -12,7 +12,7 @@ from time import mktime
 
 from abuse.models import Defendant, Proof, Service, Ticket
 from utils import utils
-from worker import common
+from worker import database, common
 from worker.workflows.engine.actions import rule_action, BaseActions
 from worker.workflows.engine.fields import FIELD_TEXT
 
@@ -48,6 +48,12 @@ class CDNRequestActions(BaseActions):
                 self.report.service = service
             self.report.ticket = ticket
             self.report.status = 'Attached'
+            database.log_action_on_ticket(
+                ticket=ticket,
+                action='attach_report',
+                new_ticket=False,
+                report=self.report
+            )
         else:
             create_request_ticket(self.report, self.domain_to_request, provider)
 

@@ -170,24 +170,6 @@ class TestWorkers(GlobalTestCase):
         self.assertEqual(2, defendant.details.id)
         self.assertEqual('Doe', defendant.details.name)
 
-    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
-    def test_report_threshold(self, mock_rq):
-        """
-        """
-        from worker import report
-
-        mock_rq.return_value = None
-        sample = self._samples['sample2']
-        content = sample.read()
-        report.create_from_email(email_content=content)
-        report.create_ticket_with_threshold()
-        cerberus_report = Report.objects.last()
-        self.assertEqual('New', cerberus_report.status)
-        ReportThreshold.objects.all().update(threshold=1)
-        report.create_ticket_with_threshold()
-        cerberus_report = Report.objects.last()
-        self.assertEqual('Attached', cerberus_report.status)
-
     @patch('rq.queue.Queue.enqueue')
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
     def test_ticket_from_phishtocheck(self, mock_rq, mock_rq_enqueue):

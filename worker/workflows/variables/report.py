@@ -7,7 +7,8 @@
 
 from datetime import datetime, timedelta
 
-from abuse.models import BusinessRulesHistory, Report, Ticket
+from abuse.models import BusinessRulesHistory, Report, Ticket, ReportThreshold
+from django.db.models import Q
 from django.conf import settings
 from worker import database, phishing
 from worker.workflows.engine.fields import FIELD_NO_INPUT, FIELD_NUMERIC, FIELD_TEXT
@@ -194,14 +195,35 @@ class ReportVariables(BaseVariables):
         """
         """
         return Report.objects.filter(
-            defendant=self.report.defendant
+            ~Q(status='Archived'),
+            defendant=self.report.defendant,
         ).count()
+
+    @boolean_rule_variable()
+    def report_ticket_threshold(self):
+        """
+        """
+        thres = ReportThreshold.objects.filter(
+            category=self.report.category
+        ).last()
+        if not thres:
+            return False
+
+        reports_count = Report.objects.filter(
+            defendant=self.report.defendant,
+            service=self.report.service,
+            category=self.report.category,
+            status='New',
+            receivedDate__gte=datetime.now() - timedelta(days=thres.interval)
+        ).count()
+        return reports_count >= thres.threshold
 
     @numeric_rule_variable()
     def ticket_count(self):
         """
         """
         return Ticket.objects.filter(
+            ~Q(status='Closed'),
             defendant=self.report.defendant
         ).count()
 
