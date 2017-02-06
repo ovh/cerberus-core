@@ -18,24 +18,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-    Parsing template for operations@friendmediatech.com
+    Generic template for X-Arf
 """
 
 from worker.parsing import regexp
 
-
 TEMPLATE = {
-    'fallback': False,
-    'email': 'operations@friendmediatech.com',
+    'email': 'fail2ban',
+    'fallback': True,
     'regexp': {
         'ips': {
-            'pattern': r'(?:ip\s*address\s*:\s*|IP_Address\s*>\s*)' + regexp.IPV4,
-        },
-        'urls': {
-            'pattern': r'(?:tcUrl\s*:\s*|URL_Base\s*>\s*)' + regexp.URL,
+            'pattern': r'(?:We\s*have\s*detected\s*abuse\s*from\s*the\s*IP\s*address\s*|The\s*IP\s*)' + regexp.IPV4,
         },
         'category': {
-            'value': 'Copyright'
+            'value': 'Intrusion'
         },
     },
 }

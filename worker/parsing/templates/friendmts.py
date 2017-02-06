@@ -25,6 +25,7 @@ from worker.parsing import regexp
 
 
 TEMPLATE = {
+    'fallback': False,
     'email': 'operations@friendmts.com',
     'regexp': {
         'ips': {

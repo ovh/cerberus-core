@@ -184,8 +184,8 @@ def _get_log_message(ticket, action, user, **kwargs):
         reason = ', reason : %s' % close_reason if close_reason else ''
         log_msg = 'change status from %s to %s%s' % (previous_value, new_value, reason)
     elif action == 'change_treatedby':
-        before = previous_value if previous_value else 'nobody'
-        after = new_value if new_value else 'nobody'
+        before = previous_value or 'nobody'
+        after = new_value or 'nobody'
         log_msg = 'change treatedBy from %s to %s' % (before, after)
     elif action == 'send_email':
         log_msg = 'sent an email to %s' % email

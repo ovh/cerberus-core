@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-    Parsing template for operations@friendmediatech.com
+    Parsing template for contact@pointdecontact.net
 """
 
 from worker.parsing import regexp
@@ -26,16 +26,13 @@ from worker.parsing import regexp
 
 TEMPLATE = {
     'fallback': False,
-    'email': 'operations@friendmediatech.com',
+    'email': 'contact@pointdecontact.net',
     'regexp': {
-        'ips': {
-            'pattern': r'(?:ip\s*address\s*:\s*|IP_Address\s*>\s*)' + regexp.IPV4,
-        },
         'urls': {
-            'pattern': r'(?:tcUrl\s*:\s*|URL_Base\s*>\s*)' + regexp.URL,
+            'pattern': r'(?:URL.*signal.*:\s*<\/b>\s*<br>)' + regexp.URL,
         },
         'category': {
-            'value': 'Copyright'
+            'value': 'Illegal'
         },
     },
 }

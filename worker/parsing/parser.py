@@ -319,7 +319,7 @@ def get_sender_from_headers(headers):
         decodefrag = decode_header(headers['From'])
         for line, encoding in decodefrag:
             enc = 'iso-8859-11' if encoding == 'windows-874' else encoding
-            enc = 'utf-8' if enc is None else enc
+            enc = enc or 'utf-8'
             from_part.append(line.decode(enc, 'replace'))
         sender = ''.join(from_part)
         line = regexp.EMAIL.search(sender)
@@ -345,7 +345,7 @@ def get_recipients_from_headers(headers):
         if headers.get(key):
             decodefrag = decode_header(headers[key])
             for line, encoding in decodefrag:
-                enc = 'utf-8' if encoding is None else encoding
+                enc = encoding or 'utf-8'
                 recps = line.decode(enc, 'replace').split(',')
                 for recp in recps:
                     line = regexp.EMAIL.search(recp)
@@ -556,7 +556,7 @@ def get_ordered_template_names_list(parsed_email, content_to_parse):
     if parsed_email.recipients:
         template_names = parsed_email.recipients + template_names
 
-    for keyword in ['acns', 'x-arf']:
+    for keyword in ('acns', 'x-arf', 'fail2ban'):
         if keyword in content_to_parse.lower():
             template_names.append(keyword)
     template_names.append('default')
