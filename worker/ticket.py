@@ -208,7 +208,7 @@ def _check_timeout_ticket_conformance(ticket):
         )
         return False
 
-    if ticket.category.name.lower() not in ['phishing', 'copyright']:
+    if ticket.category.name.lower() not in ['phishing', 'copyright', 'illegal']:
         Logger.error(unicode(
             'Ticket %d is in wrong category (%s, Skipping...' % (ticket.id, ticket.category.name))
         )

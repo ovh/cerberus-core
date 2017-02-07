@@ -58,7 +58,6 @@ class CDNRequestActions(BaseActions):
             create_request_ticket(self.report, self.domain_to_request, provider)
 
         self.report.save()
-        return True
 
 
 @utils.redis_lock(common.CDN_REQUEST_LOCK)

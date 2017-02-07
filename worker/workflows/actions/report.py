@@ -156,11 +156,26 @@ class ReportActions(BaseActions):
         """
         ticket.timeout(self.ticket.id)
 
-    @rule_action()
-    def add_ticket_acns_proof(self):
+    @rule_action(params=[{'fieldType': FIELD_TEXT, 'name': 'regex'},
+                         {'fieldType': FIELD_NO_INPUT, 'name': 'multiline'},
+                         {'fieldType': FIELD_NO_INPUT, 'name': 'dehtmlify'},
+                         {'fieldType': FIELD_NO_INPUT, 'name': 'flush_proof'}])
+    def add_email_body_regex_proof(self, regex, multiline=False, dehtmlify=True, flush_proof=True):
         """
         """
-        content = regexp.ACNS_PROOF.search(self.report.body).group()
+        flags = [re.MULTILINE] if multiline else []
+
+        content = self.report.body
+        if dehtmlify:
+            content = utils.dehtmlify(content)
+
+        try:
+            content = re.search(regex, content, *flags).group()
+        except AttributeError:
+            raise AttributeError('Unable to find given regex in email body')
+
+        if flush_proof:
+            self.ticket.proof.all().delete()
 
         for email in re.findall(regexp.EMAIL, content):  # Remove potentially sensitive emails
             content = content.replace(email, 'email-removed@provider.com')
@@ -170,7 +185,7 @@ class ReportActions(BaseActions):
             ticket=self.ticket,
         )
 
-    @rule_action()
+    @rule_action(params=[{'fieldType': FIELD_NO_INPUT, 'name': 'flush_proof'}])
     def add_email_body_as_proof(self, flush_proof=True):
         """
         """
@@ -178,7 +193,7 @@ class ReportActions(BaseActions):
             self.ticket.proof.all().delete()
 
         # Add proof
-        content = self.report.body
+        content = utils.dehtmlify(self.report.body)
 
         for email in re.findall(regexp.EMAIL, content):  # Remove potentially sensitive emails
             content = content.replace(email, 'email-removed@provider.com')
