@@ -33,6 +33,11 @@ if __name__ == "__main__":
     if 'test' in sys.argv:
         unittest.TestLoader.sortTestMethodsUsing = lambda _, x, y: cmp(y, x)
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.settings")
+    elif 'test_ovh' in sys.argv:
+        unittest.TestLoader.sortTestMethodsUsing = lambda _, x, y: cmp(y, x)
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests_ovh.settings")
+        sys.argv.remove('test_ovh')
+        sys.argv.append('test')
     else:
         from django.conf import global_settings, settings
         from config import settings as custom_settings

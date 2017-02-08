@@ -151,6 +151,17 @@ class ReportActions(BaseActions):
         )
 
     @rule_action()
+    def block_outbound_emails(self):
+        """
+            Disallow outbound emails for `abuse.models.Ticket` related `abuse.models.Service`
+        """
+        implementations.instance.get_singleton_of(
+            'ActionServiceBase'
+        ).block_outbound_emails(
+            ticket=self.ticket
+        )
+
+    @rule_action()
     def apply_timeout_action(self):
         """
         """

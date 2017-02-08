@@ -90,6 +90,14 @@ class ReportVariables(BaseVariables):
         return self.report.body
 
     @boolean_rule_variable()
+    def has_fqdn(self):
+        """
+        """
+        return self.report.reportItemRelatedReport.filter(
+            itemType='FQDN'
+        ).exists()
+
+    @boolean_rule_variable()
     def has_urls(self):
         """
         """

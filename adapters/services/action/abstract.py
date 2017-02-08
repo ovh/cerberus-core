@@ -93,6 +93,21 @@ class ActionServiceBase(object):
         )
 
     @abc.abstractmethod
+    def block_outbound_emails(self, ticket, user=None):
+        """
+            Disallow outbound emails for `abuse.models.Ticket` related `abuse.models.Service`
+
+            :param int ticket: The id of the Cerberus `abuse.models.Ticket`
+                               where `abuse.models.Defendant` is attached
+            :param in user: The id of the Cerberus User
+            :raises `adapters.services.action.abstract.ActionServiceException`: if any error occur
+        """
+        cls = self.__class__.__name__
+        raise NotImplementedError(
+            "'%s' object does not implement the method 'block_outbound_emails'" % (cls)
+        )
+
+    @abc.abstractmethod
     def apply_action_on_service(self, ticket, action, ip_addr=None, user=None):
         """
             Apply given action on service

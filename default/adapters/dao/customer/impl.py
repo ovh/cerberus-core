@@ -93,6 +93,15 @@ class DefaultCustomerDao(CustomerDaoBase):
                 urls=urls,
                 fqdn=[]
             )
+        elif fqdn:
+            response = get_default_struct(
+                ServiceClass(DEFAULT_SERVICE),
+                DefendantClass(**JOHN_DOE),
+                ips=[],
+                urls=[],
+                fqdn=fqdn
+            )
+
         return response
 
     @staticmethod
