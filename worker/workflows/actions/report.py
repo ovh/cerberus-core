@@ -221,6 +221,20 @@ class ReportActions(BaseActions):
         self.report.status = status
         self.report.save()
 
+    @rule_action(params=[{'fieldType': FIELD_TEXT, 'name': 'status'}])
+    def set_ticket_status(self, status):
+        """
+        """
+        self.ticket.status = status
+        self.ticket.save()
+
+    @rule_action(params=[{'fieldType': FIELD_TEXT, 'name': 'priority'}])
+    def set_ticket_priority(self, priority):
+        """
+        """
+        self.ticket.priority = priority
+        self.ticket.save()
+
     @rule_action(params=[{'fieldType': FIELD_NUMERIC, 'name': 'days'}])
     def set_report_timeout(self, days):
         """
