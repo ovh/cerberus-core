@@ -214,6 +214,35 @@ class ReportActions(BaseActions):
             ticket=self.ticket,
         )
 
+    @rule_action(params=[{'fieldType': FIELD_NO_INPUT, 'name': 'item_type'},
+                         {'fieldType': FIELD_NO_INPUT, 'name': 'flush_proof'}])
+    def add_items_as_proof(self, item_type=None, flush_proof=True):
+        """
+        """
+        if flush_proof:
+            self.ticket.proof.all().delete()
+
+        # Add proof
+        items = self.report.reportItemRelatedReport.filter(
+            itemType=item_type
+        ).values_list(
+            'rawItem',
+            flat=True
+        ).distinct()
+
+        if not items:
+            raise AssertionError('No items found for function add_items_as_proof'
+                    )
+        content = '\n'.join(items)
+
+        for email in re.findall(regexp.EMAIL, content):  # Remove potentially sensitive emails
+            content = content.replace(email, 'email-removed@provider.com')
+
+        Proof.objects.create(
+            content=content,
+            ticket=self.ticket,
+        )
+
     @rule_action(params=[{'fieldType': FIELD_TEXT, 'name': 'status'}])
     def set_report_status(self, status):
         """

@@ -1,0 +1,91 @@
+{
+    "config": {
+        "actions": [
+            {
+                "name": "create_ticket", 
+                "params": {
+                    "attach_new": true
+                }
+            }, 
+            {
+                "name": "add_items_as_proof",
+                "params": {
+                    "item_type": "URL",
+                    "flush_proof": true
+                }
+            }, 
+            {
+                "name": "send_provider_ack"
+            }, 
+            {
+                "name": "send_defendant_email", 
+                "params": {
+                    "template_codename": "illegal_pedo"
+                }
+            }, 
+            {
+                "name": "set_ticket_timeout", 
+                "params": {
+                    "seconds": 43200
+                }
+            }
+        ], 
+        "conditions": {
+            "all": [
+                {
+                    "name": "has_defendant", 
+                    "operator": "is_true", 
+                    "value": true
+                }, 
+                {
+                    "name": "report_category", 
+                    "operator": "equal_to", 
+                    "value": "illegal"
+                }, 
+                {
+                    "name": "defendant_is_vip", 
+                    "operator": "is_false", 
+                    "value": true
+                },
+                {
+                    "name": "defendant_is_internal", 
+                    "operator": "is_false", 
+                    "value": true
+                },
+                {
+                    "name": "report_provider", 
+                    "operator": "shares_at_least_one_element_with", 
+                    "value": [
+                        "cybertip@cybertip.ca"
+                    ]
+                },
+                {
+                    "name": "service_type", 
+                    "operator": "shares_at_least_one_element_with", 
+                    "value": [
+                        "voip",
+                        "xdsl",
+                        "ip",
+                        "runabove",
+                        "dedicated",
+                        "vps",
+                        "publiccloud"
+                    ]
+                },
+                {
+                    "name": "is_report_trusted", 
+                    "operator": "is_true", 
+                    "value": true
+                }, 
+                {
+                    "name": "has_urls", 
+                    "operator": "is_true", 
+                    "value": true
+                }
+            ]
+        }
+    }, 
+    "name": "illegal_cybertip", 
+    "orderId": 75, 
+    "rulesType": "Report"
+}

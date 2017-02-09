@@ -1,0 +1,76 @@
+Return-Path: <cybertip@cybertip.ca>
+Delivered-To: <cerberus-prod@abuse.ovh.net>
+Received: from mx.abuse.ovh.net
+	by mx.abuse.ovh.net (Dovecot) with LMTP id SQZKJKxqm1i9LgAArOwUew
+	for <cerberus-prod@abuse.ovh.net>; Wed, 08 Feb 2017 20:04:40 +0100
+Received: by mx.abuse.ovh.net (Postfix, from userid 25036)
+	id 6644D20087; Wed,  8 Feb 2017 20:04:40 +0100 (CET)
+Authentication-Results: mx.abuse.ovh.net; dkim=pass
+	reason="1024-bit key; insecure key"
+	header.d=cybertip.ca header.i=@cybertip.ca header.b=ATe4CJL0;
+	dkim-adsp=pass; dkim-atps=neutral
+X-Sieve: Pigeonhole Sieve 0.3.1
+X-Sieve-Redirected-From: cybertip@abuse.ovh.net
+Test-Magic-Smtp-Header: it's here
+Delivered-To: <cybertip@abuse.ovh.net>
+Received: from mx.abuse.ovh.net
+	by mx.abuse.ovh.net (Dovecot) with LMTP id xHRBEkRpm1iELAAArOwUew
+	for <cybertip@abuse.ovh.net>; Wed, 08 Feb 2017 20:04:40 +0100
+Received: from c3p-wav-mx2.ad.protectchildren.ca (c3p-wav-mx2.protectchildren.ca [64.4.79.120])
+	by mx.abuse.ovh.net (Postfix) with ESMTP id CE4E620083
+	for <cybertip@abuse.ovh.net>; Wed,  8 Feb 2017 20:04:39 +0100 (CET)
+Authentication-Results: mx.abuse.ovh.net; dkim=pass
+	reason="1024-bit key; insecure key"
+	header.d=cybertip.ca header.i=@cybertip.ca header.b=ATe4CJL0;
+	dkim-adsp=pass; dkim-atps=neutral
+Received: from localhost.localdomain (localhost [127.0.0.1])
+	by c3p-wav-mx2.ad.protectchildren.ca (8.14.9/8.14.9) with ESMTP id v18J4cK2094578
+	for <cybertip@abuse.ovh.net>; Wed, 8 Feb 2017 13:04:38 -0600
+Message-Id: <201702081904.v18J4cK2094578@c3p-wav-mx2.ad.protectchildren.ca>
+DKIM-Signature: v=1; a=rsa-sha1; c=relaxed; d=cybertip.ca; h=from:to
+	:subject:date:mime-version:content-type
+	:content-transfer-encoding; s=selector1; bh=Ky6tlr3yrcZAfu1fpp15
+	cm+X7KM=; b=ATe4CJL0ousSLIOoLpRiB4GTPB65xBsapwKxEyBKLtK0tPusix6m
+	PGrjCA2XeDKJ2GT+aSUaTD1dhKdOQ1SVtvOgNGAxKxtBEP91WpygJdtO/6QMpwee
+	O3FQ8pqsFknGniv5Ojp8KylW8ClnQGJf9dMYn0vLIuwsK/8e5WnSTrM=
+From: cybertip@cybertip.ca
+To: cybertip@abuse.ovh.net
+Subject: [Cybertip.ca] Notice and takedown request
+Date: Wed, 8 Feb 2017 13:04:36 -0600
+MIME-Version: 1.0
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: base64
+
+Q3liZXJ0aXAuY2EgaXMgQ2FuYWRh4oCZcyBuYXRpb25hbCB0aXBsaW5lIGZvciByZXBvcnRpbmcg
+dGhlIG9ubGluZSBzZXh1YWwKZXhwbG9pdGF0aW9uIG9mIGNoaWxkcmVuLiBDeWJlcnRpcC5jYSBo
+YXMgcmVjZWl2ZWQgYSByZXBvcnQgdG8gb3VyIHRpcGxpbmUKYWxsZWdpbmcgdGhhdCBjaGlsZCBz
+ZXh1YWwgZXhwbG9pdGF0aW9uIGNvbnRlbnQgaXMgZGVwaWN0ZWQgb24geW91ciBzZXJ2aWNlLiBU
+aGUKcmVwb3J0ZWQgY29udGVudCBoYXMgYmVlbiBhbmFseXplZCBieSBDeWJlcnRpcC5jYSB1c2lu
+ZyBDYW5hZGlhbiBsYXcgYW5kIGl0CmFwcGVhcnMgdGhlIGNvbnRlbnQgbWF5IGJlIGNvbnNpZGVy
+ZWQKY2hpbGQgcG9ybm9ncmFwaHkgdW5kZXIgdGhlIGxhd3Mgb2YgQ2FuYWRhLiBDaGlsZCBwb3Ju
+b2dyYXBoeSBpcyBpbGxlZ2FsIGluCkNhbmFkYSBhbmQgc3VjaCBjb250ZW50IGxpa2VseSB2aW9s
+YXRlcyB0aGUgVGVybXMgb2YgU2VydmljZSBvciBNZW1iZXIgU2VydmljZXMKQWdyZWVtZW50IGFw
+cGxpY2FibGUgdG8geW91ciBzZXJ2aWNlLgoKVG8gZW5hYmxlIHlvdSB0byBsb2NhdGUgdGhlIGNv
+bnRlbnQgLCByZW1vdmUgaXQgYXMgYXBwcm9wcmlhdGUsIGFuZCBjYXJyeSBvdXQKYW55IGFkZGl0
+aW9uYWwgcmVwb3J0aW5nIG9ibGlnYXRpb25zIHlvdSBtYXkgaGF2ZSB1bmRlciB0aGUgbGF3IHlv
+dSBhcmUgc3ViamVjdAp0bywgQ3liZXJ0aXAuY2EgaXMgcHJvdmlkaW5nIHlvdSB3aXRoIHRoZSBV
+Ukw6CgpoeHhwOi8vaXMyLjRjaGFuLm9yZy9oYy8xNDg2NDI0OTk5Mjg5bS5qcGcKCgoKKGh0dHAg
+aGFzIGJlZW4gcmVwbGFjZWQgd2l0aCBoeHhwIHRvIHByZXZlbnQgYWNjaWRlbnRhbCBleHBvc3Vy
+ZSkKClBsZWFzZSBub3RlIHRoYXQgbGF3IGVuZm9yY2VtZW50IGluIENhbmFkYSBoYXMgYWxzbyBi
+ZWVuIG5vdGlmaWVkIGFib3V0IHRoZQpjb250ZW50cyBvZiB0aGUgVVJMIGRlc2NyaWJlZCBhYm92
+ZQoKU2hvdWxkIHlvdSBoYXZlIGFueSBxdWVzdGlvbnMgcmVnYXJkaW5nIHRoaXMgbm90aWZpY2F0
+aW9uLCBwbGVhc2UgY29udGFjdApDeWJlcnRpcC5jYSBhdCBjeWJlcnRpcEBjeWJlcnRpcC5jYS4K
+ClRoYW5rIHlvdSBmb3IgeW91ciBjb29wZXJhdGlvbi4KClRoaXMgbm90aWZpY2F0aW9uIG9yaWdp
+bmF0ZXMgZnJvbSBDeWJlcnRpcC5jYSwgQ2FuYWRhJ3MgbmF0aW9uYWwgdGlwbGluZSB0bwpyZXBv
+cnQgdGhlIG9ubGluZSBzZXh1YWwgZXhwbG9pdGF0aW9uIG9mIGNoaWxkcmVuLiBDeWJlcnRpcC5j
+YSBpcyBhIHByb2dyYW0Kb3BlcmF0ZWQgYnkgdGhlIENhbmFkaWFuIENlbnRyZSBmb3IgQ2hpbGQg
+UHJvdGVjdGlvbiBJbmMuIEN5YmVydGlwLmNhJ3Mgcm9sZSBpbgpDYW5hZGEgaXMgdG8gcmVjZWl2
+ZSBhbmQgYW5hbHl6ZSB0aXBzIGZyb20gdGhlIHB1YmxpYyBhYm91dCBwb3RlbnRpYWxseSBpbGxl
+Z2FsCm1hdGVyaWFsLCBuYW1lbHkgY2hpbGQgc2V4dWFsIGV4cGxvaXRhdGlvbiBjb250ZW50IG9y
+IOKAnGNoaWxkIHBvcm5vZ3JhcGh54oCdLiBUaGlzCm5vdGlmaWNhdGlvbiBoYXMgYmVlbiBzZW50
+IGFzIGl0IGlzIGJlbGlldmVkIHRoYXQgdGhlIHJlY2lwaWVudCBoYXMgYW4gaW50ZXJlc3QKaW4g
+YmVpbmcgaW5mb3JtZWQgYWJvdXQgdGhlIG5hdHVyZSBvZiB0aGUgY29udGVudCB0aGF0IG1heSBi
+ZSBkZXBpY3RlZCBvbiB0aGUKcmVjaXBpZW504oCZcyBzZXJ2aWNlLiBUbyByZXF1ZXN0IHRoYXQg
+ZnV0dXJlIG5vdGlmaWNhdGlvbnMgYmUgY29tbXVuaWNhdGVkIGluIGEKZGlmZmVyZW50IG1hbm5l
+ciwgb3IgdG8gZGVjbGluZSBmdXR1cmUgbm90aWZpY2F0aW9ucywgcGxlYXNlIGNvbnRhY3QKY3li
+ZXJ0aXBAY3liZXJ0aXAuY2Eu
