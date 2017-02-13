@@ -559,5 +559,7 @@ def get_ordered_template_names_list(parsed_email, content_to_parse):
     for keyword in ('acns', 'x-arf', 'fail2ban'):
         if keyword in content_to_parse.lower():
             template_names.append(keyword)
+
     template_names.append('default')
+
     return template_names

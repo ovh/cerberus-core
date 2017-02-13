@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-    Parsing template for contact@pointdecontact.net
+    Parsing template for *@netcraft.com
 """
 
 import re
@@ -28,7 +28,7 @@ from worker.parsing import regexp
 
 def pretransform(content):
 
-    pattern = r'(?:URL.*signal.*:\s*<\/b>\s*<br>(.|\n|\r|\t)*)(?:Bonjour)'
+    pattern = r'(?:discovered\s*a\s*phishing\s*attack\s*located\s*on\s*your\s*network\s*:(.|\n|\r|\t)*)(?:This attack)'
     search = re.search(pattern, content, re.IGNORECASE & re.MULTILINE)
     if search:
         return search.group()
@@ -36,15 +36,17 @@ def pretransform(content):
 
 
 TEMPLATE = {
-    'fallback': False,
-    'email': 'contact@pointdecontact.net',
+    'email': '*@netcraft.com',
     'regexp': {
+        'ips': {
+            'pattern': r'(?:\[\s*)' + regexp.IPV4,
+        },
         'urls': {
             'pretransform': pretransform,
             'pattern': regexp.URL,
         },
         'category': {
-            'value': 'Illegal'
+            'value': 'Phishing',
         },
     },
 }
