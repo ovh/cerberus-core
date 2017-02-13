@@ -61,6 +61,7 @@ PROVIDERS_GENERIC = {
     re.compile(r'(takedown-response\+[0-9]+@netcraft\.com)', re.IGNORECASE): '*@netcraft.com',
     re.compile(r'([0-9]+@reports\.spamcop\.net)', re.IGNORECASE): '*@reports.spamcop.net',
     re.compile(r'(.*@copyright-compliance\.com)', re.IGNORECASE): '*@copyright-compliance.com',
+    re.compile(r'(.*@friendmts\.com)', re.IGNORECASE): '*@friendmts.com',
     re.compile(r'(.*@alpa\.asso\.fr)', re.IGNORECASE): '*@alpa.asso.fr',
 }
 

@@ -26,7 +26,7 @@ from worker.parsing import regexp
 
 TEMPLATE = {
     'fallback': False,
-    'email': 'operations@friendmts.com',
+    'email': '*@friendmts.com',
     'regexp': {
         'ips': {
             'pattern': r'(?:ip\s*address\s*:\s*|IP_Address\s*>\s*)' + regexp.IPV4,
