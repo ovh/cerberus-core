@@ -1617,7 +1617,6 @@ def _get_email_attachments(email, ticket):
         return attachments
 
     filters = [{'name': a['filename'], 'filetype': a['content_type']} for a in email.attachments]
-    filters.extend([{'name': a['name'].replace('_', ' '), 'filetype': a['filetype']} for a in filters])
 
     for attach in filters:
         for att in ticket.attachments.filter(**attach):
