@@ -1252,7 +1252,7 @@ def _save_and_sanitize_attachments(ticket, attachments):
         with ImplementationFactory.instance.get_instance_of('StorageServiceBase', storage) as cnx:
             cnx.write(storage_filename, content)
 
-        ticket.reportTicket.last().attachments.add(AttachedDocument.objects.create(
+        ticket.attachments.add(AttachedDocument.objects.create(
             filename=storage_filename,
             filetype=attachment['content_type'],
             name=attachment['filename']
