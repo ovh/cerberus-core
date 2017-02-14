@@ -339,6 +339,14 @@ def get_timeline(ticket=None):
     return TicketsController.get_timeline(ticket, filters=request.args.get('filters'))
 
 
+@ticket_views.route('/api/tickets/<ticket>/attachments', methods=['GET'])
+@perm_required
+def get_ticket_attachments(ticket=None):
+    """ Get all `abuse.models.Ticket`'s `abuse.models.AttachedDocument`
+    """
+    return TicketsController.get_ticket_attachments(ticket)
+
+
 @ticket_views.route('/api/tickets/<ticket>/attachments/<attachment>', methods=['GET'])
 @perm_required
 def get_ticket_attachment(ticket=None, attachment=None):

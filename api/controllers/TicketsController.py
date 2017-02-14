@@ -85,7 +85,7 @@ def index(**kwargs):
 
     # Generate Django filter based on parsed filters
     try:
-        where = __generate_request_filters(filters, user, kwargs.get('treated_by'))
+        where = _generate_request_filters(filters, user, kwargs.get('treated_by'))
     except (AttributeError, KeyError, IndexError, FieldError,
             SyntaxError, TypeError, ValueError) as ex:
         raise BadRequest(str(ex.message))
@@ -121,11 +121,11 @@ def index(**kwargs):
             SyntaxError, TypeError, ValueError) as ex:
         raise BadRequest(str(ex.message))
 
-    __format_ticket_response(tickets, user)
+    _format_ticket_response(tickets, user)
     return list(tickets), nb_record_filtered
 
 
-def __generate_request_filters(filters, user=None, treated_by=None):
+def _generate_request_filters(filters, user=None, treated_by=None):
     """
         Generates filters base on filter query string
     """
@@ -187,7 +187,7 @@ def __generate_request_filters(filters, user=None, treated_by=None):
     return where
 
 
-def __format_ticket_response(tickets, user):
+def _format_ticket_response(tickets, user):
     """ Convert datetime object and add flat foreign key
     """
     for ticket in tickets:
@@ -278,17 +278,16 @@ def show(ticket_id, user):
         user=user
     ).exists()
 
-    ticket_dict['comments'] = __get_ticket_comments(ticket)
-    ticket_dict['history'] = __get_ticket_history(ticket)
+    ticket_dict['comments'] = _get_ticket_comments(ticket)
+    ticket_dict['history'] = _get_ticket_history(ticket)
     ticket_dict['attachedReportsCount'] = ticket.reportTicket.count()
-    ticket_dict['tags'] = __get_ticket_tags(ticket, ticket_reports_id)
-    ticket_dict['attachments'] = __get_ticket_attachments(ticket, ticket_reports_id)
+    ticket_dict['tags'] = _get_ticket_tags(ticket, ticket_reports_id)
     ticket_dict['justAssigned'] = just_assigned
 
     return ticket_dict
 
 
-def __get_ticket_comments(ticket):
+def _get_ticket_comments(ticket):
     """
         Get ticket comments..
     """
@@ -300,7 +299,7 @@ def __get_ticket_comments(ticket):
     } for c in TicketComment.objects.filter(ticket=ticket.id).order_by('-comment__date')]
 
 
-def __get_ticket_history(ticket):
+def _get_ticket_history(ticket):
     """
         Get ticket history..
     """
@@ -318,7 +317,7 @@ def __get_ticket_history(ticket):
     } for username, date, action in history]
 
 
-def __get_ticket_tags(ticket, ticket_reports_id):
+def _get_ticket_tags(ticket, ticket_reports_id):
     """
         Get ticket tags..
     """
@@ -329,15 +328,26 @@ def __get_ticket_tags(ticket, ticket_reports_id):
     return [model_to_dict(tag) for tag in tags]
 
 
-def __get_ticket_attachments(ticket, ticket_reports_id):
+def get_ticket_attachments(ticket_id):
     """
         Get ticket attachments..
     """
+    try:
+        ticket = Ticket.objects.get(id=ticket_id)
+    except (IndexError, ObjectDoesNotExist, ValueError):
+        raise NotFound('Ticket not found')
+
+    ticket_reports_id = ticket.reportTicket.all().values_list(
+        'id',
+        flat=True
+    ).distinct()
+
     attachments = AttachedDocument.objects.filter(report__id__in=ticket_reports_id).distinct()
     attachments = list(attachments)
     attachments.extend(ticket.attachments.all())
     attachments = list(set(attachments))
-    return [model_to_dict(attach) for attach in attachments]
+    attachments = [model_to_dict(attach) for attach in attachments]
+    return attachments
 
 
 def assign_if_not(ticket, user):
@@ -599,7 +609,7 @@ def update_snooze_duration(ticket_id, body, user):
                 delay=delay,
                 back=True
             )
-        return __update_duration(ticket, data, user)
+        return _update_duration(ticket, data, user)
     except (KeyError, ValueError) as ex:
         raise BadRequest(str(ex.message))
 
@@ -639,12 +649,12 @@ def update_pause_duration(ticket_id, body, user):
                 delay=delay,
                 back=True
             )
-        return __update_duration(ticket, data, user)
+        return _update_duration(ticket, data, user)
     except (KeyError, ValueError) as ex:
         raise BadRequest(str(ex.message))
 
 
-def __update_duration(ticket, data, user):
+def _update_duration(ticket, data, user):
     """ Generic update for duration
     """
     try:
@@ -1049,7 +1059,7 @@ def bulk_update(body, user, method):
     """
         Add or update infos for multiple tickets
     """
-    tickets = __check_bulk_conformance(body, user, method)
+    tickets = _check_bulk_conformance(body, user, method)
 
     for ticket in tickets:
         assign_if_not(ticket, user)
@@ -1080,7 +1090,7 @@ def bulk_delete(body, user, method):
     """
         Delete infos from multiple tickets
     """
-    tickets = __check_bulk_conformance(body, user, method)
+    tickets = _check_bulk_conformance(body, user, method)
 
     # Update tags
     try:
@@ -1094,7 +1104,7 @@ def bulk_delete(body, user, method):
     return {'message': 'Ticket(s) successfully updated'}
 
 
-def __check_bulk_conformance(body, user, method):
+def _check_bulk_conformance(body, user, method):
     """
         Check request conformance for bulk
     """
@@ -1186,7 +1196,7 @@ def interact(ticket_id, body, user):
     action = body['action']
 
     try:
-        __parse_interact_action(ticket, action, user)
+        _parse_interact_action(ticket, action, user)
     except (AttributeError, KeyError, ValueError, TypeError):
         raise BadRequest('Missing or invalid params in action')
 
@@ -1251,7 +1261,7 @@ def _save_and_sanitize_attachments(ticket, attachments):
     return attachments
 
 
-def __parse_interact_action(ticket, action, user):
+def _parse_interact_action(ticket, action, user):
     """ Parse action of interact endpoint's body
     """
     resp = {'message': 'OK'}
@@ -1272,11 +1282,11 @@ def __parse_interact_action(ticket, action, user):
             raise NotFound('Action not found')
 
         # Check IP address
-        ip_addr = __get_ip_for_action(ticket, action)
+        ip_addr = _get_ip_for_action(ticket, action)
         if not ip_addr:
             raise BadRequest('No IP specified')
 
-        if not __check_action_rights(ticket, action_id, user):
+        if not _check_action_rights(ticket, action_id, user):
             raise Forbidden('Invalid permission for action')
 
         if action['codename'] == 'waiting_answer_then_action':
@@ -1388,7 +1398,7 @@ def __parse_interact_action(ticket, action, user):
     return resp
 
 
-def __get_ip_for_action(ticket, action):
+def _get_ip_for_action(ticket, action):
     """
         Extract and check IP address for action
     """
@@ -1483,7 +1493,7 @@ def schedule_asynchronous_job(ticket_id, action_id, ip_addr, user,
         params = {}
     params['timeout'] = 3600
 
-    if not __check_action_rights(ticket, action.id, user):
+    if not _check_action_rights(ticket, action.id, user):
         raise Forbidden('Invalid permission for this action')
 
     # Cancel previous pending jobs
@@ -1536,7 +1546,7 @@ def get_jobs_status(ticket_id):
     return resp
 
 
-def __check_action_rights(ticket, action_id, user):
+def _check_action_rights(ticket, action_id, user):
     """
         Check if user can set action
     """
@@ -1571,7 +1581,7 @@ def get_todo_tickets(**kwargs):
             user=user,
             filters=filters
         )
-        __format_ticket_response(tickets, user)
+        _format_ticket_response(tickets, user)
     except (ObjectDoesNotExist, KeyError):
         tickets = []
         nb_record = 0

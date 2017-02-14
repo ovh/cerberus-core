@@ -1599,8 +1599,17 @@
 },
 {
   "fields": {
+    "endpoint": "ticket_views.get_ticket_attachments",
+    "method": "GET"
+  },
+  "model": "abuse.apiroute",
+  "pk": 144
+},
+{
+  "fields": {
     "codename": "run_level_1",
     "allowedRoutes": [
+      144,  
       143,  
       142,
       141,
@@ -1712,6 +1721,7 @@
   "fields": {
     "codename": "run_level_3",
     "allowedRoutes": [
+      144,  
       143,  
       142,
       141,
@@ -1863,6 +1873,12 @@
   "fields": {
     "codename": "admin",
     "allowedRoutes": [
+      144,  
+      143,  
+      142,
+      141,
+      140,
+      131,
       139,
       138,
       133,
