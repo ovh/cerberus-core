@@ -23,13 +23,11 @@
     Workflow event producer for Cerberus
 """
 
-import inspect
 import os
 import sys
 
-CURRENTDIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-PARENTDIR = os.path.dirname(CURRENTDIR)
-sys.path.insert(0, PARENTDIR)
+# Add the project to the python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir))
 
 import django
 from django.conf import ImproperlyConfigured

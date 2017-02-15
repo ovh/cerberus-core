@@ -27,7 +27,6 @@
 """
 
 import hashlib
-import inspect
 import os
 import socket
 import ssl
@@ -37,12 +36,10 @@ from Queue import Queue
 from threading import Thread
 from time import sleep
 
-CURRENTDIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-PARENTDIR = os.path.dirname(CURRENTDIR)
-sys.path.insert(0, PARENTDIR)
+# Add the project to the python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir))
 
 # Init settings
-
 import django
 from django.conf import ImproperlyConfigured
 

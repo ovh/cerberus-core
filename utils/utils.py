@@ -23,6 +23,7 @@
 """
 
 import base64
+import hashlib
 import json
 import os
 import re
@@ -494,6 +495,25 @@ def string_to_underscore_case(string):
     """
     tmp = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', tmp).lower()
+
+
+def get_attachment_storage_filename(hash_string=None, content=None, filename=None):
+    """
+        Generate a pseudo-unique filename based on content and filename
+
+        :param str hash_string: a hash if it has been previously computed
+        :param str content: the content of the file
+        :param str filename: the real name of the file
+    """
+    storage_filename = None
+
+    if content:
+        hash_string = hashlib.sha256(content).hexdigest()
+
+    storage_filename = hash_string + '-attach-'
+    storage_filename = storage_filename.encode('utf-8')
+    storage_filename = storage_filename + filename
+    return storage_filename
 
 
 def redis_lock(key):

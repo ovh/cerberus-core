@@ -27,11 +27,9 @@ from __future__ import unicode_literals
 import glob
 import hashlib
 import imp
-import inspect
 import mimetypes
 import os
 import re
-import sys
 import time
 from email.errors import HeaderParseError
 from email.Header import decode_header
@@ -42,10 +40,6 @@ from bs4 import BeautifulSoup
 from django.conf import settings
 from django.db.models import ObjectDoesNotExist
 from django.utils.text import get_valid_filename
-
-CURRENTDIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-PARENTDIR = os.path.dirname(CURRENTDIR)
-sys.path.insert(0, PARENTDIR)
 
 import regexp
 from abuse.models import Category, Provider

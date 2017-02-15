@@ -23,7 +23,6 @@
 """
 
 import base64
-import hashlib
 import json
 import operator
 import time
@@ -1204,14 +1203,18 @@ def interact(ticket_id, body, user):
 
         attachments = None
         if params.get('attachments'):
-            if len(params['attachments']) > 5:
-                raise BadRequest('Too many attachments')
+            if len(params['attachments']) > 7:
+                raise BadRequest('Too many attachments actions successfully applied)')
             try:
                 attachments = _save_and_sanitize_attachments(ticket, params['attachments'])
             except StorageServiceException:
-                raise InternalServerError('Error while uploading attachments')
+                raise InternalServerError(
+                    'Error while uploading attachments (actions successfully applied)'
+                )
             except KeyError:
-                raise BadRequest('Missing or invalid params in attachments')
+                raise BadRequest(
+                    'Missing or invalid params in attachments (actions successfully applied)'
+                )
 
         category = params['category'] if params.get('category') else 'Defendant'
         for recipient in params['to']:
@@ -1231,32 +1234,47 @@ def interact(ticket_id, body, user):
                     email=recipient
                 )
             except MailerServiceException as ex:
-                raise InternalServerError(str(ex))
+                error = '{} (actions successfully applied)'
+                raise InternalServerError(error.format(str(ex)))
 
     return {'message': 'Ticket successfully updated'}
 
 
 def _save_and_sanitize_attachments(ticket, attachments):
 
+    storage = settings.GENERAL_CONFIG['email_storage_dir']
+
     for attachment in attachments:
-        attachment['filename'] = text.get_valid_filename(attachment['filename'])
-        attachment['content_type'] = attachment.pop('contentType')
 
-        content = base64.b64decode(attachment['content'])
-        storage_filename = hashlib.sha256(attachment['content']).hexdigest()
-        storage_filename = storage_filename + '-attach-'
-        storage_filename = storage_filename.encode('utf-8')
-        storage_filename = storage_filename + attachment['filename']
+        # XXX: to remove
+        attachment['content_type'] = attachment.get('filetype') or attachment.get('contentType')
 
-        storage = settings.GENERAL_CONFIG['email_storage_dir']
-        with ImplementationFactory.instance.get_instance_of('StorageServiceBase', storage) as cnx:
-            cnx.write(storage_filename, content)
+        if attachment.get('content'):  # New attachment
 
-        ticket.attachments.add(AttachedDocument.objects.create(
-            filename=storage_filename,
-            filetype=attachment['content_type'],
-            name=attachment['filename']
-        ))
+            # XXX: to remove
+            filename = attachment.get('name') or attachment.get('filename')
+            attachment['filename'] = text.get_valid_filename(filename)
+            content = base64.b64decode(attachment['content'])
+            storage_filename = utils.get_attachment_storage_filename(
+                content=content,
+                filename=attachment['filename']
+            )
+
+            with ImplementationFactory.instance.get_instance_of('StorageServiceBase', storage) as cnx:
+                cnx.write(storage_filename, content)
+
+            ticket.attachments.add(AttachedDocument.objects.create(
+                filename=storage_filename,
+                filetype=attachment['content_type'],
+                name=attachment['filename']
+            ))
+
+        elif attachment.get('filename'):  # Existing
+
+            with ImplementationFactory.instance.get_instance_of('StorageServiceBase', storage) as cnx:
+                attachment['content'] = base64.b64encode(cnx.read(attachment['filename']))
+
+            attachment['filename'] = attachment['name']
 
     return attachments
 

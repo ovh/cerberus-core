@@ -12,17 +12,13 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import inspect
 import sys
 import os
 
-CURRENTDIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-PARENTDIR = os.path.dirname(CURRENTDIR)
-PARENTDIR = os.path.dirname(PARENTDIR)
-sys.path.insert(0, PARENTDIR)
+sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, os.path.abspath('.'))
 
 # Init settings
-
 import django
 from django.conf import ImproperlyConfigured
 
@@ -39,12 +35,6 @@ except ImproperlyConfigured:
 
     settings.configure()
     django.setup()
-
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('../..'))
-sys.path.insert(0, os.path.abspath('.'))
 
 # -- General configuration ------------------------------------------------
 

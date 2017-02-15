@@ -388,9 +388,10 @@ def _save_attachments(filename, attachments, reports=None, tickets=None):
     """
     for attachment in attachments[:20]:  # Slice 20 to avoid denial of service
 
-        storage_filename = filename + '-attach-'
-        storage_filename = storage_filename.encode('utf-8')
-        storage_filename = storage_filename + attachment['filename']
+        storage_filename = utils.get_attachment_storage_filename(
+            hash_string=filename,
+            filename=attachment['filename']
+        )
 
         with implementations.instance.get_instance_of('StorageServiceBase', common.STORAGE_DIR) as cnx:
             cnx.write(storage_filename, attachment['content'])
