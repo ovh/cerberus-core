@@ -1309,10 +1309,11 @@ def _get_email_thread_attachment(ticket, email_category=None):
         raise InternalServerError(str(ex))
 
     emails = [email for email in _emails if email.category.lower() == email_category]
-    content, filetype = utils.get_email_thread_content(ticket, emails)
 
-    if not content:
-        raise InternalServerError('Unable to generate email thread attachment')
+    try:
+        content, filetype = utils.get_email_thread_content(ticket, emails)
+    except (utils.EmailThreadTemplateNotFound, utils.EmailThreadTemplateSyntaxError) as ex:
+        raise InternalServerError(str(ex))
 
     content = base64.b64encode(content)
     name = 'ticket_{}_emails_{}'.format(

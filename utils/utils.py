@@ -95,6 +95,22 @@ DNS_ERROR = {
 }
 
 
+class EmailThreadTemplateNotFound(Exception):
+    """
+        EmailThreadTemplateNotFound
+    """
+    def __init__(self, message):
+        super(EmailThreadTemplateNotFound, self).__init__(message)
+
+
+class EmailThreadTemplateSyntaxError(Exception):
+    """
+        EmailThreadTemplateSyntaxError
+    """
+    def __init__(self, message):
+        super(EmailThreadTemplateSyntaxError, self).__init__(message)
+
+
 class CryptoException(Exception):
     """
         CryptoException
@@ -542,6 +558,12 @@ def get_email_thread_content(ticket, emails):
         :rtype: tuple
         :return: The content and the filetype
     """
+    try:
+        template = MailTemplate.objects.get(codename='email_thread')
+        is_html = '<html>' in template.body
+    except ObjectDoesNotExist:
+        raise EmailThreadTemplateNotFound('Unable to find email thread template')
+
     _emails = []
 
     for email in emails:
@@ -549,15 +571,14 @@ def get_email_thread_content(ticket, emails):
             sender=email.sender,
             subject=email.subject,
             recipient=email.recipient,
-            body=email.body.replace('\n', '<br>'),
+            body=email.body.replace('\n', '<br>') if is_html else email.body,
             created=datetime.fromtimestamp(email.created),
             category=None,
             attachments=None,
         ))
 
     try:
-        content_template = MailTemplate.objects.get(codename='email_thread')
-        template = loader.get_template_from_string(content_template.body)
+        template = loader.get_template_from_string(template.body)
         context = Context({
             'publicId': ticket.publicId,
             'creationDate': ticket.creationDate,
@@ -565,8 +586,8 @@ def get_email_thread_content(ticket, emails):
             'emails': _emails
         })
         content = template.render(context)
-    except (ObjectDoesNotExist, TemplateEncodingError, TemplateSyntaxError):
-        return None, None
+    except (TemplateEncodingError, TemplateSyntaxError) as ex:
+        raise EmailThreadTemplateSyntaxError(str(ex))
 
     try:
         import pdfkit
@@ -577,7 +598,7 @@ def get_email_thread_content(ticket, emails):
         display.stop()
         return content, 'application/pdf'
     except:
-        return content, 'text/html'
+        return content, 'text/html' if is_html else 'text/plain'
 
 
 def redis_lock(key):
