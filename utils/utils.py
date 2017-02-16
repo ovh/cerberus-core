@@ -577,12 +577,14 @@ def get_email_thread_content(ticket, emails):
             attachments=None,
         ))
 
+    domain = ticket.service.name if ticket.service else None
+
     try:
         template = loader.get_template_from_string(template.body)
         context = Context({
             'publicId': ticket.publicId,
             'creationDate': ticket.creationDate,
-            'domain': ticket.service.name,
+            'domain': domain,
             'emails': _emails
         })
         content = template.render(context)

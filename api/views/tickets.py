@@ -25,12 +25,13 @@
 from io import BytesIO
 
 from flask import Blueprint, g, request, send_file
+from voluptuous import Any, Optional
 from werkzeug.exceptions import BadRequest
 
 from api.controllers import (CommentsController, TicketsController,
                              PresetsController, ReportItemsController,
                              TemplatesController)
-from decorators import perm_required
+from decorators import perm_required, validate_body
 
 ticket_views = Blueprint('ticket_views', __name__)
 
@@ -242,6 +243,33 @@ def delete_ticket_tag(ticket=None, tag=None):
 
 @ticket_views.route('/api/tickets/<ticket>/interact', methods=['POST'])
 @perm_required
+@validate_body({
+    'action': {
+        Optional('id'): int,
+        'codename': Any(str, unicode),
+        'params': {
+            Optional('ip'): Any(str, unicode),
+            Optional('action'): int,
+            Optional('snoozeDuration'): int,
+            Optional('pauseDuration'): int,
+            Optional('resolution'): int
+        }
+    },
+    Optional('emails'): [{
+        'category': Any(str, unicode),
+        'to': [Any(str, unicode)],
+        'subject': Any(str, unicode),
+        'body': Any(str, unicode),
+        Optional('attachments'): [{
+            Optional('name'): Any(str, unicode),
+            Optional('content'): Any(str, unicode),
+            Optional('id'): int,
+            Optional('filename'): Any(str, unicode),
+            'filetype': Any(str, unicode),
+        }],
+        Optional('attachEmailThread'): bool
+    }]
+})
 def interact(ticket=None):
     """ Magic endpoint to save operator's time
     """

@@ -21,10 +21,13 @@
 """
     Cerberus tickets manager
 """
+
 import base64
+import hashlib
 import json
 import operator
 import time
+
 from copy import deepcopy
 from datetime import datetime, timedelta
 from urllib import unquote
@@ -1180,23 +1183,6 @@ def interact(ticket_id, body, user):
     except (ObjectDoesNotExist, ValueError):
         raise NotFound('Ticket not found')
 
-    if not all(key in body for key in ('emails', 'action')):
-        raise BadRequest('Missing param(s): need emails and action')
-
-    email_thread_attachment = None
-    for params in body['emails']:
-        if not all(params.get(key) for key in ('to', 'subject', 'body')):
-            raise BadRequest('Missing param(s): need subject and body in email')
-        if params.get('attachEmailThread') and not email_thread_attachment:
-            email_thread_attachment = _get_email_thread_attachment(
-                ticket,
-                email_category='defendant'
-            )
-        category = params['category'] if params.get('category') else 'Defendant'
-        category = category.title()
-        if category not in EMAIL_VALID_CATEGORIES:
-            raise BadRequest('Invalid email category')
-
     action = body['action']
 
     try:
@@ -1204,39 +1190,51 @@ def interact(ticket_id, body, user):
     except (AttributeError, KeyError, ValueError, TypeError):
         raise BadRequest('Missing or invalid params in action')
 
-    try:
-        _send_emails(ticket, body['emails'], user, email_thread_attachment)
-    except MailerServiceException as ex:
-        error = '{} (actions successfully applied)'
-        raise InternalServerError(error.format(str(ex)))
+    if body.get('emails'):
+        try:
+            _send_emails(ticket, body['emails'], user)
+        except MailerServiceException as ex:
+            error = '{} (actions successfully applied)'
+            raise InternalServerError(error.format(str(ex)))
 
     return {'message': 'Ticket successfully updated'}
 
 
-def _send_emails(ticket, emails, user, email_thread_attachment):
+def _send_emails(ticket, emails, user):
 
     for params in emails:
+        category = params['category'] if params.get('category') else 'Defendant'
+        category = category.title()
+        if category not in EMAIL_VALID_CATEGORIES:
+            raise BadRequest('Invalid email category (actions successfully applied)')
 
-        attachments = None
+    # Normalize attachments
+    email_thread = None
+    for params in emails:
+        if params.get('attachEmailThread') and not email_thread:
+            email_thread = _get_email_thread_attachment(
+                ticket,
+                email_category='defendant'
+            )
+            break
+
+    attachments = _get_merged_attachments(ticket, emails, email_thread)
+
+    # Send emails
+    for params in emails:
+
+        _attachments = []
         if params.get('attachments'):
-            if len(params['attachments']) > 7:
-                raise BadRequest('Too many attachments actions successfully applied)')
-            try:
-                attachments = _save_and_sanitize_attachments(
-                    ticket,
-                    params['attachments'],
-                    email_thread_attachment
-                )
-            except StorageServiceException:
-                raise InternalServerError(
-                    'Error while uploading attachments (actions successfully applied)'
-                )
-            except KeyError:
-                raise BadRequest(
-                    'Missing or invalid params in attachments (actions successfully applied)'
-                )
+            for attach in params['attachments']:
+                if attach.get('content'):
+                    _hash = hashlib.sha256(attach['content']).hexdigest()
+                    _attachments.append(attachments[(_hash, attach['name'])])
+                elif attach.get('filename'):
+                    _attachments.append(attachments[(attach['filename'], attach['name'])])
 
-        category = params.get('category') or 'Defendant'
+        if params.get('attachEmailThread'):
+            _hash = hashlib.sha256(email_thread['content']).hexdigest()
+            _attachments.append(attachments[(_hash, email_thread['name'])])
 
         for recipient in params['to']:
             ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
@@ -1244,8 +1242,8 @@ def _send_emails(ticket, emails, user, email_thread_attachment):
                 recipient,
                 params['subject'],
                 params['body'],
-                category,
-                attachments=attachments,
+                params['category'],
+                attachments=_attachments,
             )
             database.log_action_on_ticket(
                 ticket=ticket,
@@ -1255,48 +1253,90 @@ def _send_emails(ticket, emails, user, email_thread_attachment):
             )
 
 
-def _save_and_sanitize_attachments(ticket, attachments, email_thread_attachment):
+def _get_merged_attachments(ticket, emails, email_thread):
+
+    attachments = []
+    for params in emails:
+        if params.get('attachments'):
+            attachments.extend(params['attachments'])
+
+    if email_thread:
+        attachments.append(email_thread)
+
+    attachments = map(dict, set(map(lambda x: tuple(x.items()), attachments)))
+    sanitized = {}
+
+    if attachments:
+        try:
+            sanitized = _save_and_sanitize_attachments(
+                ticket,
+                attachments,
+            )
+        except StorageServiceException:
+            raise InternalServerError(
+                'Error while uploading attachments (actions successfully applied)'
+            )
+        except KeyError:
+            raise BadRequest(
+                'Missing or invalid params in attachments (actions successfully applied)'
+            )
+    return sanitized
+
+
+def _save_and_sanitize_attachments(ticket, attachments):
 
     # Attachment's content are encoded in base64
 
-    storage = settings.GENERAL_CONFIG['email_storage_dir']
-
-    if email_thread_attachment:
-        attachments.append(email_thread_attachment)
+    sanitized = {}
 
     for attachment in attachments:
 
-        # XXX: to remove
-        attachment['content_type'] = attachment.get('filetype') or attachment.get('contentType')
+        filetype = attachment['filetype']
 
         if attachment.get('content'):  # New attachment
 
-            # XXX: to remove
-            filename = attachment.get('name') or attachment.get('filename')
-            attachment['filename'] = text.get_valid_filename(filename)
-            content = base64.b64decode(attachment['content'])
+            name = attachment['name']
+            content = attachment['content']
+            filename = text.get_valid_filename(name)
             storage_filename = utils.get_attachment_storage_filename(
                 content=content,
-                filename=attachment['filename']
+                filename=filename
             )
 
-            with ImplementationFactory.instance.get_instance_of('StorageServiceBase', storage) as cnx:
-                cnx.write(storage_filename, content)
+            with ImplementationFactory.instance.get_instance_of(
+                'StorageServiceBase',
+                settings.GENERAL_CONFIG['email_storage_dir']
+            ) as cnx:
+                cnx.write(storage_filename, base64.b64decode(content))
 
             ticket.attachments.add(AttachedDocument.objects.create(
                 filename=storage_filename,
-                filetype=attachment['content_type'],
-                name=attachment['filename']
+                filetype=filetype,
+                name=name
             ))
+
+            _hash = hashlib.sha256(content).hexdigest()
+            sanitized[(_hash, name)] = {
+                'content': content,
+                'content_type': filetype,
+                'filename': name
+            }
 
         elif attachment.get('filename'):  # Existing
 
-            with ImplementationFactory.instance.get_instance_of('StorageServiceBase', storage) as cnx:
-                attachment['content'] = base64.b64encode(cnx.read(attachment['filename']))
+            with ImplementationFactory.instance.get_instance_of(
+                'StorageServiceBase',
+                settings.GENERAL_CONFIG['email_storage_dir']
+            ) as cnx:
+                content = base64.b64encode(cnx.read(attachment['filename']))
 
-            attachment['filename'] = attachment['name']
+            sanitized[(attachment['filename'], attachment['name'])] = {
+                'content': content,
+                'content_type': filetype,
+                'filename': attachment['name']
+            }
 
-    return attachments
+    return sanitized
 
 
 def _get_email_thread_attachment(ticket, email_category=None):
@@ -1338,11 +1378,7 @@ def _parse_interact_action(ticket, action, user):
 
     if 'action' in action['codename']:
 
-        # Check action
-        try:
-            action_id = int(action['params']['action'])
-        except ObjectDoesNotExist:
-            raise NotFound('Action not found')
+        action_id = int(action['params']['action'])
 
         # Check IP address
         ip_addr = _get_ip_for_action(ticket, action)
