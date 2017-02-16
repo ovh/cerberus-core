@@ -21,7 +21,6 @@
 """
     Cerberus tickets manager
 """
-
 import base64
 import json
 import operator
@@ -1184,9 +1183,15 @@ def interact(ticket_id, body, user):
     if not all(key in body for key in ('emails', 'action')):
         raise BadRequest('Missing param(s): need emails and action')
 
+    email_thread_attachment = None
     for params in body['emails']:
         if not all(params.get(key) for key in ('to', 'subject', 'body')):
             raise BadRequest('Missing param(s): need subject and body in email')
+        if params.get('attachEmailThread') and not email_thread_attachment:
+            email_thread_attachment = _get_email_thread_attachment(
+                ticket,
+                email_category='defendant'
+            )
         category = params['category'] if params.get('category') else 'Defendant'
         category = category.title()
         if category not in EMAIL_VALID_CATEGORIES:
@@ -1199,14 +1204,29 @@ def interact(ticket_id, body, user):
     except (AttributeError, KeyError, ValueError, TypeError):
         raise BadRequest('Missing or invalid params in action')
 
-    for params in body['emails']:
+    try:
+        _send_emails(ticket, body['emails'], user, email_thread_attachment)
+    except MailerServiceException as ex:
+        error = '{} (actions successfully applied)'
+        raise InternalServerError(error.format(str(ex)))
+
+    return {'message': 'Ticket successfully updated'}
+
+
+def _send_emails(ticket, emails, user, email_thread_attachment):
+
+    for params in emails:
 
         attachments = None
         if params.get('attachments'):
             if len(params['attachments']) > 7:
                 raise BadRequest('Too many attachments actions successfully applied)')
             try:
-                attachments = _save_and_sanitize_attachments(ticket, params['attachments'])
+                attachments = _save_and_sanitize_attachments(
+                    ticket,
+                    params['attachments'],
+                    email_thread_attachment
+                )
             except StorageServiceException:
                 raise InternalServerError(
                     'Error while uploading attachments (actions successfully applied)'
@@ -1216,33 +1236,33 @@ def interact(ticket_id, body, user):
                     'Missing or invalid params in attachments (actions successfully applied)'
                 )
 
-        category = params['category'] if params.get('category') else 'Defendant'
+        category = params.get('category') or 'Defendant'
+
         for recipient in params['to']:
-            try:
-                ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
-                    ticket,
-                    recipient,
-                    params['subject'],
-                    params['body'],
-                    category,
-                    attachments=attachments,
-                )
-                database.log_action_on_ticket(
-                    ticket=ticket,
-                    action='send_email',
-                    user=user,
-                    email=recipient
-                )
-            except MailerServiceException as ex:
-                error = '{} (actions successfully applied)'
-                raise InternalServerError(error.format(str(ex)))
-
-    return {'message': 'Ticket successfully updated'}
+            ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
+                ticket,
+                recipient,
+                params['subject'],
+                params['body'],
+                category,
+                attachments=attachments,
+            )
+            database.log_action_on_ticket(
+                ticket=ticket,
+                action='send_email',
+                user=user,
+                email=recipient
+            )
 
 
-def _save_and_sanitize_attachments(ticket, attachments):
+def _save_and_sanitize_attachments(ticket, attachments, email_thread_attachment):
+
+    # Attachment's content are encoded in base64
 
     storage = settings.GENERAL_CONFIG['email_storage_dir']
+
+    if email_thread_attachment:
+        attachments.append(email_thread_attachment)
 
     for attachment in attachments:
 
@@ -1277,6 +1297,30 @@ def _save_and_sanitize_attachments(ticket, attachments):
             attachment['filename'] = attachment['name']
 
     return attachments
+
+
+def _get_email_thread_attachment(ticket, email_category=None):
+
+    try:
+        _emails = ImplementationFactory.instance.get_singleton_of(
+            'MailerServiceBase'
+        ).get_emails(ticket)
+    except (KeyError, MailerServiceException) as ex:
+        raise InternalServerError(str(ex))
+
+    emails = [email for email in _emails if email.category.lower() == email_category]
+    content, filetype = utils.get_email_thread_content(ticket, emails)
+
+    if not content:
+        raise InternalServerError('Unable to generate email thread attachment')
+
+    content = base64.b64encode(content)
+    name = 'ticket_{}_emails_{}'.format(
+        ticket.publicId,
+        datetime.strftime(datetime.now(), '%d-%m-%Y_%H-%M')
+    )
+
+    return {'filetype': filetype, 'content': content, 'name': name}
 
 
 def _parse_interact_action(ticket, action, user):

@@ -28,7 +28,7 @@ from worker.parsing import regexp
 
 def pretransform(content):
 
-    pattern = r'(?:discovered\s*a\s*phishing\s*attack\s*located\s*on\s*your\s*network\s*:(.|\n|\r|\t)*)(?:This attack)'
+    pattern = r'discovered\s*a\s*phishing\s*attack\s*located\s*on\s*your\s*network\s*:(.|\n)*?\['
     search = re.search(pattern, content, re.IGNORECASE & re.MULTILINE)
     if search:
         return search.group()

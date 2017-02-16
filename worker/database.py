@@ -486,11 +486,7 @@ def refresh_defendant_infos(defendant_id=None):
     """
         Try to update `abuse.models.Defendant`'s revision
     """
-    try:
-        defendant = Defendant.objects.get(id=defendant_id)
-    except (AttributeError, ObjectDoesNotExist, ValueError):
-        pass
-
+    defendant = Defendant.objects.get(id=defendant_id)
     fresh_defendant_infos = None
 
     try:

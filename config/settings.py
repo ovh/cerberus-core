@@ -40,11 +40,11 @@ CUSTOM_SCHEDULING_ALGORITHMS = (
 QUEUE = {
     'default': {
         'name': 'default',
-        'default_timeout': 86400,
+        'default_timeout': 7200,
     },
     'email': {
         'name': 'email',
-        'default_timeout': 86400,
+        'default_timeout': 7200,
     },
     'kpi': {
         'name': 'kpi',

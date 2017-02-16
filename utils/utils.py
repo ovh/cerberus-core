@@ -29,6 +29,7 @@ import os
 import re
 import socket
 
+from datetime import datetime
 from functools import wraps
 from time import sleep
 from urlparse import urlparse
@@ -41,9 +42,12 @@ from cryptography.fernet import Fernet, InvalidSignature, InvalidToken
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from django.db.models import ObjectDoesNotExist
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator, validate_ipv46_address
+from django.template import (Context, TemplateEncodingError,
+                             TemplateSyntaxError, loader)
 from redis import ConnectionError as RedisError
 from redis import Redis
 from requests.exceptions import (ChunkedEncodingError, ConnectionError,
@@ -52,7 +56,8 @@ from rq import Queue
 from rq_scheduler import Scheduler
 from simplejson import JSONDecodeError
 
-from abuse.models import Role, User
+from adapters.services.mailer.abstract import Email
+from abuse.models import MailTemplate, Role, User
 from logger import get_logger
 
 Logger = get_logger(os.path.basename(__file__))
@@ -184,7 +189,8 @@ class RequestException(Exception):
         self.code = code
 
 
-def request_wrapper(url, auth=None, params=None, as_json=False, method='POST', headers=None, timeout=30):
+def request_wrapper(url, auth=None, params=None, as_json=False,
+                    method='POST', headers=None, timeout=30):
     """
         Python-requests wrapper
     """
@@ -215,21 +221,30 @@ def request_wrapper(url, auth=None, params=None, as_json=False, method='POST', h
         except HTTPError as ex:
             if 500 <= int(ex.response.status_code) <= 599:
                 if retry == max_tries - 1:
-                    raise RequestException(__get_request_exception_message(request, url, params, ex), ex.response.status_code)
+                    raise RequestException(
+                        _get_request_exception_message(request, url, params, ex),
+                        ex.response.status_code
+                    )
                 else:
                     sleep(1)
             else:
-                raise RequestException(__get_request_exception_message(request, url, params, ex), ex.response.status_code)
+                raise RequestException(
+                    _get_request_exception_message(request, url, params, ex),
+                    ex.response.status_code
+                )
         except Timeout as ex:
-            raise RequestException(__get_request_exception_message(request, url, params, ex), None)
+            raise RequestException(_get_request_exception_message(request, url, params, ex), None)
         except (ChunkedEncodingError, ConnectionError, JSONDecodeError) as ex:
             if retry == max_tries - 1:
-                raise RequestException(__get_request_exception_message(request, url, params, ex), None)
+                raise RequestException(
+                    _get_request_exception_message(request, url, params, ex),
+                    None
+                )
             else:
                 sleep(1)
 
 
-def __get_request_exception_message(request, url, params, exception):
+def _get_request_exception_message(request, url, params, exception):
     """
         Try to extract message from requests exeption
     """
@@ -314,7 +329,8 @@ def get_reverses_for_item(item, nature='IP', replace_exception=False):
             validate_ipv46_address(item)
             reverses['ipReverse'] = socket.gethostbyaddr(item)[0]
             reverses['ipReverseResolved'] = socket.gethostbyname(reverses['ipReverse'])
-        except (IndexError, socket.error, socket.gaierror, socket.herror, socket.timeout, TypeError, ValidationError):
+        except (IndexError, socket.error, socket.gaierror, socket.herror,
+                socket.timeout, TypeError, ValidationError):
             pass
     elif nature == 'URL':
         reverses['url'] = item
@@ -514,6 +530,54 @@ def get_attachment_storage_filename(hash_string=None, content=None, filename=Non
     storage_filename = storage_filename.encode('utf-8')
     storage_filename = storage_filename + filename
     return storage_filename
+
+
+def get_email_thread_content(ticket, emails):
+    """
+        Generate `abuse.models.Ticket` emails thred history
+        based on 'email_thread' `abuse.models.MailTemplate`
+
+        :param `abuse.models.Ticket` ticket: The cererus ticket
+        :param list emails: a list of `adapters.services.mailer.abstract.Email`
+        :rtype: tuple
+        :return: The content and the filetype
+    """
+    _emails = []
+
+    for email in emails:
+        _emails.append(Email(
+            sender=email.sender,
+            subject=email.subject,
+            recipient=email.recipient,
+            body=email.body.replace('\n', '<br>'),
+            created=datetime.fromtimestamp(email.created),
+            category=None,
+            attachments=None,
+        ))
+
+    try:
+        content_template = MailTemplate.objects.get(codename='email_thread')
+        template = loader.get_template_from_string(content_template.body)
+        context = Context({
+            'publicId': ticket.publicId,
+            'creationDate': ticket.creationDate,
+            'domain': ticket.service.name,
+            'emails': _emails
+        })
+        content = template.render(context)
+    except (ObjectDoesNotExist, TemplateEncodingError, TemplateSyntaxError):
+        return None, None
+
+    try:
+        import pdfkit
+        from pyvirtualdisplay import Display
+        display = Display(visible=0, size=(1366, 768))
+        display.start()
+        content = pdfkit.from_string(content, False)
+        display.stop()
+        return content, 'application/pdf'
+    except:
+        return content, 'text/html'
 
 
 def redis_lock(key):
