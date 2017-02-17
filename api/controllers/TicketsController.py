@@ -1309,6 +1309,9 @@ def _save_and_sanitize_attachments(ticket, attachments):
             ) as cnx:
                 cnx.write(storage_filename, base64.b64decode(content))
 
+            if ticket.attachments.filter(name=name).exists():
+                name = '{}_{}'.format(name, storage_filename[:4])
+
             ticket.attachments.add(AttachedDocument.objects.create(
                 filename=storage_filename,
                 filetype=filetype,
