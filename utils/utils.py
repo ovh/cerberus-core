@@ -600,7 +600,7 @@ def get_email_thread_content(ticket, emails):
         display.stop()
         return content, 'application/pdf'
     except:
-        return content, 'text/html' if is_html else 'text/plain'
+        return content.encode('utf-8'), 'text/html' if is_html else 'text/plain'
 
 
 def redis_lock(key):

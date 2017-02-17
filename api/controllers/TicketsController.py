@@ -1218,23 +1218,17 @@ def _send_emails(ticket, emails, user):
             )
             break
 
-    attachments = _get_merged_attachments(ticket, emails, email_thread)
+    merged_attachments = _get_merged_attachments(ticket, emails, email_thread)
 
     # Send emails
     for params in emails:
 
-        _attachments = []
-        if params.get('attachments'):
-            for attach in params['attachments']:
-                if attach.get('content'):
-                    _hash = hashlib.sha256(attach['content']).hexdigest()
-                    _attachments.append(attachments[(_hash, attach['name'])])
-                elif attach.get('filename'):
-                    _attachments.append(attachments[(attach['filename'], attach['name'])])
-
-        if params.get('attachEmailThread'):
-            _hash = hashlib.sha256(email_thread['content']).hexdigest()
-            _attachments.append(attachments[(_hash, email_thread['name'])])
+        attachments = _fetch_attachments(
+            params.get('attachments'),
+            merged_attachments,
+            email_thread,
+            attach_email_thread=params.get('attachEmailThread')
+        )
 
         for recipient in params['to']:
             ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
@@ -1243,7 +1237,7 @@ def _send_emails(ticket, emails, user):
                 params['subject'],
                 params['body'],
                 params['category'],
-                attachments=_attachments,
+                attachments=attachments,
             )
             database.log_action_on_ticket(
                 ticket=ticket,
@@ -1303,20 +1297,27 @@ def _save_and_sanitize_attachments(ticket, attachments):
                 filename=filename
             )
 
-            with ImplementationFactory.instance.get_instance_of(
-                'StorageServiceBase',
-                settings.GENERAL_CONFIG['email_storage_dir']
-            ) as cnx:
-                cnx.write(storage_filename, base64.b64decode(content))
+            if ticket.attachments.filter(filename=storage_filename).exists():
+                with ImplementationFactory.instance.get_instance_of(
+                    'StorageServiceBase',
+                    settings.GENERAL_CONFIG['email_storage_dir']
+                ) as cnx:
+                    content = base64.b64encode(cnx.read(storage_filename))
+            else:
+                with ImplementationFactory.instance.get_instance_of(
+                    'StorageServiceBase',
+                    settings.GENERAL_CONFIG['email_storage_dir']
+                ) as cnx:
+                    cnx.write(storage_filename, base64.b64decode(content))
 
-            if ticket.attachments.filter(name=name).exists():
-                name = '{}_{}'.format(name, storage_filename[:4])
+                if ticket.attachments.filter(name=name).exists():
+                    name = '{}_{}'.format(storage_filename[:4], name)
 
-            ticket.attachments.add(AttachedDocument.objects.create(
-                filename=storage_filename,
-                filetype=filetype,
-                name=name
-            ))
+                ticket.attachments.add(AttachedDocument.objects.create(
+                    filename=storage_filename,
+                    filetype=filetype,
+                    name=name
+                ))
 
             _hash = hashlib.sha256(content).hexdigest()
             sanitized[(_hash, name)] = {
@@ -1361,10 +1362,33 @@ def _get_email_thread_attachment(ticket, email_category=None):
     content = base64.b64encode(content)
     name = 'ticket_{}_emails_{}'.format(
         ticket.publicId,
-        datetime.strftime(datetime.now(), '%d-%m-%Y_%H-%M')
+        datetime.strftime(datetime.now(), '%d-%m-%Y_%H-%M-%S')
     )
 
     return {'filetype': filetype, 'content': content, 'name': name}
+
+
+def _fetch_attachments(attachments, merged_attachments, email_thread, attach_email_thread=False):
+
+    _attachments = []
+    if attachments:
+        for attach in attachments:
+            if attach.get('content'):
+                _hash = hashlib.sha256(attach['content']).hexdigest()
+                try:
+                    _attachments.append(merged_attachments[(_hash, attach['name'])])
+                except KeyError:  # renamed
+                    _attachments.append(
+                        merged_attachments[(_hash, '{}_{}'.format(_hash[:4], attach['name']))]
+                    )
+            elif attach.get('filename'):
+                _attachments.append(merged_attachments[(attach['filename'], attach['name'])])
+
+    if attach_email_thread:
+        _hash = hashlib.sha256(email_thread['content']).hexdigest()
+        _attachments.append(merged_attachments[(_hash, email_thread['name'])])
+
+    return _attachments
 
 
 def _parse_interact_action(ticket, action, user):
