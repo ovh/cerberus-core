@@ -25,6 +25,7 @@
 import base64
 import hashlib
 import json
+import mimetypes
 import operator
 import time
 
@@ -1360,9 +1361,10 @@ def _get_email_thread_attachment(ticket, email_category=None):
         raise InternalServerError(str(ex))
 
     content = base64.b64encode(content)
-    name = 'ticket_{}_emails_{}'.format(
+    name = 'ticket_{}_emails_{}{}'.format(
         ticket.publicId,
-        datetime.strftime(datetime.now(), '%d-%m-%Y_%H-%M-%S')
+        datetime.strftime(datetime.now(), '%d-%m-%Y_%H-%M-%S'),
+        mimetypes.guess_extension(filetype),
     )
 
     return {'filetype': filetype, 'content': content, 'name': name}

@@ -56,8 +56,8 @@ from rq import Queue
 from rq_scheduler import Scheduler
 from simplejson import JSONDecodeError
 
-from adapters.services.mailer.abstract import Email
 from abuse.models import MailTemplate, Role, User
+from adapters.services.mailer.abstract import Email
 from logger import get_logger
 
 Logger = get_logger(os.path.basename(__file__))
