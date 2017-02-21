@@ -112,7 +112,7 @@ class ReportActions(BaseActions):
             acknowledged_report_id=self.report.id
         )
 
-        if not any(self.ticket.snoozeDuration, self.ticket.snoozeStart):
+        if not any((self.ticket.snoozeDuration, self.ticket.snoozeStart)):
             self.ticket.snoozeDuration = 172800
             self.ticket.snoozeStart = datetime.now()
             self.ticket.save()
