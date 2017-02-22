@@ -47,6 +47,8 @@ class EmailReplyActions(BaseActions):
                 self.ticket,
                 'Alarm',
             )
+            self.ticket.treatedBy = None
+            self.ticket.save()
         else:
             update_ticket(services, self.ticket, self.parsed_email.ips, provider)
 
