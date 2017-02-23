@@ -28,7 +28,7 @@ from worker.parsing import regexp
 
 def pretransform(content):
 
-    pattern = r'(?:URL.*signal.*:\s*<\/b>\s*<br>(.|\n|\r|\t)*)(?:Bonjour)'
+    pattern = r'URL.*signal.*:\s*<\/b>\s*<br>(.|\n)*?Bonjour'
     search = re.search(pattern, content, re.IGNORECASE & re.MULTILINE)
     if search:
         return search.group()
