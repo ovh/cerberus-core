@@ -2,12 +2,8 @@
 
 ## Summary ##
 
-This tool aims to help ISP manage abuse on their network by providing
-a set of tools such as an email parser and classification, a ticketing
-system, an API and an UX for operators (with cerberus-ux project).
-
-This tool can be easily expanded by implementing new `python-rq`jobs.
-
+Cerberus is a toolkit to receive, parse, process and automate abuse reports handling received by ISP or hosting providers.
+This toolkit includes an email fetcher, abuse reports parsers, a business rules engine and a ticketing system.
 
 ## Try it ##
 
@@ -97,6 +93,11 @@ Fraudulent URL/IP/FQDN found in an email.
 ### Action ###
 
 An action on a customer's service (suspend, shutdown, breach of contract).
+
+## Business Rules ##
+
+Cerberus business rules engine is based on [https://github.com/venmo/business-rules](https://github.com/venmo/business-rules)
+You can find business rules example in `tests/rules/`
 
 ## Workflow ##
 
@@ -199,9 +200,9 @@ You can add template for provider in `worker/parsing/templates`. If your templat
 
 ## API ##
 
-Once everything is running, you can start using the API. By default, it's listening to the port 8080. Full endpoints description are available in documentation
+Once everything is running, you can start using the API. By default, it's listening on port 8080. Full endpoints description are available in documentation
 
-**Be careful, this is not a RESTFul API.** The main goal of this API is to interface DB with `ovh/cerberus-ux` project.
+**Be careful, this is not a RESTFul API.** The main goal of this API is to interface DB with [https://github.com/ovh/cerberus-ux](https://github.com/ovh/cerberus-ux) project.
 
 ## Documentation ##
 
