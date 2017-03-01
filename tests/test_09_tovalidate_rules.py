@@ -110,7 +110,7 @@ class TestWorkers(GlobalTestCase):
 
         sample = self._samples['sample23']
         content = sample.read()
-        report.create_from_email(email_content=content, send_ack=True)
+        report.create_from_email(email_content=content)
         cerberus_report = Report.objects.last()
         self.assertEqual('ToValidate', cerberus_report.status)
         user = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
@@ -137,7 +137,7 @@ class TestWorkers(GlobalTestCase):
         # Now create ToValidate report
         sample = self._samples['sample23']
         content = sample.read()
-        report.create_from_email(email_content=content, send_ack=True)
+        report.create_from_email(email_content=content)
         cerberus_report = Report.objects.last()
         self.assertEqual('ToValidate', cerberus_report.status)
 
@@ -170,6 +170,6 @@ class TestWorkers(GlobalTestCase):
         # Now create ToValidate report
         sample = self._samples['sample23']
         content = sample.read()
-        report.create_from_email(email_content=content, send_ack=True)
+        report.create_from_email(email_content=content)
         cerberus_report = Report.objects.last()
         self.assertEqual('New', cerberus_report.status)

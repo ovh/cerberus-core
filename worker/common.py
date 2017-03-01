@@ -55,14 +55,15 @@ def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report
     )
 
     for email in emails:
+        _email = email.strip()
         try:
-            validate_email(email)
+            validate_email(_email)
         except ValidationError:
             continue
 
         implementations.instance.get_singleton_of('MailerServiceBase').send_email(
             ticket,
-            email,
+            _email,
             prefetched_email.subject,
             prefetched_email.body,
             prefetched_email.category
@@ -70,7 +71,7 @@ def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report
         database.log_action_on_ticket(
             ticket=ticket,
             action='send_email',
-            email=email
+            email=_email
         )
 
 

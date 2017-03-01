@@ -34,7 +34,7 @@ from django.db.models import ObjectDoesNotExist
 import common
 import database
 from abuse.models import (AttachedDocument, Proof, Report,
-                          ReportItem, Ticket, User, BusinessRules,
+                          ReportItem, User, BusinessRules,
                           BusinessRulesHistory)
 from adapters.services.search.abstract import SearchServiceException
 from factory.implementation import ImplementationFactory as implementations
@@ -55,20 +55,20 @@ from worker import Logger
 Parser = EmailParser()
 
 
-def create_from_email(email_content=None, filename=None, lang='EN', send_ack=False):
+def create_from_email(email_content=None, filename=None, ack_lang='EN'):
     """
         Create Cerberus report(s) based on email content
 
-        If send_ack is True and report is attached to a ticket,
-        then an acknowledgement is sent to the email provider.
-
         :param str email_content: The raw email content
         :param str filename: The name of the raw email file
-        :param str lang: Langage to use if send_ack is True
-        :param bool send_ack: If an acknowledgment have to be sent to provider
-        :raises `adapters.dao.customer.abstract.CustomerDaoException`: if exception while identifying defendants from items
-        :raises `adapters.services.mailer.abstract.MailerServiceException: if exception while updating ticket's emails
-        :raises `adapters.services.storage.abstract.StorageServiceException: if exception while accessing storage
+        :param str ack_lang: Langage to use
+                         if `worker.workflows.actions.report.send_provider_ack` is triggered
+        :raises `adapters.dao.customer.abstract.CustomerDaoException`:
+                if exception while identifying defendants from items
+        :raises `adapters.services.mailer.abstract.MailerServiceException:
+                if exception while updating ticket's emails
+        :raises `adapters.services.storage.abstract.StorageServiceException:
+                if exception while accessing storage
     """
     # This function use a lock/commit_on_succes on db when creating reports
     #
@@ -121,7 +121,7 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
 
     # Create report(s) with identified services
     if not services:
-        created_reports = [_create_without_services(abuse_report, filename)]
+        created_reports = [_create_without_services(abuse_report, filename, ack_lang=ack_lang)]
     else:
         with pglocks.advisory_lock('cerberus_lock'):
             _create_defendants_and_services(services)
@@ -130,11 +130,6 @@ def create_from_email(email_content=None, filename=None, lang='EN', send_ack=Fal
     # Upload attachments
     if abuse_report.attachments:
         _save_attachments(filename, abuse_report.attachments, reports=created_reports)
-
-    # Send acknowledgement to provider (only if send_ack = True and report is attached to a ticket)
-    for report in created_reports:
-        if send_ack and report.ticket:
-            _send_ack(report, lang=lang)
 
     # Index to SearchService
     if implementations.instance.is_implemented('SearchServiceBase'):
@@ -152,12 +147,14 @@ def _create_defendants_and_services(services):
 
 
 @transaction.atomic
-def _create_without_services(abuse_report, filename, apply_rules=True):
+def _create_without_services(abuse_report, filename, ack_lang='EN', apply_rules=True):
     """
         Create report in Cerberus
 
-        :param `worker.parsing.parser.ParsedEmail` abuse_report: The `worker.parsing.parser.ParsedEmail`
+        :param `worker.parsing.parser.ParsedEmail` abuse_report:
+            The `worker.parsing.parser.ParsedEmail`
         :param str filename: The filename of the email
+        :param str ack_lang: Langage to use for report acknowledgement
         :param bool apply_rules: Run rules or not
         :rtype: `abuse.models.Report`
         :return: The Cerberus `abuse.models.Report`
@@ -181,20 +178,22 @@ def _create_without_services(abuse_report, filename, apply_rules=True):
         _apply_business_rules(
             parsed_email=abuse_report,
             report=report,
-            rules_type='Report'
+            rules_type='Report',
+            ack_lang=ack_lang
         )
 
     return report
 
 
 @transaction.atomic
-def _create_with_services(abuse_report, filename, services):
+def _create_with_services(abuse_report, filename, services, ack_lang='EN'):
     """
         Create report(s), ticket(s), item(s), defendant(s), service(s), attachment(s) in Cerberus
 
         :param `ParsedEmail` abuse_report: The `ParsedEmail`
         :param str filename: The filename of the email
         :param dict services: The identified service(s) (see adapters/dao/customer/abstract.py)
+        :param str ack_lang: Langage to use for report acknowledgement
         :rtype: list
         :return: The list of Cerberus `abuse.models.Report` created
     """
@@ -224,7 +223,8 @@ def _create_with_services(abuse_report, filename, services):
             report=report,
             ticket=ticket,
             service=report.service,
-            rules_type='Report'
+            rules_type='Report',
+            ack_lang=ack_lang
         )
         if rule_applied:
             continue
@@ -278,6 +278,7 @@ def _get_business_rules_config(**kwargs):
     cdn_domain_to_request = kwargs.get('domain_to_request')
     reply_category = kwargs.get('reply_category')
     trusted = kwargs.get('is_trusted')
+    ack_lang = kwargs.get('ack_lang') or 'EN'
 
     variables = actions = None
     rules = BusinessRules.objects.filter(
@@ -293,7 +294,8 @@ def _get_business_rules_config(**kwargs):
         )
         actions = ReportActions(
             report,
-            ticket
+            ticket,
+            ack_lang,
         )
     elif rules_type == 'EmailReply':
         variables = EmailReplyVariables(
@@ -334,26 +336,6 @@ def _index_report_to_searchservice(parsed_email, filename, reports_id):
     except SearchServiceException as ex:
         # Not fatal => don't stop current routine
         Logger.error(unicode('Unable to index mail %s in SearchService -> %s' % (filename, ex)))
-
-
-def _send_ack(report, lang=None):
-    """
-        Send acknoledgement to provider
-
-        :param `abuse.models.Report` report: A `abuse.models.Report` instance
-        :param string lang: The langage to use
-    """
-    if settings.TAGS['no_autoack'] not in report.provider.tags.all().values_list('name', flat=True):
-        common.send_email(
-            report.ticket,
-            [report.provider.email],
-            settings.CODENAMES['ack_received'],
-            lang=lang,
-            acknowledged_report_id=report.id,
-        )
-
-    report.ticket = Ticket.objects.get(id=report.ticket.id)
-    report.save()
 
 
 def _add_items(report_id, items):

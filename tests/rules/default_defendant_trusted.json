@@ -7,7 +7,10 @@
                     "attach_new": true, 
                     "create_new": false
                 }
-            }
+            },
+            {
+                "name": "send_provider_ack"
+            } 
         ], 
         "conditions": {
             "all": [

@@ -470,18 +470,6 @@ def add_phishing_blocked_tag(report):
         pass
 
 
-def add_mass_contact_tag(ticket, campaign_name):
-    """
-        Add mass contact tag to report
-    """
-    try:
-        tag, _ = Tag.objects.get_or_create(tagType='Ticket', name=campaign_name)
-        ticket.tags.add(tag)
-        ticket.save()
-    except ObjectDoesNotExist:
-        pass
-
-
 def refresh_defendant_infos(defendant_id=None):
     """
         Try to update `abuse.models.Defendant`'s revision

@@ -40,6 +40,7 @@ from worker import Logger
 DOWN_THRESHOLD = settings.GENERAL_CONFIG['phishing']['down_threshold']
 
 
+# XXX: rewrite
 def check_if_all_down(report=None, last=5, try_screenshot=True):
     """ Check if all urls items for a report (phishing for example) are 'down'.
 
@@ -109,6 +110,7 @@ def _update_item_status(item, country='FR', try_screenshot=True):
         pass
 
 
+# XXX: rewrite
 def close_because_all_down(report=None, denied_by=None):
     """
         Create and close a ticket when all report's items are down
@@ -167,6 +169,7 @@ def _send_email(ticket, email, codename, lang='EN'):
     )
 
 
+# XXX: rewrite
 def block_url_and_mail(ticket_id=None, report_id=None):
     """
         Block url with PhishingService and send mail to defendant

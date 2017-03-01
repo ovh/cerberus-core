@@ -705,7 +705,7 @@ def __create_jobs(campaign_name, ips, category, body, user):
     jobs = []
     for ip_address in ips:
         job = utils.default_queue.enqueue(
-            'ticket.mass_contact',
+            'masscontact.mass_contact',
             ip_address=ip_address,
             category=category.name,
             campaign_name=campaign_name,
@@ -716,7 +716,7 @@ def __create_jobs(campaign_name, ips, category, body, user):
         jobs.append(job.id)
 
     utils.default_queue.enqueue(
-        'ticket.check_mass_contact_result',
+        'masscontact.check_mass_contact_result',
         result_campaign_id=result.id,
         jobs=jobs,
     )

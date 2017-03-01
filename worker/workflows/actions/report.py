@@ -16,21 +16,23 @@ from worker.workflows.engine.actions import rule_action, BaseActions
 from worker.workflows.engine.fields import (FIELD_TEXT,
                                             FIELD_NO_INPUT,
                                             FIELD_NUMERIC)
-from worker import common, database, phishing, ticket
+from worker import common, database, phishing
 
 
 class ReportActions(BaseActions):
     """
         This class implements usefull actions required for Report `abuse.models.BusinessRules`
     """
-    def __init__(self, report, ticket):
+    def __init__(self, report, cerberus_ticket, ack_lang='EN'):
         """
             :param `abuse.models.Report` report: A Cerberus report instance
-            :param `abuse.models.Ticket` ticket: A Cerberus ticket instance
+            :param `abuse.models.Ticket` cerberus_ticket: A Cerberus ticket instance
+            :param str ack_lang: Langage to use for report acknowledgement
         """
         self.report = report
-        self.ticket = ticket
-        self.existing_ticket = bool(ticket)
+        self.ticket = cerberus_ticket
+        self.ack_lang = ack_lang
+        self.existing_ticket = bool(cerberus_ticket)
 
     @rule_action(params=[{'fieldType': FIELD_NO_INPUT, 'name': 'create_new'},
                          {'fieldType': FIELD_NO_INPUT, 'name': 'attach_new'}])
@@ -92,13 +94,16 @@ class ReportActions(BaseActions):
     def send_provider_ack(self):
         """
         """
-        common.send_email(
-            self.ticket,
-            [self.report.provider.email],
-            settings.CODENAMES['ack_received'],
-            lang='EN',
-            acknowledged_report_id=self.report.id,
-        )
+        lang = self.ack_lang or 'EN'
+        report_tags = self.report.provider.tags.all().values_list('name', flat=True)
+        if settings.TAGS['no_autoack'] not in report_tags:
+            common.send_email(
+                self.ticket,
+                [self.report.provider.email],
+                settings.CODENAMES['ack_received'],
+                lang=lang,
+                acknowledged_report_id=self.report.id,
+            )
 
     @rule_action(params=[{'fieldType': FIELD_TEXT, 'name': 'template_codename'}])
     def send_defendant_email(self, template_codename=None):
@@ -167,6 +172,7 @@ class ReportActions(BaseActions):
     def apply_timeout_action(self):
         """
         """
+        from worker import ticket
         ticket.timeout(self.ticket.id)
 
     @rule_action(params=[{'fieldType': FIELD_TEXT, 'name': 'regex'},
@@ -233,8 +239,8 @@ class ReportActions(BaseActions):
         ).distinct()
 
         if not items:
-            raise AssertionError('No items found for function add_items_as_proof'
-                    )
+            raise AssertionError('No items found for function add_items_as_proof')
+
         content = '\n'.join(items)
 
         for email in re.findall(regexp.EMAIL, content):  # Remove potentially sensitive emails

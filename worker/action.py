@@ -36,6 +36,7 @@ from factory.implementation import ImplementationFactory as implementations
 from worker import Logger
 
 
+# XXX: rewrite
 def apply_if_no_reply(ticket_id=None, action_id=None, ip_addr=None,
                       resolution_id=None, user_id=None, close=False):
     """
@@ -89,6 +90,7 @@ def apply_if_no_reply(ticket_id=None, action_id=None, ip_addr=None,
     Logger.info(unicode('Ticket %d processed. Next !' % (ticket_id)))
 
 
+# XXX: rewrite
 def apply_then_close(ticket_id=None, action_id=None, ip_addr=None,
                      resolution_id=None, user_id=None):
     """
@@ -122,6 +124,7 @@ def apply_then_close(ticket_id=None, action_id=None, ip_addr=None,
     Logger.info(unicode('Ticket %d processed. Next !' % (ticket_id)))
 
 
+# XXX: rewrite
 def apply_action(ticket_id=None, action_id=None, ip_addr=None, user_id=None):
     """
         Apply given action on customer service
