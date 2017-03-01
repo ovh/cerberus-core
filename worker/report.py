@@ -125,7 +125,7 @@ def create_from_email(email_content=None, filename=None, ack_lang='EN'):
     else:
         with pglocks.advisory_lock('cerberus_lock'):
             _create_defendants_and_services(services)
-        created_reports = _create_with_services(abuse_report, filename, services)
+        created_reports = _create_with_services(abuse_report, filename, services, ack_lang=ack_lang)
 
     # Upload attachments
     if abuse_report.attachments:
