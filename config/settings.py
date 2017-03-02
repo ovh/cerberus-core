@@ -102,9 +102,12 @@ GENERAL_CONFIG = {
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(os.path.dirname(__file__), 'test.db'),
-        'TEST_NAME': os.path.join(os.path.dirname(__file__), 'test.db'),
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': os.getenv('PG_NAME', 'abuse'),
+        'USER': os.getenv('PG_USER', 'cerberus'),
+        'PASSWORD': os.getenv('PG_PASS', 'cerberus'),
+        'HOST': os.getenv('PG_HOST', '127.0.0.1'),
+        'PORT': os.getenv('PG_PORT', 5432),
     }
 }
 
@@ -140,6 +143,10 @@ INSTALLED_APPS = (
 SECRET_KEY = 'test'
 
 EMAIL_FETCHER = {
+    'host': os.getenv('EMAIL_HOST'),
+    'port': os.getenv('EMAIL_PORT', 993),
+    'login': os.getenv('EMAIL_LOGIN'),
+    'pass': os.getenv('EMAIL_PASS'),
     'cerberus_email': 'ticket+%s.%s@example.com',
     'cerberus_re': r'ticket\+(\w+).(\w+)@example.com',
 }
