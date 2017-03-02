@@ -18,11 +18,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import json
 import os
 
 from abuse.models import (AbusePermission, ServiceAction, Category, MailTemplate,
                           Provider, ReportThreshold, User, Profile, Resolution, Tag,
-                          Operator, ApiRoute, Role)
+                          Operator, ApiRoute, Role, BusinessRules)
 from django.conf import settings
 from django.test import TestCase
 
@@ -60,231 +61,286 @@ class GlobalTestCase(TestCase):
             interval=3600,
         )
 
-        MailTemplate.objects.create(
-            codename='ack_report_received',
-            name='Test template',
-            subject='Abuse dectected, Ticket #{{ publicId }}',
-            body='Abuse dectected, Ticket #{{ publicId }}',
-        )
-
-        MailTemplate.objects.create(
-            codename='no_more_content',
-            name='No more content',
-            subject='No more content',
-            body='No more content',
-        )
-
-        MailTemplate.objects.create(
-            codename='fixed',
-            name='Fixed',
-            subject='Fixed',
-            body='Fixed',
-        )
-
-        MailTemplate.objects.create(
-            codename='first_alert',
-            name='First Alert',
-            subject='First Alert',
-            body='First Alert',
-        )
-
-        MailTemplate.objects.create(
-            codename='case_closed',
-            name='Case closed',
-            subject='Case closed',
-            body='Case closed',
-        )
-
-        MailTemplate.objects.create(
-            codename='service_blocked',
-            name='Service blocked',
-            subject='Service blocked',
-            body='Service blocked',
-        )
-
-        MailTemplate.objects.create(
-            codename='ticket_closed',
-            name='ticket closed',
-            subject='ticket closed',
-            body='ticket closed',
-        )
-
-        MailTemplate.objects.create(
-            codename='phishing_blocked',
-            name='phishing blocked',
-            subject='phishing blocked',
-            body="""{% if phishingUrls|length > 0 %}
-                  Below is the list of URLs pointing to the phishing webpage you're hosting :\n
-                  {% for url in phishingUrls %}
-                  \n* {{ url }}
-                  {% endfor %}
-                  {% endif %}""",
-        )
-
         for tag in ['copyright:autoclosed', 'phishing:autoblocked', 'phishing:autoclosed', 'phishing:autoreopened']:
             Tag.objects.create(codename=tag, name=tag, tagType='Ticket')
+            Tag.objects.create(codename=tag, name=tag, tagType='Report')
 
         Resolution.objects.create(codename='no_more_content')
+        Resolution.objects.create(codename='invalid')
         Resolution.objects.create(codename='fixed')
         Resolution.objects.create(codename='forward_acns')
         Resolution.objects.create(codename='fixed_by_customer')
-
-        user = User.objects.create(username=settings.GENERAL_CONFIG['bot_user'])
-        user.is_superuser = True
-        user.is_staff = True
-        user.is_active = True
-        user.set_password('test')
-        user.save()
-
-        profile = Profile.objects.create(name='Expert')
-        profile.actions.add(action)
-        profile.save()
-
-        for category in Category.objects.all():
-            AbusePermission.objects.create(user=user, category=category, profile=profile)
 
         Provider.objects.create(email='low@provider.com', priority='Low')
         Provider.objects.create(email='normal@provider.com', priority='Normal')
         Provider.objects.create(email='critical@provider.com', priority='Critical')
         Provider.objects.create(email='trusted.phishing@provider.com', priority='Critical', apiKey='token')
 
-        role = Role.objects.create(codename='admin', name='Admin')
-        role.modelsAuthorizations = {'ticket': {'schedulingAlgorithm': 'GlobalSchedulingAlgorithm'}}
-        role.save()
-        Operator.objects.create(role=role, user=user)
+        set_email_templates()
+        set_business_rules()
+        set_roles()
 
-        endpoints = [
-            'reputation_views.get_url_external_reputation',
-            'email_templates_views.get_recipients_type',
-            'email_templates_views.get_supported_languages',
-            'misc_views.get_providers_priorities',
-            'misc_views.get_ticket_priorities',
-            'defendant_views.get_defendant_top20',
-            'preset_views.order_presets',
-            'report_views.bulk_add_reports',
-            'ticket_views.get_todo_tickets',
-            'ticket_views.bulk_add_tickets',
-            'threshold_views.get_all_threshold',
-            'threshold_views.create_threshold',
-            'misc_views.get_whois',
-            'misc_views.get_url_http_headers',
-            'misc_views.get_logged_user',
-            'tag_views.get_tag_type',
-            'email_templates_views.get_all_templates',
-            'email_templates_views.create_templates',
-            'category_views.get_user_categories',
-            'misc_views.get_user_notifications',
-            'misc_views.get_mass_contact',
-            'misc_views.wrapper',
-            'misc_views.get_all_ticket_resolutions',
-            'misc_views.add_ticket_resolution',
-            'category_views.get_all_categories',
-            'category_views.create_category',
-            'ticket_views.get_user_tickets',
-            'misc_views.get_dashboard',
-            'provider_views.get_providers',
-            'provider_views.create_provider',
-            'misc_views.get_profiles',
-            'preset_views.get_all_presets',
-            'preset_views.create_preset',
-            'misc_views.monitor',
-            'misc_views.get_toolbar',
-            'report_views.get_all_reports',
-            'ticket_views.get_tickets',
-            'ticket_views.create_ticket',
-            'misc_views.logout',
-            'misc_views.search',
-            'misc_views.get_all_status',
-            'misc_views.get_users_infos',
-            'misc_views.auth',
-            'misc_views.ping',
-            'news_views.get_all_news',
-            'news_views.create_news',
-            'tag_views.get_all_tags',
-            'tag_views.create_tag',
-            'reputation_views.get_ip_external_detail',
-            'report_views.get_item_screenshot',
-            'reputation_views.get_ip_internal_reputation',
-            'reputation_views.get_ip_external_reputation',
-            'reputation_views.get_ip_tool',
-            'reputation_views.get_ip_rbl_reputation',
-            'defendant_views.update_or_delete_comment',
-            'defendant_views.delete_defendant_tag',
-            'provider_views.delete_provider_tag',
-            'report_views.get_report_attachment',
-            'ticket_views.get_ticket_prefetched_template',
-            'ticket_views.update_or_delete_comment',
-            'ticket_views.get_actions',
-            'ticket_views.get_ticket_prefetched_preset',
-            'ticket_views.update_status',
-            'report_views.get_all_items_screenshot',
-            'report_views.update_report_item',
-            'ticket_views.update_ticket_item',
-            'ticket_views.update_ticket_proof',
-            'report_views.delete_report_tag',
-            'ticket_views.delete_ticket_tag',
-            'ticket_views.cancel_job',
-            'defendant_views.add_comment',
-            'defendant_views.get_defendant_services',
-            'defendant_views.add_defendant_tag',
-            'provider_views.add_provider_tag',
-            'ticket_views.update_ticket_snooze',
-            'ticket_views.update_ticket_pause',
-            'report_views.get_all_report_attachments',
-            'report_views.get_dehtmlified_report',
-            'ticket_views.update_ticket_defendant',
-            'ticket_views.get_providers',
-            'report_views.post_feedback',
-            'ticket_views.interact',
-            'ticket_views.add_comment',
-            'ticket_views.get_mails',
-            'report_views.get_report_items',
-            'report_views.create_report_item',
-            'ticket_views.get_ticket_items',
-            'ticket_views.get_ticket_proof',
-            'report_views.add_report_tag',
-            'ticket_views.add_ticket_tag',
-            'ticket_views.get_jobs',
-            'ticket_views.schedule_job',
-            'report_views.get_raw_report',
-            'threshold_views.get_threshold',
-            'threshold_views.update_threshold',
-            'threshold_views.delete_threshold',
-            'defendant_views.get_defendant_tickets_stats',
-            'defendant_views.get_defendant_reports_stats',
-            'misc_views.get_ip_report_count',
-            'email_templates_views.get_template',
-            'email_templates_views.update_template',
-            'misc_views.update_ticket_resolution',
-            'misc_views.delete_ticket_resolution',
-            'category_views.get_category',
-            'category_views.update_category',
-            'category_views.delete_category',
-            'defendant_views.get_defendant',
-            'provider_views.update_provider',
-            'preset_views.get_preset',
-            'preset_views.update_preset',
-            'preset_views.delete_preset',
-            'report_views.get_report',
-            'report_views.update_report',
-            'ticket_views.get_ticket',
-            'ticket_views.update_ticket',
-            'misc_views.get_status',
-            'misc_views.get_user',
-            'misc_views.update_user',
-            'news_views.get_news',
-            'news_views.update_news',
-            'news_views.delete_news',
-            'tag_views.get_tag',
-            'tag_views.update_tag',
-            'tag_views.delete_tag'
-        ]
 
-        for method in 'GET', 'POST', 'PUT', 'PATCH', 'DELETE':
-            for route in endpoints:
-                route = ApiRoute.objects.create(method=method, endpoint=route)
-                role.allowedRoutes.add(route)
+def set_email_templates():
 
-    # def tearDown(self):
+    MailTemplate.objects.create(
+        codename='ack_report_received',
+        name='Test template',
+        subject='Abuse received, Ticket #{{ publicId }}',
+        body='Abuse received, Ticket #{{ publicId }}',
+        recipientType='Plaintiff',
+    )
 
-    #     shutil.rmtree(settings.GENERAL_CONFIG['email_storage_dir'], ignore_errors=True)
+    MailTemplate.objects.create(
+        codename='no_more_content',
+        name='No more content',
+        subject='No more content',
+        body='No more content',
+        recipientType='Plaintiff',
+    )
+
+    MailTemplate.objects.create(
+        codename='fixed',
+        name='Fixed',
+        subject='Fixed',
+        body='Fixed',
+        recipientType='Defendant',
+    )
+
+    MailTemplate.objects.create(
+        codename='customer_notification',
+        name='Abuse detected',
+        subject='Abuse detected',
+        body="""-- start of the technical details --
+            {% if proof|length == 1 %}{% for p in proof %}{{ p }}{% endfor %}{% else %}{% for p in proof %}
+            {{ p }}
+            ----------{% endfor %}{% endif %}""",
+        recipientType='Defendant',
+    )
+
+    MailTemplate.objects.create(
+        codename='case_closed',
+        name='Case closed',
+        subject='Case closed',
+        body='Case closed',
+        recipientType='Plaintiff',
+    )
+
+    MailTemplate.objects.create(
+        codename='service_blocked',
+        name='Service blocked',
+        subject='Service blocked',
+        body='Service blocked',
+        recipientType='Defendant',
+    )
+
+    MailTemplate.objects.create(
+        codename='not_managed_ip',
+        name='not_managed_ip',
+        subject='not_managed_ip',
+        body='not_managed_ip',
+        recipientType='Plaintiff',
+    )
+
+    MailTemplate.objects.create(
+        codename='ticket_closed',
+        name='ticket closed',
+        subject='ticket closed',
+        body='ticket closed',
+        recipientType='Defendant',
+    )
+
+    MailTemplate.objects.create(
+        codename='cloudflare_ip_request',
+        name='Cloudflare ip request',
+        subject='Cloudflare ip request',
+        body='Cloudflare ip request',
+        recipientType='Other',
+    )
+
+    MailTemplate.objects.create(
+        codename='phishing_blocked',
+        name='phishing blocked',
+        subject='phishing blocked',
+        body="""{% if phishingUrls|length > 0 %}
+              Below is the list of URLs pointing to the phishing webpage you're hosting :\n
+              {% for url in phishingUrls %}
+              \n* {{ url }}
+              {% endfor %}
+              {% endif %}""",
+        recipientType='Defendant',
+    )
+
+
+def set_roles():
+
+    user = User.objects.create(username=settings.GENERAL_CONFIG['bot_user'])
+    user.is_superuser = True
+    user.is_staff = True
+    user.is_active = True
+    user.set_password('test')
+    user.save()
+
+    action = ServiceAction.objects.get(name='default_action')
+    profile = Profile.objects.create(name='Expert')
+    profile.actions.add(action)
+    profile.save()
+
+    for category in Category.objects.all():
+        AbusePermission.objects.create(user=user, category=category, profile=profile)
+
+    role = Role.objects.create(codename='admin', name='Admin')
+    role.modelsAuthorizations = {'ticket': {'schedulingAlgorithm': 'GlobalSchedulingAlgorithm'}}
+    role.save()
+    Operator.objects.create(role=role, user=user)
+
+    endpoints = [
+        'threshold_views.get_all_threshold',
+        'report_views.validate_report',
+        'preset_views.create_preset',
+        'ticket_views.update_ticket_proof',
+        'tag_views.get_all_tags',
+        'email_templates_views.create_templates',
+        'reputation_views.get_ip_rbl_reputation',
+        'email_templates_views.get_all_templates',
+        'ticket_views.get_actions',
+        'ticket_views.update_ticket_item',
+        'misc_views.get_user_notifications',
+        'ticket_views.delete_ticket_tag',
+        'ticket_views.get_ticket_prefetched_template',
+        'provider_views.delete_provider_tag',
+        'email_templates_views.get_recipients_type',
+        'ticket_views.get_ticket',
+        'news_views.get_all_news',
+        'report_views.update_report',
+        'news_views.get_news',
+        'email_templates_views.get_supported_languages',
+        'misc_views.get_user',
+        'ticket_views.add_items_to_proof',
+        'report_views.delete_report_tag',
+        'misc_views.get_providers_priorities',
+        'tag_views.delete_tag',
+        'misc_views.get_url_http_headers',
+        'ticket_views.get_ticket_attachments',
+        'threshold_views.update_threshold',
+        'misc_views.monitor',
+        'ticket_views.update_ticket',
+        'defendant_views.get_defendant_tickets_stats',
+        'misc_views.get_all_ticket_resolutions',
+        'report_views.get_all_reports',
+        'ticket_views.cancel_job',
+        'preset_views.get_preset',
+        'defendant_views.add_comment',
+        'email_templates_views.update_template',
+        'tag_views.get_tag_type',
+        'defendant_views.get_defendant_top20',
+        'ticket_views.get_providers',
+        'ticket_views.add_ticket_tag',
+        'provider_views.get_providers',
+        'threshold_views.delete_threshold',
+        'ticket_views.update_ticket_pause',
+        'misc_views.get_cerberus_roles',
+        'preset_views.update_preset',
+        'ticket_views.get_ticket_items',
+        'tag_views.update_tag',
+        'defendant_views.update_or_delete_comment',
+        'misc_views.update_ticket_resolution',
+        'report_views.get_all_report_attachments',
+        'ticket_views.update_ticket_defendant',
+        'report_views.get_raw_report',
+        'ticket_views.update_or_delete_comment',
+        'report_views.post_feedback',
+        'misc_views.get_profiles',
+        'ticket_views.schedule_job',
+        'provider_views.add_provider_tag',
+        'ticket_views.unblock_ticket_item',
+        'defendant_views.add_defendant_tag',
+        'ticket_views.bulk_add_tickets',
+        'misc_views.delete_ticket_resolution',
+        'report_views.get_report',
+        'preset_views.order_presets',
+        'defendant_views.get_defendant_reports_stats',
+        'misc_views.update_user',
+        'category_views.get_all_categories',
+        'ticket_views.get_todo_tickets',
+        'provider_views.update_provider',
+        'reputation_views.get_url_external_reputation',
+        'reputation_views.get_ip_external_detail',
+        'preset_views.delete_preset',
+        'report_views.bulk_add_reports',
+        'category_views.create_category',
+        'misc_views.logout',
+        'category_views.get_user_categories',
+        'news_views.update_news',
+        'misc_views.add_ticket_resolution',
+        'misc_views.get_dashboard',
+        'defendant_views.get_defendant',
+        'misc_views.get_logged_user',
+        'tag_views.get_tag',
+        'ticket_views.get_ticket_proof',
+        'misc_views.auth',
+        'category_views.update_category',
+        'ticket_views.get_user_tickets',
+        'ticket_views.get_ticket_attachment',
+        'report_views.add_report_tag',
+        'email_templates_views.get_template',
+        'ticket_views.update_status',
+        'category_views.get_category',
+        'ticket_views.create_ticket',
+        'tag_views.create_tag',
+        'ticket_views.get_ticket_prefetched_preset',
+        'ticket_views.get_jobs',
+        'misc_views.search',
+        'news_views.delete_news',
+        'misc_views.get_all_status',
+        'misc_views.get_mass_contact',
+        'misc_views.get_users_infos',
+        'ticket_views.update_ticket_snooze',
+        'misc_views.get_whois',
+        'report_views.get_dehtmlified_report',
+        'provider_views.create_provider',
+        'category_views.delete_category',
+        'report_views.get_report_attachment',
+        'report_views.get_all_items_screenshot',
+        'reputation_views.get_ip_external_reputation',
+        'report_views.update_report_item',
+        'report_views.create_report_item',
+        'report_views.unblock_report_item',
+        'reputation_views.get_ip_internal_reputation',
+        'misc_views.ping',
+        'threshold_views.get_threshold',
+        'threshold_views.create_threshold',
+        'defendant_views.delete_defendant_tag',
+        'defendant_views.get_defendant_services',
+        'misc_views.get_ip_report_count',
+        'misc_views.wrapper',
+        'ticket_views.interact',
+        'ticket_views.get_mails',
+        'report_views.get_report_items',
+        'ticket_views.get_timeline',
+        'preset_views.get_all_presets',
+        'ticket_views.ticket_star_management',
+        'misc_views.get_ticket_priorities',
+        'misc_views.get_toolbar',
+        'report_views.get_item_screenshot',
+        'ticket_views.get_tickets',
+        'news_views.create_news',
+        'ticket_views.add_comment',
+        'reputation_views.get_ip_tool',
+        'misc_views.get_status',
+    ]
+
+    for method in 'GET', 'POST', 'PUT', 'PATCH', 'DELETE':
+        for route in endpoints:
+            route = ApiRoute.objects.create(method=method, endpoint=route)
+            role.allowedRoutes.add(route)
+
+
+def set_business_rules():
+
+    for dirpath, _, files in os.walk(os.path.dirname(os.path.realpath(__file__)) + '/rules'):
+        for _file in files:
+            if _file.endswith(".json"):
+                with open(os.path.join(dirpath, _file), 'r') as file_reader:
+                    config = json.loads(file_reader.read())
+                BusinessRules.objects.create(**config)

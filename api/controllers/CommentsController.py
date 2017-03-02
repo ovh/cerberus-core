@@ -27,8 +27,10 @@ from time import mktime
 
 from django.db.models import ObjectDoesNotExist
 from django.forms.models import model_to_dict
+from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
-from abuse.models import Comment, DefendantComment, Ticket, TicketComment, User
+from abuse.models import (Comment, DefendantComment, Ticket,
+                          TicketComment, User)
 from worker import database
 
 
@@ -40,16 +42,26 @@ def check_comment(func):
         try:
             comment = Comment.objects.get(id=kwargs['comment_id'])
         except (ObjectDoesNotExist, ValueError):
-            return 404, {'status': 'Not Found', 'code': 404, 'message': 'Comment not found'}
+            raise NotFound('Comment not found')
 
         if comment.user_id != kwargs['user_id']:
-            return 403, {'status': 'Forbidden', 'code': 403, 'message': 'Comment not owned by user'}
+            raise Forbidden('Comment not owned by user')
 
-        if kwargs.get('ticket_id') and not TicketComment.objects.filter(ticket=kwargs['ticket_id'], comment=kwargs['comment_id']).exists():
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Comment not associated to specified ticket'}
+        if kwargs.get('ticket_id'):
+            existing = TicketComment.objects.filter(
+                ticket=kwargs['ticket_id'],
+                comment=kwargs['comment_id']
+            ).exists()
+            if not existing:
+                raise BadRequest('Comment not associated to specified ticket')
 
-        if kwargs.get('defendant_id') and not DefendantComment.objects.filter(defendant=kwargs['defendant_id'], comment=kwargs['comment_id']).exists():
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Comment not associated to defendant ticket'}
+        if kwargs.get('defendant_id'):
+            existing = DefendantComment.objects.filter(
+                defendant=kwargs['defendant_id'],
+                comment=kwargs['comment_id']
+            ).exists()
+            if not existing:
+                raise BadRequest('Comment not associated to defendant ticket')
 
         # OK, it's valid
         return func(*args, **kwargs)
@@ -62,7 +74,7 @@ def show(comment_id):
     try:
         comment = Comment.objects.get(id=comment_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Comment not found'}
+        raise NotFound('Comment not found')
 
     comment_dict = model_to_dict(comment)
     comment_dict['date'] = mktime(comment.date.timetuple())
@@ -70,7 +82,7 @@ def show(comment_id):
     if comment_dict.get('user'):
         comment_dict['user'] = User.objects.get(id=comment_dict['user']).username
 
-    return 200, comment_dict
+    return comment_dict
 
 
 def create(body, ticket_id=None, defendant_id=None, user_id=None):
@@ -79,7 +91,7 @@ def create(body, ticket_id=None, defendant_id=None, user_id=None):
     try:
         content = body.pop('comment')
     except KeyError:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing comment field in body'}
+        raise BadRequest('Missing comment field in body')
 
     comment = Comment.objects.create(comment=content, user_id=user_id)
 
@@ -118,7 +130,7 @@ def update(body, comment_id=None, ticket_id=None, user_id=None):
             )
 
     except KeyError:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing comment field in body'}
+        raise BadRequest('Missing comment field in body')
 
     return show(comment_id)
 
@@ -141,4 +153,4 @@ def delete(comment_id=None, ticket_id=None, defendant_id=None, user_id=None):
         DefendantComment.objects.filter(defendant=defendant_id, comment=comment_id).delete()
         Comment.objects.filter(id=comment_id).delete()
 
-    return 200, {'status': 'OK', 'code': 200}
+    return {'message': 'Comment successfully deleted'}

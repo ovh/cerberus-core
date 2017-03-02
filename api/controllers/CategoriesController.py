@@ -26,6 +26,7 @@ from django.core.exceptions import FieldError
 from django.db import IntegrityError
 from django.db.models import ObjectDoesNotExist, ProtectedError
 from django.forms.models import model_to_dict
+from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
 from abuse.models import AbusePermission, Category
 
@@ -41,7 +42,7 @@ def index(**kwargs):
     else:
         cats = Category.objects.all()
 
-    return 200, [model_to_dict(c) for c in cats]
+    return [model_to_dict(c) for c in cats]
 
 
 def show(cat):
@@ -49,9 +50,9 @@ def show(cat):
     """
     result = Category.objects.filter(name=cat)
     if not result:
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Category not found')
 
-    return 200, model_to_dict(result[0])
+    return model_to_dict(result[0])
 
 
 def create(cat):
@@ -60,8 +61,8 @@ def create(cat):
     try:
         category, created = Category.objects.get_or_create(**cat)
     except (FieldError, IntegrityError):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
-    return 201, model_to_dict(category)
+        raise BadRequest('Invalid fields in body')
+    return model_to_dict(category)
 
 
 def update(cat, body):
@@ -70,13 +71,13 @@ def update(cat, body):
     try:
         category = Category.objects.get(name=cat)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Category not found')
     try:
         Category.objects.filter(pk=category.pk).update(**body)
         category = Category.objects.get(pk=category.pk)
     except (FieldError, IntegrityError):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
-    return 200, model_to_dict(category)
+        raise BadRequest('Invalid fields in body')
+    return model_to_dict(category)
 
 
 def destroy(cat):
@@ -85,9 +86,9 @@ def destroy(cat):
     try:
         category = Category.objects.get(name=cat)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Category not found')
     try:
         category.delete()
-        return 200, {'status': 'OK', 'code': 200, 'message': 'Category successfully removed'}
+        return {'message': 'Category successfully removed'}
     except ProtectedError:
-        return 403, {'status': 'Forbidden', 'message': 'Category still referenced in reports/tickets', 'code': 403}
+        raise Forbidden('Category still referenced in reports/tickets')

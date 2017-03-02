@@ -25,9 +25,10 @@
 import base64
 import hashlib
 import json
+import mimetypes
 import operator
-import re
 import time
+
 from copy import deepcopy
 from datetime import datetime, timedelta
 from urllib import unquote
@@ -40,90 +41,27 @@ from django.db.models import Count, FieldDoesNotExist, ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
 from django.utils import text
 from netaddr import AddrConversionError, AddrFormatError, IPNetwork
+from werkzeug.exceptions import (BadRequest, Forbidden, InternalServerError,
+                                 NotFound)
 
 from abuse.models import (AbusePermission, ContactedProvider, Defendant,
                           History, Proof, Report, Resolution, Service,
                           ServiceAction, ServiceActionJob, Tag, Ticket,
-                          TicketComment, AttachedDocument)
+                          TicketComment, AttachedDocument, StarredTicket)
+from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.action.abstract import ActionServiceException
 from adapters.services.mailer.abstract import EMAIL_VALID_CATEGORIES, MailerServiceException
 from adapters.services.search.abstract import SearchServiceException
 from adapters.services.storage.abstract import StorageServiceException
+from api.constants import (IP_CIDR_RE, TICKET_FIELDS, TICKET_FILTER_MAPPING,
+                           TICKET_UPDATE_VALID_FIELDS, TICKET_BULK_VALID_FIELDS,
+                           TICKET_BULK_VALID_STATUS, TICKET_MODIFICATION_INVALID_FIELDS)
 from api.controllers import (DefendantsController, GeneralController,
                              ProvidersController)
-from factory.factory import (ImplementationFactory,
-                             TicketSchedulingAlgorithmFactory)
-from utils import utils
+from factory.implementation import ImplementationFactory
+from factory.ticketscheduling import TicketSchedulingAlgorithmFactory
+from utils import schema, utils
 from worker import database
-from worker.parsing import regexp
-
-
-IP_CIDR_RE = re.compile(r"(?<!\d\.)(?<!\d)(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}(?!\d|(?:\.\d))")
-STATUS = [status[0].lower() for status in Ticket.TICKET_STATUS]
-
-# Mapping JSON fields name to django syntax
-FILTER_MAPPING = (
-    ('ticketsTag', 'tags__name'),
-    ('reportsTag', 'reportTicket__tags__name'),
-    ('treatedBy', 'treatedBy__username'),
-    ('defendantCustomerId', 'defendant__customerId'),
-    ('defendantCountry', 'defendant__details__country'),
-    ('defendantEmail', 'defendant__details__email'),
-    ('defendantTag', 'defendant__tags__name'),
-    ('providerEmail', 'reportTicket__provider__email'),
-    ('providerTag', 'reportTicket__provider__tags__name'),
-    ('itemRawItem', 'reportTicket__reportItemRelatedReport__rawItem'),
-    ('itemIpReverse', 'reportTicket__reportItemRelatedReport__ipReverse'),
-    ('itemFqdnResolved', 'reportTicket__reportItemRelatedReport__fqdnResolved'),
-)
-
-UPDATE_VALID_FIELDS = (
-    'defendant',
-    'category',
-    'level',
-    'alarm',
-    'treatedBy',
-    'confidential',
-    'priority',
-    'pauseStart',
-    'pauseDuration',
-    'moderation',
-    'protected',
-    'escalated',
-    'update'
-)
-
-BULK_VALID_FIELDS = (
-    'category',
-    'level',
-    'alarm',
-    'treatedBy',
-    'confidential',
-    'priority',
-    'moderation',
-    'protected',
-    'escalated',
-    'update',
-    'pauseDuration'
-)
-
-BULK_VALID_STATUS = (
-    'unpaused',
-    'paused',
-    'closed',
-    'reopened'
-)
-
-MODIFICATION_INVALID_FIELDS = (
-    'defendant',
-    'category',
-    'treatedBy',
-    'snoozeStart',
-    'creationDate',
-    'modificationDate'
-)
-
-TICKET_FIELDS = [fld.name for fld in Ticket._meta.fields]
 
 
 def index(**kwargs):
@@ -133,12 +71,13 @@ def index(**kwargs):
     """
 
     # Parse filters from request
+    user = kwargs['user']
     filters = {}
     if kwargs.get('filters'):
         try:
             filters = json.loads(unquote(unquote(kwargs['filters'])))
         except (ValueError, SyntaxError, TypeError) as ex:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
+            raise BadRequest(str(ex.message))
     try:
         limit = int(filters['paginate']['resultsPerPage'])
         offset = int(filters['paginate']['currentPage'])
@@ -148,9 +87,10 @@ def index(**kwargs):
 
     # Generate Django filter based on parsed filters
     try:
-        where = __generate_request_filters(filters, kwargs['user'], kwargs.get('treated_by'))
-    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
+        where = _generate_request_filters(filters, user, kwargs.get('treated_by'))
+    except (AttributeError, KeyError, IndexError, FieldError,
+            SyntaxError, TypeError, ValueError) as ex:
+        raise BadRequest(str(ex.message))
 
     # Try to identify sortby in request
     sort = []
@@ -179,14 +119,15 @@ def index(**kwargs):
             attachedReportsCount=Count('reportTicket')).order_by(*sort)
         tickets = tickets[(offset - 1) * limit:limit * offset]
         len(tickets)  # Force django to evaluate query now
-    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
+    except (AttributeError, KeyError, IndexError, FieldError,
+            SyntaxError, TypeError, ValueError) as ex:
+        raise BadRequest(str(ex.message))
 
-    __format_ticket_response(tickets)
-    return 200, list(tickets), nb_record_filtered
+    _format_ticket_response(tickets, user)
+    return list(tickets), nb_record_filtered
 
 
-def __generate_request_filters(filters, user=None, treated_by=None):
+def _generate_request_filters(filters, user=None, treated_by=None):
     """
         Generates filters base on filter query string
     """
@@ -200,7 +141,7 @@ def __generate_request_filters(filters, user=None, treated_by=None):
             for key, value in field.iteritems():
                 if key == 'fulltext':
                     if ImplementationFactory.instance.is_implemented('SearchServiceBase'):
-                        add_search_filters(filters, value[0])
+                        _add_search_filters(filters, value[0])
                     filters['where']['like'].remove({key: value})
                     break
     except KeyError:
@@ -212,13 +153,13 @@ def __generate_request_filters(filters, user=None, treated_by=None):
         if 'in' in keys:
             for param in filters['where']['in']:
                 for key, val in param.iteritems():
-                    field = reduce(lambda a, kv: a.replace(*kv), FILTER_MAPPING, key)
+                    field = reduce(lambda a, kv: a.replace(*kv), TICKET_FILTER_MAPPING, key)
                     where.append(reduce(operator.or_, [Q(**{field: i}) for i in val]))
         if 'like' in keys:
             like = []
             for param in filters['where']['like']:
                 for key, val in param.iteritems():
-                    field = reduce(lambda a, kv: a.replace(*kv), FILTER_MAPPING, key)
+                    field = reduce(lambda a, kv: a.replace(*kv), TICKET_FILTER_MAPPING, key)
                     field = field + '__icontains'
                     like.append(Q(**{field: val[0]}))
             if len(like):
@@ -248,13 +189,10 @@ def __generate_request_filters(filters, user=None, treated_by=None):
     return where
 
 
-def __format_ticket_response(tickets):
+def _format_ticket_response(tickets, user):
     """ Convert datetime object and add flat foreign key
     """
     for ticket in tickets:
-        for key, val in ticket.iteritems():
-            if isinstance(val, datetime):
-                ticket[key] = time.mktime(val.timetuple())
 
         # Flat foreign models
         if ticket.get('defendant'):
@@ -269,9 +207,13 @@ def __format_ticket_response(tickets):
             tags = Ticket.objects.get(id=ticket['id']).tags.all()
             ticket['tags'] = [model_to_dict(tag) for tag in tags]
         ticket['commentsCount'] = TicketComment.objects.filter(ticket=ticket['id']).count()
+        ticket['starredByMe'] = StarredTicket.objects.filter(
+            ticket_id=ticket['id'],
+            user=user
+        ).exists()
 
 
-def add_search_filters(filters, query):
+def _add_search_filters(filters, query):
     """
         Add SearchService response to filters
     """
@@ -285,7 +227,9 @@ def add_search_filters(filters, query):
         except (AttributeError, IndexError, AddrFormatError, AddrConversionError):
             pass
     try:
-        reports = ImplementationFactory.instance.get_singleton_of('SearchServiceBase').search_reports(search_query)
+        reports = ImplementationFactory.instance.get_singleton_of(
+            'SearchServiceBase'
+        ).search_reports(search_query)
         if not reports:
             reports = [None]
     except SearchServiceException:
@@ -312,18 +256,13 @@ def show(ticket_id, user):
             just_assigned = assign_if_not(ticket, user)
         ticket_dict = Ticket.objects.filter(id=ticket_id).values(*TICKET_FIELDS)[0]
     except (IndexError, ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket not found'}
-
-    # Convert dates
-    for key, val in ticket_dict.iteritems():
-        if isinstance(val, datetime):
-            ticket_dict[key] = time.mktime(val.timetuple())
+        raise NotFound('Ticket not found')
 
     # Add related infos
     if ticket.treatedBy:
         ticket_dict['treatedBy'] = ticket.treatedBy.username
     if ticket.defendant:
-        ticket_dict['defendant'] = DefendantsController.show(ticket.defendant.id)[1]
+        ticket_dict['defendant'] = DefendantsController.show(ticket.defendant.id)
     if ticket.action:
         ticket_dict['action'] = model_to_dict(ServiceAction.objects.get(id=ticket.action.id))
     if ticket.service:
@@ -332,24 +271,25 @@ def show(ticket_id, user):
         ticket_dict['jobs'] = []
         for job in ticket.jobs.all():
             info = model_to_dict(job)
-            for key, val in info.iteritems():
-                if isinstance(val, datetime):
-                    info[key] = int(time.mktime(val.timetuple()))
             ticket_dict['jobs'].append(info)
 
     ticket_reports_id = ticket.reportTicket.all().values_list('id', flat=True).distinct()
 
-    ticket_dict['comments'] = __get_ticket_comments(ticket)
-    ticket_dict['history'] = __get_ticket_history(ticket)
+    ticket_dict['starredByMe'] = StarredTicket.objects.filter(
+        ticket=ticket,
+        user=user
+    ).exists()
+
+    ticket_dict['comments'] = _get_ticket_comments(ticket)
+    ticket_dict['history'] = _get_ticket_history(ticket)
     ticket_dict['attachedReportsCount'] = ticket.reportTicket.count()
-    ticket_dict['tags'] = __get_ticket_tags(ticket, ticket_reports_id)
-    ticket_dict['attachments'] = __get_ticket_attachments(ticket, ticket_reports_id)
+    ticket_dict['tags'] = _get_ticket_tags(ticket, ticket_reports_id)
     ticket_dict['justAssigned'] = just_assigned
 
-    return 200, ticket_dict
+    return ticket_dict
 
 
-def __get_ticket_comments(ticket):
+def _get_ticket_comments(ticket):
     """
         Get ticket comments..
     """
@@ -361,7 +301,7 @@ def __get_ticket_comments(ticket):
     } for c in TicketComment.objects.filter(ticket=ticket.id).order_by('-comment__date')]
 
 
-def __get_ticket_history(ticket):
+def _get_ticket_history(ticket):
     """
         Get ticket history..
     """
@@ -379,7 +319,7 @@ def __get_ticket_history(ticket):
     } for username, date, action in history]
 
 
-def __get_ticket_tags(ticket, ticket_reports_id):
+def _get_ticket_tags(ticket, ticket_reports_id):
     """
         Get ticket tags..
     """
@@ -390,15 +330,26 @@ def __get_ticket_tags(ticket, ticket_reports_id):
     return [model_to_dict(tag) for tag in tags]
 
 
-def __get_ticket_attachments(ticket, ticket_reports_id):
+def get_ticket_attachments(ticket_id):
     """
         Get ticket attachments..
     """
+    try:
+        ticket = Ticket.objects.get(id=ticket_id)
+    except (IndexError, ObjectDoesNotExist, ValueError):
+        raise NotFound('Ticket not found')
+
+    ticket_reports_id = ticket.reportTicket.all().values_list(
+        'id',
+        flat=True
+    ).distinct()
+
     attachments = AttachedDocument.objects.filter(report__id__in=ticket_reports_id).distinct()
     attachments = list(attachments)
     attachments.extend(ticket.attachments.all())
     attachments = list(set(attachments))
-    return [model_to_dict(attach) for attach in attachments]
+    attachments = [model_to_dict(attach) for attach in attachments]
+    return attachments
 
 
 def assign_if_not(ticket, user):
@@ -415,7 +366,10 @@ def assign_if_not(ticket, user):
 
     assigned = False
     delta = datetime.now() - timedelta(seconds=15)
-    just_unassigned = ticket.ticketHistory.filter(date__gt=delta, action__icontains='to nobody').order_by('-date')[:1]
+    just_unassigned = ticket.ticketHistory.filter(
+        date__gt=delta,
+        action__icontains='to nobody'
+    ).order_by('-date')[:1]
     if not ticket.treatedBy and not ticket.protected and not just_unassigned:
         ticket.treatedBy = user
         ticket.save()
@@ -429,21 +383,18 @@ def assign_if_not(ticket, user):
     return assigned
 
 
-def create(report, user):
+def create(body, user):
     """ Create a ticket from a report or attach it
         if ticket with same defendant/category already exists
     """
-    if not all(k in report.keys() for k in ('id', 'status')) or report['status'].lower() not in ('new', 'attached'):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Can not create a ticket with this status'}
-
     try:
-        report = Report.objects.get(id=report['id'])
+        if body['status'].lower() not in ('new', 'attached'):
+            raise BadRequest('Can not create a ticket with this status')
+        report = Report.objects.get(id=body['id'])
     except (KeyError, ObjectDoesNotExist):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid or missing report id'}
+        raise BadRequest('Invalid or missing report id')
 
-    code, resp = GeneralController.check_perms(method='POST', user=user, report=report.id)
-    if code != 200:
-        return code, resp
+    GeneralController.check_perms(method='POST', user=user, report=report.id)
 
     # Retrieve foreign model from body
     defendant = None
@@ -451,9 +402,9 @@ def create(report, user):
         try:
             defendant = DefendantsController.get_or_create(customer_id=report.defendant.customerId)
             if not defendant:
-                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Defendant not found'}
+                raise BadRequest('Defendant not found')
         except KeyError:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing id in defendant object'}
+            raise BadRequest('Missing id in defendant object')
 
     service = None
     if report.service:
@@ -463,7 +414,7 @@ def create(report, user):
                 name=report.service.name,
             )
         except (KeyError, ObjectDoesNotExist):
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid service or missing id in service object'}
+            raise BadRequest('Invalid service or missing id in service object')
 
     new_ticket = False
     ticket = None
@@ -473,7 +424,12 @@ def create(report, user):
 
     # Else creates ticket
     if not ticket:
-        ticket = database.create_ticket(defendant, report.category, service, priority=report.provider.priority)
+        ticket = database.create_ticket(
+            defendant,
+            report.category,
+            service,
+            priority=report.provider.priority
+        )
         new_ticket = True
 
     database.log_action_on_ticket(
@@ -484,10 +440,10 @@ def create(report, user):
         new_ticket=new_ticket
     )
 
-    database.set_ticket_higher_priority(ticket)
     report.status = 'Attached'
     report.ticket = ticket
     report.save()
+    database.set_ticket_higher_priority(ticket)
 
     # If new report, try to attach existing reports with status "New" to this new created ticket
     if ticket:
@@ -500,8 +456,8 @@ def create(report, user):
                 new_ticket=False
             )
 
-    _, resp = show(ticket.id, user)
-    return 201, resp
+    resp = show(ticket.id, user)
+    return resp
 
 
 def update(ticket, body, user, bulk=False):
@@ -510,26 +466,22 @@ def update(ticket, body, user, bulk=False):
     """
     allowed, body = _precheck_user_fields_update_authorizations(user, body)
     if not allowed:
-        return 403, {'status': 'Forbidden', 'code': 403, 'message': 'You are not allowed to edit any fields'}
+        raise Forbidden('You are not allowed to edit any fields')
 
     if not isinstance(ticket, Ticket):
         try:
             ticket = Ticket.objects.get(id=ticket)
         except (ObjectDoesNotExist, ValueError):
-            return 404, {'status': 'Not Found', 'code': 404}
+            raise NotFound('Not Found')
 
     if 'defendant' in body and body['defendant'] != ticket.defendant:
-        code, resp = update_ticket_defendant(ticket, body['defendant'])
-        if code != 200:
-            return code, resp
-        else:
-            body['defendant'] = resp
+        body['defendant'] = update_ticket_defendant(ticket, body['defendant'])
 
     if 'category' in body and body['category'] != ticket.category:
         try:
             ticket.reportTicket.update(category=body['category'])
         except IntegrityError:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid category'}
+            raise BadRequest('Invalid category')
 
     # If the user is a Beginner, he does not have the rights to modify these infos
     if user.abusepermission_set.filter(category=ticket.category, profile__name='Beginner').count():
@@ -539,11 +491,12 @@ def update(ticket, body, user, bulk=False):
     if not ticket.escalated and body.get('escalated'):
         body['treatedBy'] = None
 
-    if 'treatedBy' in body and ticket.treatedBy and ticket.protected and ticket.treatedBy.username != body['treatedBy']:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Ticket is protected'}
+    if 'treatedBy' in body and ticket.treatedBy and \
+       ticket.protected and ticket.treatedBy.username != body['treatedBy']:
+        raise BadRequest('Ticket is protected')
 
     # remove invalid fields
-    body = {k: v for k, v in body.iteritems() if k in UPDATE_VALID_FIELDS}
+    body = {k: v for k, v in body.iteritems() if k in TICKET_UPDATE_VALID_FIELDS}
 
     if body.get('treatedBy'):
         body['treatedBy'] = User.objects.get(username=body['treatedBy'])
@@ -560,10 +513,10 @@ def update(ticket, body, user, bulk=False):
             database.log_action_on_ticket(**action)
 
     except (KeyError, FieldDoesNotExist, FieldError, IntegrityError, TypeError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+        raise BadRequest(str(ex.message))
 
     if bulk:
-        return 200, None
+        return None
 
     return show(ticket.id, user)
 
@@ -606,7 +559,7 @@ def _get_modifications(old, new, user):
             'new_value': new_value
         })
 
-    for field in [f.name for f in Ticket._meta.fields if f.name not in MODIFICATION_INVALID_FIELDS]:
+    for field in set(TICKET_FIELDS) - set(TICKET_MODIFICATION_INVALID_FIELDS):
         if getattr(old, field) != getattr(new, field):
             actions.append({
                 'ticket': new,
@@ -625,7 +578,7 @@ def update_snooze_duration(ticket_id, body, user):
     try:
         ticket = Ticket.objects.get(id=ticket_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Not Found')
 
     try:
         data = {'snoozeDuration': body['snoozeDuration']}
@@ -636,22 +589,31 @@ def update_snooze_duration(ticket_id, body, user):
             ticket.save()
 
         if int(data['snoozeDuration']) > 10000000:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid duration'}
+            raise BadRequest('Invalid duration')
 
         # Delay jobs
         new_duration = int(data['snoozeDuration'])
         if new_duration > ticket.snoozeDuration:
             delay = new_duration - ticket.snoozeDuration
             delay = timedelta(seconds=delay)
-            utils.default_queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=False)
+            utils.default_queue.enqueue(
+                'ticket.delay_jobs',
+                ticket=ticket.id,
+                delay=delay,
+                back=False
+            )
         else:
             delay = ticket.snoozeDuration - new_duration
             delay = timedelta(seconds=delay)
-            utils.default_queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=True)
-
-        return __update_duration(ticket, data, user)
+            utils.default_queue.enqueue(
+                'ticket.delay_jobs',
+                ticket=ticket.id,
+                delay=delay,
+                back=True
+            )
+        return _update_duration(ticket, data, user)
     except (KeyError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+        raise BadRequest(str(ex.message))
 
 
 def update_pause_duration(ticket_id, body, user):
@@ -660,32 +622,41 @@ def update_pause_duration(ticket_id, body, user):
     try:
         ticket = Ticket.objects.get(id=ticket_id)
         if ticket.status != 'Paused':
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Ticket is not paused'}
+            raise BadRequest('Ticket is not paused')
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Not Found')
 
     try:
         data = {'pauseDuration': body['pauseDuration']}
         if int(data['pauseDuration']) > 10000000:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid duration'}
+            raise BadRequest('Invalid duration')
 
         # Delay jobs
         new_duration = int(data['pauseDuration'])
         if new_duration > ticket.pauseDuration:
             delay = new_duration - ticket.pauseDuration
             delay = timedelta(seconds=delay)
-            utils.default_queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=False)
+            utils.default_queue.enqueue(
+                'ticket.delay_jobs',
+                ticket=ticket.id,
+                delay=delay,
+                back=False
+            )
         else:
             delay = ticket.pauseDuration - new_duration
             delay = timedelta(seconds=delay)
-            utils.default_queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=True)
-
-        return __update_duration(ticket, data, user)
+            utils.default_queue.enqueue(
+                'ticket.delay_jobs',
+                ticket=ticket.id,
+                delay=delay,
+                back=True
+            )
+        return _update_duration(ticket, data, user)
     except (KeyError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+        raise BadRequest(str(ex.message))
 
 
-def __update_duration(ticket, data, user):
+def _update_duration(ticket, data, user):
     """ Generic update for duration
     """
     try:
@@ -706,7 +677,7 @@ def __update_duration(ticket, data, user):
         )
 
     except (FieldDoesNotExist, FieldError, IntegrityError, TypeError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+        raise BadRequest(str(ex.message))
 
     return show(ticket.id, user)
 
@@ -727,15 +698,15 @@ def update_ticket_defendant(ticket, defendant):
         try:
             defendant_obj = DefendantsController.get_or_create(customer_id=defendant['customerId'])
             if not defendant_obj:
-                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Defendant not found'}
+                raise BadRequest('Defendant not found')
         except KeyError:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing customerId or id in defendant body'}
+            raise BadRequest('Missing customerId or id in defendant body')
 
         # Cascade update
         if ticket.defendant != defendant:
             ticket.reportTicket.update(defendant=defendant_obj.id)
 
-    return 200, defendant_obj
+    return defendant_obj
 
 
 def get_providers(ticket_id):
@@ -744,15 +715,18 @@ def get_providers(ticket_id):
     try:
         ticket = Ticket.objects.get(id=ticket_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket not found'}
+        raise NotFound('Ticket not found')
 
     emails = ticket.reportTicket.all().values_list('provider__pk', flat=True).distinct()
-    providers = [ProvidersController.show(email)[1] for email in emails]
+    providers = [ProvidersController.show(email) for email in emails]
 
     for prov in providers:
-        prov['contacted'] = ContactedProvider.objects.filter(ticket=ticket, provider__email=prov['email']).exists()
+        prov['contacted'] = ContactedProvider.objects.filter(
+            ticket=ticket,
+            provider__email=prov['email']
+        ).exists()
 
-    return 200, providers
+    return providers
 
 
 def get_priorities():
@@ -767,9 +741,9 @@ def get_proof(ticket_id):
     try:
         ticket = Ticket.objects.get(id=ticket_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket not found'}
+        raise NotFound('Ticket not found')
 
-    return 200, [model_to_dict(p) for p in ticket.proof.all()]
+    return [model_to_dict(p) for p in ticket.proof.all()]
 
 
 def add_proof(ticket_id, body, user):
@@ -778,18 +752,16 @@ def add_proof(ticket_id, body, user):
     try:
         ticket = Ticket.objects.get(id=ticket_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket not found'}
+        raise NotFound('Ticket not found')
 
     if isinstance(body, dict):
         body = [body]
 
     if not isinstance(body, list):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid body, expecting object or list'}
+        raise BadRequest('Invalid body, expecting object or list')
 
     for param in body:
         try:
-            for email in re.findall(regexp.EMAIL, param['content']):  # Remove potentially sensitive emails
-                param['content'] = param['content'].replace(email, 'email-removed@provider.com')
             ticket.proof.create(**param)
             ticket.save()
             database.log_action_on_ticket(
@@ -797,9 +769,11 @@ def add_proof(ticket_id, body, user):
                 action='add_proof',
                 user=user
             )
-        except (KeyError, FieldDoesNotExist, FieldError, IntegrityError, TypeError, ValueError) as ex:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
-    return 201, {'status': 'Created', 'code': 201, 'message': 'Proof successfully added to ticket'}
+        except (KeyError, FieldDoesNotExist, FieldError,
+                IntegrityError, TypeError, ValueError) as ex:
+            raise BadRequest(str(ex.message))
+
+    return {'message': 'Proof successfully added to ticket'}
 
 
 def update_proof(ticket_id, proof_id, body, user):
@@ -810,7 +784,7 @@ def update_proof(ticket_id, proof_id, body, user):
         ticket = Ticket.objects.get(id=ticket_id)
         Proof.objects.get(id=proof_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Not Found')
 
     try:
         body.pop('id', None)
@@ -823,8 +797,8 @@ def update_proof(ticket_id, proof_id, body, user):
             user=user
         )
     except (KeyError, FieldDoesNotExist, FieldError, IntegrityError, TypeError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
-    return 200, {'status': 'OK', 'code': 201, 'message': 'Proof successfully updated'}
+        raise BadRequest(str(ex.message))
+    return {'message': 'Proof successfully updated'}
 
 
 def delete_proof(ticket_id, proof_id, user):
@@ -833,7 +807,7 @@ def delete_proof(ticket_id, proof_id, user):
     try:
         ticket = Ticket.objects.get(id=ticket_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket not found'}
+        raise NotFound('Ticket not found')
 
     try:
         proof = ticket.proof.get(id=proof_id)
@@ -843,9 +817,63 @@ def delete_proof(ticket_id, proof_id, user):
             action='delete_proof',
             user=user
         )
-    except (ObjectDoesNotExist, KeyError, FieldDoesNotExist, FieldError, IntegrityError, TypeError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Proof successfully deleted'}
+    except (ObjectDoesNotExist, KeyError, FieldDoesNotExist,
+            FieldError, IntegrityError, TypeError, ValueError) as ex:
+        raise BadRequest(str(ex.message))
+    return {'message': 'Proof successfully deleted'}
+
+
+def add_items_to_proof(ticket_id, user):
+    """
+        Add all `abuse.models.ReportItems` to `abuse.models.Ticket`'s `abuse.models.Proof`
+    """
+    try:
+        ticket = Ticket.objects.get(id=ticket_id)
+        if not all((ticket.defendant, ticket.service)):
+            raise BadRequest('Need defendant')
+    except (IndexError, ObjectDoesNotExist, ValueError):
+        raise NotFound('Ticket not found')
+
+    items = ticket.reportTicket.all().values_list(
+        'reportItemRelatedReport__rawItem',
+        flat=True
+    ).distinct()
+
+    # Check items current state
+    try:
+        services = ImplementationFactory.instance.get_singleton_of(
+            'CustomerDaoBase'
+        ).get_services_from_items(
+            ips=items,
+            urls=items,
+            fqdn=items
+        )
+        schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
+    except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
+        raise InternalServerError('Unknown exception while identifying defendant')
+
+    _create_proof(ticket, services)
+
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='add_proof',
+        user=user,
+    )
+
+    return {'message': 'Proof successfully updated'}
+
+
+def _create_proof(ticket, services):
+
+    for service in services:
+        if (service['defendant']['customerId'] == ticket.defendant.customerId and
+                service['service']['serviceId'] == ticket.service.serviceId):
+            items = [item for sub in services[0]['items'].values() for item in sub if sub]
+            for item in items:
+                proof, _ = Proof.objects.get_or_create(
+                    ticket=ticket,
+                    content=item
+                )
 
 
 def update_status(ticket, status, body, user):
@@ -853,28 +881,28 @@ def update_status(ticket, status, body, user):
         Update ticket status
     """
     if not _precheck_user_status_update_authorizations(user, status):
-        return 403, {'status': 'Forbidden', 'code': 403, 'message': 'You are not allowed to set this status'}
+        raise Forbidden('You are not allowed to set this status')
 
     try:
         status = status.lower()
     except AttributeError:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid status'}
+        raise BadRequest('Invalid status')
 
     if not isinstance(ticket, Ticket):
         try:
             ticket = Ticket.objects.get(id=ticket)
         except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-            return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket not found'}
+            raise NotFound('Ticket not found')
 
     if not status == 'waitinganswer' and status == ticket.status.lower():
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Ticket had already this status'}
+        raise BadRequest('Ticket had already this status')
 
-    code = 200
+    resp = {}
     action = None
     if status == 'paused':
         try:
-            code, resp = pause_ticket(ticket, body)
-            new_value = '%s (for %s hour(s))' % (ticket.status, str(int(body['pauseDuration'] / 3600)))
+            resp = pause_ticket(ticket, body)
+            new_value = '%s (for %s hour(s))' % (ticket.status, int(body['pauseDuration'] / 3600))
             action = {
                 'ticket': ticket,
                 'action': 'change_status',
@@ -883,15 +911,13 @@ def update_status(ticket, status, body, user):
                 'new_value': new_value
             }
         except (ValueError, TypeError, ObjectDoesNotExist):
-            code = 400
-            resp = {'status': 'Bad Request', 'code': 400, 'message': 'Invalid parameter'}
+            raise BadRequest('Invalid parameter')
         except KeyError as ex:
-            code = 400
-            resp = {'status': 'Bad Request', 'code': 400, 'message': 'Missing %s field' % (str(ex.message))}
+            raise BadRequest('Missing %s field' % (str(ex.message)))
 
     elif status == 'unpaused':
         try:
-            code, resp = unpause_ticket(ticket)
+            resp = unpause_ticket(ticket)
             action = {
                 'ticket': ticket,
                 'action': 'change_status',
@@ -900,17 +926,15 @@ def update_status(ticket, status, body, user):
                 'new_value': ticket.status
             }
         except (ValueError, TypeError, ObjectDoesNotExist):
-            code = 400
-            resp = {'status': 'Bad Request', 'code': code, 'message': 'Invalid parameter'}
+            raise BadRequest('Invalid parameter')
         except KeyError as ex:
-            code = 400
-            resp = {'status': 'Bad Request', 'code': code, 'message': 'Missing %s field' % (str(ex.message))}
+            raise BadRequest('Missing %s field' % (str(ex.message)))
 
     elif status == 'waitinganswer':
-        resp = {'status': 'OK', 'code': code, 'message': 'Ticket waiting answer from customer'}
+        resp = {'message': 'Ticket waiting answer from customer'}
         try:
             if int(body['snoozeDuration']) > 10000000:
-                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid snooze duration'}
+                raise BadRequest('Invalid snooze duration')
             ticket.snoozeDuration = int(body['snoozeDuration'])
             ticket.snoozeStart = datetime.now()
             ticket.previousStatus = ticket.status
@@ -919,7 +943,7 @@ def update_status(ticket, status, body, user):
             else:
                 ticket.status = 'WaitingAnswer'
             ticket.reportTicket.all().update(status='Attached')
-            new_value = '%s (for %s hour(s))' % (ticket.status, str(int(body['snoozeDuration'] / 3600)))
+            new_value = '%s (for %s hour(s))' % (ticket.status, int(body['snoozeDuration'] / 3600))
             action = {
                 'ticket': ticket,
                 'action': 'change_status',
@@ -928,83 +952,80 @@ def update_status(ticket, status, body, user):
                 'new_value': new_value
             }
         except (KeyError, ValueError):
-            code = 400
-            resp = {'status': 'Bad Request', 'code': code, 'message': 'Missing or invalid snoozeDuration'}
+            raise BadRequest('Missing or invalid snoozeDuration')
 
     elif status == 'closed':
 
         try:
             resolution = Resolution.objects.get(id=int(body['resolution']))
         except (AttributeError, KeyError, ValueError, ObjectDoesNotExist):
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing or invalid resolution id'}
+            raise BadRequest('Missing or invalid resolution id')
 
-        resp = {'status': 'OK', 'code': 200, 'message': 'Ticket closed'}
+        resp = {'message': 'Ticket closed'}
 
         if ticket.mailerId:
-            try:
-                ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
-            except MailerServiceException:
-                code = 500
-                resp = {'status': 'Internal Server Error', 'code': 500, 'message': 'Unable to close thread'}
-
-        if code == 200:
-            resp = {'status': 'OK', 'code': 200, 'message': 'Ticket closed'}
-            ticket.previousStatus = ticket.status
-            ticket.status = 'Closed'
-            ticket.reportTicket.all().update(status='Archived')
-            ticket.resolution = resolution
-
-            # Cancel pending jobs
             utils.default_queue.enqueue(
-                'ticket.cancel_rq_scheduler_jobs',
+                'ticket.close_emails_thread',
                 ticket_id=ticket.id,
-                status=status
             )
 
-            if user.abusepermission_set.filter(category=ticket.category, profile__name='Beginner').count():
-                ticket.moderation = True
+        resp = {'message': 'Ticket closed'}
+        ticket.previousStatus = ticket.status
+        ticket.status = 'Closed'
+        ticket.reportTicket.all().update(status='Archived')
+        ticket.resolution = resolution
 
-            action = {
-                'ticket': ticket,
-                'action': 'change_status',
-                'user': user,
-                'previous_value': ticket.previousStatus,
-                'new_value': ticket.status,
-                'close_reason': ticket.resolution.codename
-            }
+        # Cancel pending jobs
+        utils.default_queue.enqueue(
+            'ticket.cancel_rq_scheduler_jobs',
+            ticket_id=ticket.id,
+            status=status
+        )
+
+        is_user_beginner = user.abusepermission_set.filter(
+            category=ticket.category,
+            profile__name='Beginner'
+        ).count()
+        if is_user_beginner:
+            ticket.moderation = True
+
+        action = {
+            'ticket': ticket,
+            'action': 'change_status',
+            'user': user,
+            'previous_value': ticket.previousStatus,
+            'new_value': ticket.status,
+            'close_reason': ticket.resolution.codename
+        }
 
     elif status == 'reopened':
-        resp = {'status': 'OK', 'code': 200, 'message': 'Ticket reopened'}
-
-        if code == 200:
-            resp = {'status': 'OK', 'code': 200, 'message': 'Ticket reopened'}
-            ticket.previousStatus = ticket.status
-            ticket.status = 'Reopened'
-            ticket.reportTicket.all().update(status='Attached')
-            action = {
-                'ticket': ticket,
-                'action': 'change_status',
-                'user': user,
-                'previous_value': ticket.previousStatus,
-                'new_value': ticket.status
-            }
+        resp = {'message': 'Ticket reopened'}
+        ticket.previousStatus = ticket.status
+        ticket.status = 'Reopened'
+        ticket.reportTicket.all().update(status='Attached')
+        action = {
+            'ticket': ticket,
+            'action': 'change_status',
+            'user': user,
+            'previous_value': ticket.previousStatus,
+            'new_value': ticket.status
+        }
 
     else:
-        code = 400
-        resp = {'status': 'Bad Request', 'code': 400, 'message': 'Invalid status'}
+        raise NotFound('Status not found')
 
-    if code == 200:
-        ticket.save()
-        if action:
-            database.log_action_on_ticket(**action)
-    return code, resp
+    ticket.save()
+    if action:
+        database.log_action_on_ticket(**action)
+
+    return resp
 
 
 def pause_ticket(ticket, body):
     """ Pause ticket
     """
     if int(body['pauseDuration']) > 10000000:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid pause duration'}
+        raise BadRequest('Invalid pause duration')
 
     ticket.pauseStart = datetime.now()
     ticket.pauseDuration = int(body['pauseDuration'])
@@ -1015,7 +1036,7 @@ def pause_ticket(ticket, body):
     delay = timedelta(seconds=ticket.pauseDuration)
     utils.default_queue.enqueue('ticket.delay_jobs', ticket=ticket.id, delay=delay, back=False)
 
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Ticket paused for %d hour(s)' % (ticket.pauseDuration)}
+    return {'message': 'Ticket paused for %d hour(s)' % (ticket.pauseDuration)}
 
 
 def unpause_ticket(ticket):
@@ -1032,7 +1053,7 @@ def unpause_ticket(ticket):
     ticket.status = ticket.previousStatus
     ticket.previousStatus = 'Paused'
 
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Ticket unpaused'}
+    return {'message': 'Ticket unpaused'}
 
 
 @transaction.atomic
@@ -1040,36 +1061,30 @@ def bulk_update(body, user, method):
     """
         Add or update infos for multiple tickets
     """
-    code, tickets = __check_bulk_conformance(body, user, method)
-    if code != 200:
-        return code, tickets
+    tickets = _check_bulk_conformance(body, user, method)
 
     for ticket in tickets:
         assign_if_not(ticket, user)
 
     # Update status
     if 'status' in body['properties']:
-        if body['properties']['status'].lower() not in BULK_VALID_STATUS:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Status not supported'}
+        if body['properties']['status'].lower() not in TICKET_BULK_VALID_STATUS:
+            raise BadRequest('Status not supported')
 
         valid_fields = ('pauseDuration', 'resolution')
         properties = {k: v for k, v in body['properties'].iteritems() if k in valid_fields}
 
         for ticket in tickets:
-            code, resp = update_status(ticket, body['properties']['status'], properties, user)
-            if code != 200:
-                return code, resp
+            update_status(ticket, body['properties']['status'], properties, user)
 
     # Update general fields
-    properties = {k: v for k, v in body['properties'].iteritems() if k in BULK_VALID_FIELDS}
+    properties = {k: v for k, v in body['properties'].iteritems() if k in TICKET_BULK_VALID_FIELDS}
 
     if properties:
         for ticket in tickets:
-            code, resp = update(ticket, properties, user, bulk=True)
-            if code != 200:
-                return code, resp
+            update(ticket, properties, user, bulk=True)
 
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Ticket(s) successfully updated'}
+    return {'message': 'Ticket(s) successfully updated'}
 
 
 @transaction.atomic
@@ -1077,42 +1092,36 @@ def bulk_delete(body, user, method):
     """
         Delete infos from multiple tickets
     """
-    code, tickets = __check_bulk_conformance(body, user, method)
-    if code != 200:
-        return code, tickets
+    tickets = _check_bulk_conformance(body, user, method)
 
     # Update tags
     try:
         if 'tags' in body['properties'] and isinstance(body['properties']['tags'], list):
             for ticket in tickets:
                 for tag in body['properties']['tags']:
-                    code, resp = remove_tag(ticket.id, tag['id'], user)
-                    if code != 200:
-                        return code, resp
+                    remove_tag(ticket.id, tag['id'], user)
     except (KeyError, TypeError, ValueError):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid or missing tag(s) id'}
+        raise BadRequest('Invalid or missing tag(s) id')
 
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Ticket(s) successfully updated'}
+    return {'message': 'Ticket(s) successfully updated'}
 
 
-def __check_bulk_conformance(body, user, method):
+def _check_bulk_conformance(body, user, method):
     """
         Check request conformance for bulk
     """
     if not body.get('tickets') or not body.get('properties'):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing tickets or properties in body'}
+        raise BadRequest('Missing tickets or properties in body')
 
     try:
         tickets = Ticket.objects.filter(id__in=list(body['tickets']))
     except (AttributeError, TypeError, ValueError, KeyError):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid ticket(s) id'}
+        raise BadRequest('Invalid ticket(s) id')
 
     for ticket in tickets:
-        code, resp = GeneralController.check_perms(method=method, user=user, ticket=ticket.id)
-        if code != 200:
-            return code, resp
+        GeneralController.check_perms(method=method, user=user, ticket=ticket.id)
 
-    return 200, tickets
+    return tickets
 
 
 def add_tag(ticket_id, body, user):
@@ -1123,7 +1132,7 @@ def add_tag(ticket_id, body, user):
         ticket = Ticket.objects.get(id=ticket_id)
 
         if ticket.__class__.__name__ != tag.tagType:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid tag for ticket'}
+            raise BadRequest('Invalid tag for ticket')
 
         ticket.tags.add(tag)
         ticket.save()
@@ -1134,10 +1143,10 @@ def add_tag(ticket_id, body, user):
             tag_name=tag.name
         )
     except MultipleObjectsReturned:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Please use tag id'}
+        raise BadRequest('Please use tag id')
     except (KeyError, FieldError, IntegrityError, ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Tag or ticket not found'}
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Tag successfully added'}
+        raise NotFound('Tag or ticket not found')
+    return {'message': 'Tag successfully added'}
 
 
 def remove_tag(ticket_id, tag_id, user):
@@ -1148,7 +1157,7 @@ def remove_tag(ticket_id, tag_id, user):
         ticket = Ticket.objects.get(id=ticket_id)
 
         if ticket.__class__.__name__ != tag.tagType:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid tag for ticket'}
+            raise BadRequest('Invalid tag for ticket')
 
         ticket.tags.remove(tag)
         ticket.save()
@@ -1160,8 +1169,8 @@ def remove_tag(ticket_id, tag_id, user):
         )
 
     except (ObjectDoesNotExist, FieldError, IntegrityError, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Tag successfully removed'}
+        raise NotFound('Not Found')
+    return {'message': 'Tag successfully removed'}
 
 
 def interact(ticket_id, body, user):
@@ -1169,136 +1178,253 @@ def interact(ticket_id, body, user):
         Magic endpoint to save operator's time
     """
     if not _precheck_user_interact_authorizations(user, body):
-        return 403, {'status': 'Forbidden', 'code': 403, 'message': 'You are not allowed use this interact parameters'}
+        raise Forbidden('You are not allowed use this interact parameters')
     try:
         ticket = Ticket.objects.get(id=ticket_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket not found'}
+        raise NotFound('Ticket not found')
 
-    if not all(key in body for key in ('emails', 'action')):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing param(s): need emails and action'}
+    action = body['action']
 
-    for params in body['emails']:
-        if not all(params.get(key) for key in ('to', 'subject', 'body')):
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing param(s): need subject and body in email'}
+    try:
+        _parse_interact_action(ticket, action, user)
+    except (AttributeError, KeyError, ValueError, TypeError):
+        raise BadRequest('Missing or invalid params in action')
+
+    if body.get('emails'):
+        try:
+            _send_emails(ticket, body['emails'], user)
+        except MailerServiceException as ex:
+            error = '{} (actions successfully applied)'
+            raise InternalServerError(error.format(str(ex)))
+
+    return {'message': 'Ticket successfully updated'}
+
+
+def _send_emails(ticket, emails, user):
+
+    for params in emails:
         category = params['category'] if params.get('category') else 'Defendant'
         category = category.title()
         if category not in EMAIL_VALID_CATEGORIES:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid email category'}
+            raise BadRequest('Invalid email category (actions successfully applied)')
 
-    action = body['action']
-    code = 200
+    # Normalize attachments
+    email_thread = None
+    for params in emails:
+        if params.get('attachEmailThread') and not email_thread:
+            email_thread = _get_email_thread_attachment(
+                ticket,
+                email_category='defendant'
+            )
+            break
 
-    try:
-        code, resp = __parse_interact_action(ticket, action, user)
-        if not code == 200:
-            return code, resp
-    except (AttributeError, KeyError, ValueError, TypeError):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing or invalid params in action'}
+    merged_attachments = _get_merged_attachments(ticket, emails, email_thread)
 
-    for params in body['emails']:
+    # Send emails
+    for params in emails:
 
-        attachments = None
-        if params.get('attachments'):
-            if len(params['attachments']) > 5:
-                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Too many attachments'}
-            try:
-                attachments = _save_and_sanitize_attachments(ticket, params['attachments'])
-            except StorageServiceException:
-                return 500, {'status': 'Internal Server Error', 'code': 500, 'message': 'Error while uploading attachments'}
-            except KeyError:
-                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing or invalid params in attachments'}
+        attachments = _fetch_attachments(
+            params.get('attachments'),
+            merged_attachments,
+            email_thread,
+            attach_email_thread=params.get('attachEmailThread')
+        )
 
-        category = params['category'] if params.get('category') else 'Defendant'
         for recipient in params['to']:
-            try:
-                ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
-                    ticket,
-                    recipient,
-                    params['subject'],
-                    params['body'],
-                    category,
-                    attachments=attachments,
-                )
-                database.log_action_on_ticket(
-                    ticket=ticket,
-                    action='send_email',
-                    user=user,
-                    email=recipient
-                )
-            except MailerServiceException as ex:
-                return 500, {'status': 'Internal Server Error', 'code': 500, 'message': str(ex)}
+            ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
+                ticket,
+                recipient,
+                params['subject'],
+                params['body'],
+                params['category'],
+                attachments=attachments,
+            )
+            database.log_action_on_ticket(
+                ticket=ticket,
+                action='send_email',
+                user=user,
+                email=recipient
+            )
 
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Ticket successfully updated'}
+
+def _get_merged_attachments(ticket, emails, email_thread):
+
+    attachments = []
+    for params in emails:
+        if params.get('attachments'):
+            attachments.extend(params['attachments'])
+
+    if email_thread:
+        attachments.append(email_thread)
+
+    attachments = map(dict, set(map(lambda x: tuple(x.items()), attachments)))
+    sanitized = {}
+
+    if attachments:
+        try:
+            sanitized = _save_and_sanitize_attachments(
+                ticket,
+                attachments,
+            )
+        except StorageServiceException:
+            raise InternalServerError(
+                'Error while uploading attachments (actions successfully applied)'
+            )
+        except KeyError:
+            raise BadRequest(
+                'Missing or invalid params in attachments (actions successfully applied)'
+            )
+    return sanitized
 
 
 def _save_and_sanitize_attachments(ticket, attachments):
 
+    # Attachment's content are encoded in base64
+
+    sanitized = {}
+
     for attachment in attachments:
-        attachment['filename'] = text.get_valid_filename(attachment['filename'])
-        attachment['content_type'] = attachment.pop('contentType')
 
-        content = base64.b64decode(attachment['content'])
-        storage_filename = hashlib.sha256(attachment['content']).hexdigest()
-        storage_filename = storage_filename + '-attach-'
-        storage_filename = storage_filename.encode('utf-8')
-        storage_filename = storage_filename + attachment['filename']
+        filetype = attachment['filetype']
 
-        with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
-            cnx.write(storage_filename, content)
+        if attachment.get('content'):  # New attachment
 
-        ticket.reportTicket.last().attachments.add(AttachedDocument.objects.create(
-            filename=storage_filename,
-            filetype=attachment['content_type'],
-            name=attachment['filename']
-        ))
+            name = attachment['name']
+            content = attachment['content']
+            filename = text.get_valid_filename(name)
+            storage_filename = utils.get_attachment_storage_filename(
+                content=content,
+                filename=filename
+            )
 
-    return attachments
+            if ticket.attachments.filter(filename=storage_filename).exists():
+                with ImplementationFactory.instance.get_instance_of(
+                    'StorageServiceBase',
+                    settings.GENERAL_CONFIG['email_storage_dir']
+                ) as cnx:
+                    content = base64.b64encode(cnx.read(storage_filename))
+            else:
+                with ImplementationFactory.instance.get_instance_of(
+                    'StorageServiceBase',
+                    settings.GENERAL_CONFIG['email_storage_dir']
+                ) as cnx:
+                    cnx.write(storage_filename, base64.b64decode(content))
+
+                if ticket.attachments.filter(name=name).exists():
+                    name = '{}_{}'.format(storage_filename[:4], name)
+
+                ticket.attachments.add(AttachedDocument.objects.create(
+                    filename=storage_filename,
+                    filetype=filetype,
+                    name=name
+                ))
+
+            _hash = hashlib.sha256(content).hexdigest()
+            sanitized[(_hash, name)] = {
+                'content': content,
+                'content_type': filetype,
+                'filename': name
+            }
+
+        elif attachment.get('filename'):  # Existing
+
+            with ImplementationFactory.instance.get_instance_of(
+                'StorageServiceBase',
+                settings.GENERAL_CONFIG['email_storage_dir']
+            ) as cnx:
+                content = base64.b64encode(cnx.read(attachment['filename']))
+
+            sanitized[(attachment['filename'], attachment['name'])] = {
+                'content': content,
+                'content_type': filetype,
+                'filename': attachment['name']
+            }
+
+    return sanitized
 
 
-def __parse_interact_action(ticket, action, user):
+def _get_email_thread_attachment(ticket, email_category=None):
+
+    try:
+        _emails = ImplementationFactory.instance.get_singleton_of(
+            'MailerServiceBase'
+        ).get_emails(ticket)
+    except (KeyError, MailerServiceException) as ex:
+        raise InternalServerError(str(ex))
+
+    emails = [email for email in _emails if email.category.lower() == email_category]
+
+    try:
+        content, filetype = utils.get_email_thread_content(ticket, emails)
+    except (utils.EmailThreadTemplateNotFound, utils.EmailThreadTemplateSyntaxError) as ex:
+        raise InternalServerError(str(ex))
+
+    content = base64.b64encode(content)
+    name = 'ticket_{}_emails_{}{}'.format(
+        ticket.publicId,
+        datetime.strftime(datetime.now(), '%d-%m-%Y_%H-%M-%S'),
+        mimetypes.guess_extension(filetype),
+    )
+
+    return {'filetype': filetype, 'content': content, 'name': name}
+
+
+def _fetch_attachments(attachments, merged_attachments, email_thread, attach_email_thread=False):
+
+    _attachments = []
+    if attachments:
+        for attach in attachments:
+            if attach.get('content'):
+                _hash = hashlib.sha256(attach['content']).hexdigest()
+                try:
+                    _attachments.append(merged_attachments[(_hash, attach['name'])])
+                except KeyError:  # renamed
+                    _attachments.append(
+                        merged_attachments[(_hash, '{}_{}'.format(_hash[:4], attach['name']))]
+                    )
+            elif attach.get('filename'):
+                _attachments.append(merged_attachments[(attach['filename'], attach['name'])])
+
+    if attach_email_thread:
+        _hash = hashlib.sha256(email_thread['content']).hexdigest()
+        _attachments.append(merged_attachments[(_hash, email_thread['name'])])
+
+    return _attachments
+
+
+def _parse_interact_action(ticket, action, user):
     """ Parse action of interact endpoint's body
     """
-    code = 200
-    resp = {'status': 'OK', 'code': 200, 'message': 'OK'}
+    resp = {'message': 'OK'}
 
     # Check resolution
     resolution_id = None
     if action.get('params') and action['params'].get('resolution'):
         resolution_id = int(action['params']['resolution'])
         if not Resolution.objects.filter(id=resolution_id).exists():
-            return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket resolution not found'}
+            raise NotFound('Ticket resolution not found')
 
     if 'action' in action['codename']:
 
-        # Check action
-        try:
-            action_id = int(action['params']['action'])
-        except ObjectDoesNotExist:
-            return 404, {'status': 'Not Found', 'code': 404, 'message': 'Action not found'}
+        action_id = int(action['params']['action'])
 
         # Check IP address
-        ip_addr = None
-        code, resp = __get_ip_for_action(ticket, action)
-        if not code == 200:
-            return code, resp
-        else:
-            ip_addr = resp
-
+        ip_addr = _get_ip_for_action(ticket, action)
         if not ip_addr:
-            return 404, {'status': 'Not Found', 'code': 400, 'message': 'No IP specified'}
+            raise BadRequest('No IP specified')
 
-        if not __check_action_rights(ticket, action_id, user):
-            return 403, {'status': 'Forbidden', 'code': 403, 'message': 'Invalid permission for action'}
+        if not _check_action_rights(ticket, action_id, user):
+            raise Forbidden('Invalid permission for action')
 
         if action['codename'] == 'waiting_answer_then_action':
-            code, resp = update_status(
+            resp = update_status(
                 ticket,
                 'waitinganswer',
                 {'snoozeDuration': action['params']['snoozeDuration']},
                 user,
             )
-            code, resp = schedule_asynchronous_job(
+            resp = schedule_asynchronous_job(
                 ticket.id,
                 action_id,
                 ip_addr,
@@ -1315,13 +1441,13 @@ def __parse_interact_action(ticket, action, user):
                 }
             )
         elif action['codename'] == 'waiting_answer_then_action_and_close':
-            code, resp = update_status(
+            resp = update_status(
                 ticket,
                 'waitinganswer',
                 {'snoozeDuration': action['params']['snoozeDuration']},
                 user,
             )
-            code, resp = schedule_asynchronous_job(
+            resp = schedule_asynchronous_job(
                 ticket.id,
                 action_id,
                 ip_addr,
@@ -1338,7 +1464,7 @@ def __parse_interact_action(ticket, action, user):
                 }
             )
         elif action['codename'] == 'action_then_waiting_answer':
-            code, resp = schedule_asynchronous_job(
+            resp = schedule_asynchronous_job(
                 ticket.id,
                 action_id,
                 ip_addr,
@@ -1352,14 +1478,14 @@ def __parse_interact_action(ticket, action, user):
                     'user_id': user.id,
                 }
             )
-            code, resp = update_status(
+            resp = update_status(
                 ticket,
                 'waitinganswer',
                 {'snoozeDuration': action['params']['snoozeDuration']},
                 user
             )
         elif action['codename'] == 'action_then_close':
-            code, resp = schedule_asynchronous_job(
+            resp = schedule_asynchronous_job(
                 ticket.id,
                 action_id,
                 ip_addr,
@@ -1375,54 +1501,56 @@ def __parse_interact_action(ticket, action, user):
                 }
             )
     elif action['codename'] == 'waiting_answer':
-        code, resp = update_status(
+        resp = update_status(
             ticket,
             'waitinganswer',
             {'snoozeDuration': action['params']['snoozeDuration']},
             user
         )
     elif action['codename'] == 'close_with_resolution':
-        code, resp = update_status(
+        resp = update_status(
             ticket,
             'closed',
             {'resolution': resolution_id},
             user
         )
     elif action['codename'] == 'pause_ticket':
-        code, resp = update_status(
+        resp = update_status(
             ticket,
             'paused',
             {'pauseDuration': action['params']['pauseDuration']},
             user)
     else:
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Action not found'}
+        raise NotFound('Action not found')
 
-    return code, resp
+    return resp
 
 
-def __get_ip_for_action(ticket, action):
+def _get_ip_for_action(ticket, action):
     """
         Extract and check IP address for action
     """
     # Get ticket IP(s)
-    reports = ticket.reportTicket.all()
-    ips_on_ticket = [itm.ip for rep in reports for itm in rep.reportItemRelatedReport.filter(~Q(ip=None), itemType='IP')]
-    ips_on_ticket.extend([itm.fqdnResolved for rep in reports for itm in rep.reportItemRelatedReport.filter(~Q(fqdnResolved=None), itemType__in=['FQDN', 'URL'])])
+    ips_on_ticket = ticket.reportTicket.all().values_list(
+        'reportItemRelatedReport__ip',
+        'reportItemRelatedReport__fqdnResolved'
+    ).distinct()
+    ips_on_ticket = [item for sub in ips_on_ticket for item in sub if item]
     ips_on_ticket = list(set(ips_on_ticket))
 
     # Check IP
     ip_addr = None
     if action['params'].get('ip'):
         if action['params']['ip'] not in ips_on_ticket:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Specified IP address not attached to ticket'}
+            raise BadRequest('Specified IP address not attached to ticket')
         else:
             ip_addr = action['params']['ip']
     else:
         if len(ips_on_ticket) == 1:
             ip_addr = ips_on_ticket[0]
         else:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Multiple or no IP on this ticket'}
-    return 200, ip_addr
+            raise BadRequest('Multiple or no IP on this ticket')
+    return ip_addr
 
 
 def get_actions_list(ticket_id, user):
@@ -1432,23 +1560,25 @@ def get_actions_list(ticket_id, user):
     try:
         ticket = Ticket.objects.get(id=ticket_id)
         if not ticket.service or not ticket.defendant:
-            return 200, []
+            return []
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket not found'}
+        raise NotFound('Ticket not found')
 
     try:
         perm = AbusePermission.objects.get(user=user, category=ticket.category)
         authorized = list(set(perm.profile.actions.all().values_list('id', flat=True)))
     except ObjectDoesNotExist:
-        return 403, {'status': 'Forbidden', 'code': 403, 'message': 'You can not interact with this ticket'}
+        raise Forbidden('You can not interact with this ticket')
 
     try:
-        actions = ImplementationFactory.instance.get_singleton_of('ActionServiceBase').list_actions_for_ticket(ticket)
+        actions = ImplementationFactory.instance.get_singleton_of(
+            'ActionServiceBase'
+        ).list_actions_for_ticket(ticket)
     except ActionServiceException:
-        return 500, {'status': 'Internal Server Error', 'code': 500, 'message': 'Unable to list actions for this ticket'}
+        raise InternalServerError('Unable to list actions for this ticket')
 
     actions = [model_to_dict(action) for action in actions if action.id in authorized]
-    return 200, actions
+    return actions
 
 
 def cancel_asynchronous_job(ticket_id, job_id, user):
@@ -1458,7 +1588,7 @@ def cancel_asynchronous_job(ticket_id, job_id, user):
         ticket = Ticket.objects.get(id=ticket_id)
         job = ServiceActionJob.objects.get(id=job_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket or job not found'}
+        raise NotFound('Ticket or job not found')
 
     if ticket.action:
         database.log_action_on_ticket(
@@ -1469,12 +1599,15 @@ def cancel_asynchronous_job(ticket_id, job_id, user):
         )
 
     utils.scheduler.cancel(job.asynchronousJobId)
-    ServiceActionJob.objects.filter(asynchronousJobId=job.asynchronousJobId).update(status='cancelled')
+    ServiceActionJob.objects.filter(
+        asynchronousJobId=job.asynchronousJobId
+    ).update(status='cancelled')
     ticket.save()
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Task successfully canceled'}
+    return {'message': 'Task successfully canceled'}
 
 
-def schedule_asynchronous_job(ticket_id, action_id, ip_addr, user, seconds=1, method='apply_action', params=None):
+def schedule_asynchronous_job(ticket_id, action_id, ip_addr, user,
+                              seconds=1, method='apply_action', params=None):
     """
         Schedule task on ticket
     """
@@ -1482,14 +1615,14 @@ def schedule_asynchronous_job(ticket_id, action_id, ip_addr, user, seconds=1, me
         ticket = Ticket.objects.get(id=ticket_id)
         action = ServiceAction.objects.get(id=action_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket or action not found'}
+        raise NotFound('Ticket or action not found')
 
     if not params:
         params = {}
     params['timeout'] = 3600
 
-    if not __check_action_rights(ticket, action.id, user):
-        return 403, {'status': 'Forbidden', 'code': 403, 'message': 'Invalid permission for this action'}
+    if not _check_action_rights(ticket, action.id, user):
+        raise Forbidden('Invalid permission for this action')
 
     # Cancel previous pending jobs
     for job in ticket.jobs.filter(ip=ip_addr):
@@ -1518,7 +1651,7 @@ def schedule_asynchronous_job(ticket_id, action_id, ip_addr, user, seconds=1, me
         action_name=action.name,
         action_execution_date=delay
     )
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Task successfully created'}
+    return {'message': 'Task successfully created'}
 
 
 def get_jobs_status(ticket_id):
@@ -1528,23 +1661,20 @@ def get_jobs_status(ticket_id):
     try:
         ticket = Ticket.objects.get(id=ticket_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket not found'}
+        raise NotFound('Ticket not found')
 
     resp = []
     jobs = ticket.jobs.all().order_by('creationDate')
     for job in jobs:
         info = model_to_dict(job)
-        for key, val in info.iteritems():
-            if isinstance(val, datetime):
-                info[key] = int(time.mktime(val.timetuple()))
         if info.get('action'):
             info['action'] = model_to_dict(ServiceAction.objects.get(id=info['action']))
         resp.append(info)
 
-    return 200, resp
+    return resp
 
 
-def __check_action_rights(ticket, action_id, user):
+def _check_action_rights(ticket, action_id, user):
     """
         Check if user can set action
     """
@@ -1568,18 +1698,23 @@ def get_todo_tickets(**kwargs):
         try:
             filters = json.loads(unquote(unquote(kwargs['filters'])))
         except (ValueError, SyntaxError, TypeError) as ex:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+            raise BadRequest(str(ex.message))
 
     user = kwargs['user']
     try:
-        scheduling_algorithm = user.operator.role.modelsAuthorizations['ticket']['schedulingAlgorithm']
-        tickets, nb_record = TicketSchedulingAlgorithmFactory.instance.get_singleton_of(scheduling_algorithm).get_tickets(user=user, filters=filters)
-        __format_ticket_response(tickets)
+        scheduling_algo = user.operator.role.modelsAuthorizations['ticket']['schedulingAlgorithm']
+        tickets, nb_record = TicketSchedulingAlgorithmFactory.instance.get_singleton_of(
+            scheduling_algo
+        ).get_tickets(
+            user=user,
+            filters=filters
+        )
+        _format_ticket_response(tickets, user)
     except (ObjectDoesNotExist, KeyError):
         tickets = []
         nb_record = 0
 
-    return 200, {'tickets': list(tickets), 'ticketsCount': nb_record}
+    return {'tickets': list(tickets), 'ticketsCount': nb_record}
 
 
 def get_emails(ticket_id):
@@ -1590,15 +1725,15 @@ def get_emails(ticket_id):
     try:
         ticket = Ticket.objects.get(id=ticket_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket not found'}
-
-    ticket_reports_id = ticket.reportTicket.all().values_list('id')
+        raise NotFound('Ticket not found')
 
     try:
-        emails = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').get_emails(ticket)
+        emails = ImplementationFactory.instance.get_singleton_of(
+            'MailerServiceBase'
+        ).get_emails(ticket)
         response = []
         for email in emails:
-            attachments = _get_email_attachments(email, ticket_reports_id)
+            attachments = _get_email_attachments(email, ticket)
             response.append({
                 'body': email.body,
                 'created': email.created,
@@ -1608,25 +1743,24 @@ def get_emails(ticket_id):
                 'category': email.category,
                 'attachments': attachments,
             })
-        return 200, response
+        return response
     except (KeyError, MailerServiceException) as ex:
-        return 500, {'status': 'Internal Server Error', 'code': 500, 'message': str(ex)}
+        raise InternalServerError(str(ex))
 
 
-def _get_email_attachments(email, ticket_reports_id):
+def _get_email_attachments(email, ticket):
 
     attachments = []
     if not email.attachments:
         return attachments
 
-    for attach in email.attachments:
-        attach_obj = AttachedDocument.objects.filter(
-            report__in=ticket_reports_id,
-            name=attach['filename'],
-            filetype=attach['content_type'],
-        ).last()
-        if attach_obj:
-            attachments.append(model_to_dict(attach_obj))
+    filters = [{'name': a['filename'], 'filetype': a['content_type']} for a in email.attachments]
+
+    for attach in filters:
+        for att in ticket.attachments.filter(**attach):
+            desc = model_to_dict(att)
+            if desc not in attachments:
+                attachments.append(desc)
 
     return attachments
 
@@ -1672,7 +1806,7 @@ def get_timeline(ticket_id, **kwargs):
     try:
         ticket = Ticket.objects.get(id=ticket_id)
     except (IndexError, ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket not found'}
+        raise NotFound('Ticket not found')
 
     # Parse filters from request
     filters = {}
@@ -1680,7 +1814,7 @@ def get_timeline(ticket_id, **kwargs):
         try:
             filters = json.loads(unquote(unquote(kwargs['filters'])))
         except (ValueError, SyntaxError, TypeError) as ex:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+            raise BadRequest(str(ex.message))
     try:
         limit = int(filters['paginate']['resultsPerPage'])
         offset = int(filters['paginate']['currentPage'])
@@ -1695,7 +1829,7 @@ def get_timeline(ticket_id, **kwargs):
     order_by = 'date' if filters.get('reverse') else '-date'
 
     history = _get_timeline_history(ticket, with_meta, order_by, limit, offset)
-    return 200, history
+    return history
 
 
 def _get_timeline_history(ticket, with_meta, order_by, limit, offset):
@@ -1759,11 +1893,14 @@ def get_attachment(ticket_id, attachment_id):
         Ticket.objects.filter(id=ticket_id)
         attachment = AttachedDocument.objects.get(id=attachment_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket or attachment not found'}
+        raise NotFound('Ticket or attachment not found')
 
     resp = None
     try:
-        with ImplementationFactory.instance.get_instance_of('StorageServiceBase', settings.GENERAL_CONFIG['email_storage_dir']) as cnx:
+        with ImplementationFactory.instance.get_instance_of(
+            'StorageServiceBase',
+            settings.GENERAL_CONFIG['email_storage_dir']
+        ) as cnx:
             raw = cnx.read(attachment.filename)
             resp = {
                 'raw': base64.b64encode(raw),
@@ -1774,6 +1911,34 @@ def get_attachment(ticket_id, attachment_id):
         pass
 
     if not resp:
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Raw attachment not found'}
+        raise NotFound('Raw attachment not found')
 
-    return 200, resp
+    return resp
+
+
+def star_ticket_management(ticket_id, user, method='POST'):
+    """
+        Star/Unstar given `abuse.models.Ticket` for given `abuse.models.User`
+    """
+    try:
+        ticket = Ticket.objects.get(id=ticket_id)
+    except (ObjectDoesNotExist, ValueError):
+        raise NotFound('Ticket not found')
+
+    try:
+        if method == 'POST':
+            StarredTicket.objects.create(
+                user=user,
+                ticket=ticket
+            )
+            return {'message': 'Ticket successfully starred'}
+        elif method == 'DELETE':
+            StarredTicket.objects.filter(
+                user=user,
+                ticket=ticket
+            ).delete()
+            return {'message': 'Ticket successfully unstarred'}
+        else:
+            raise BadRequest('Unsupported operation')
+    except IntegrityError:
+        raise BadRequest('You have already starred this ticket')

@@ -24,15 +24,16 @@ COPY docker/supervisor/cerberus.conf \
 COPY abuse /abuse
 COPY adapters /adapters
 COPY api /api
+COPY config /config
 COPY default /default
 COPY event /event
 COPY factory /factory
 COPY manage.py /manage.py
 COPY requirements /requirements
 COPY requirements.txt /requirements.txt
-COPY settings.py /settings.py
 COPY utils /utils
 COPY worker /worker
+COPY docker/settings.py /config/settings.py
 
 COPY docker/cerberus-ux.tar.gz /cerberus-ux.tar.gz
 
@@ -41,13 +42,13 @@ RUN mkdir cerberus-core \
     && mv /abuse . \
     && mv /adapters . \
     && mv /api . \
+    && mv /config . \
     && mv /default . \
     && mv /event . \
     && mv /factory . \
     && mv /manage.py . \
     && mv /requirements . \
     && mv /requirements.txt . \
-    && mv /settings.py . \
     && mv /utils . \
     && mv /worker . \
     && cp abuse/fixtures/data.json abuse/fixtures/initial_data.json \

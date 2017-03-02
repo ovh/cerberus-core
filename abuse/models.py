@@ -459,17 +459,6 @@ class AbusePermission(models.Model):
     profile = models.ForeignKey(Profile, null=True)
 
 
-class Stat(models.Model):
-    """
-        `abuse.models.Defendant` abuse statistic
-    """
-    defendant = models.ForeignKey(Defendant, null=False)
-    category = models.ForeignKey(Category, null=False)
-    reports = models.IntegerField(null=False)
-    tickets = models.IntegerField(null=False)
-    date = models.DateTimeField(null=False)
-
-
 class News(models.Model):
     """
         Cerberus news model
@@ -625,3 +614,42 @@ class MassContactResult(models.Model):
     matchingCount = models.IntegerField(null=False, default=0)  # Defendant found, report created
     notMatchingCount = models.IntegerField(null=False, default=0)  # No defendant found
     failedCount = models.IntegerField(null=False, default=0)  # Rq job failed
+
+
+class StarredTicket(models.Model):
+    """
+        Association of `abuse.models.User` and `abuse.models.Ticket`
+    """
+    user = models.ForeignKey(User, null=False, related_name='starredTickets')
+    ticket = models.ForeignKey(Ticket, null=False, related_name='starredBy')
+
+    class Meta:
+        unique_together = ("ticket", "user")
+
+
+class BusinessRules(models.Model):
+    """
+        Defines a association between `worker.workflows.variables` and `worker.workflows.actions`
+    """
+    RULES_TYPE = (
+        ('Report', 'Report'),
+        ('EmailReply', 'EmailReply'),
+        ('CDNRequest', 'CDNRequest'),
+    )
+
+    name = TruncatedCharField(max_length=256, null=False)
+    orderId = models.PositiveSmallIntegerField(null=False)
+    rulesType = TruncatedCharField(max_length=32, null=False, choices=RULES_TYPE)
+    config = JSONField()
+
+
+class BusinessRulesHistory(models.Model):
+    """
+        `abuse.models.BusinessRules` execution history
+    """
+    businessRules = models.ForeignKey(BusinessRules, null=False)
+    defendant = models.ForeignKey(Defendant, null=True)
+    service = models.ForeignKey(Service, null=True)
+    report = models.ForeignKey(Report, null=True)
+    ticket = models.ForeignKey(Ticket, null=True)
+    date = models.DateTimeField(auto_now=True)

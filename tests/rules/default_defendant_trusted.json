@@ -1,0 +1,33 @@
+{
+    "config": {
+        "actions": [
+            {
+                "name": "create_ticket", 
+                "params": {
+                    "attach_new": true, 
+                    "create_new": false
+                }
+            },
+            {
+                "name": "send_provider_ack"
+            } 
+        ], 
+        "conditions": {
+            "all": [
+                {
+                    "name": "has_defendant", 
+                    "operator": "is_true", 
+                    "value": true
+                }, 
+                {
+                    "name": "is_report_trusted", 
+                    "operator": "is_true", 
+                    "value": true
+                }
+            ]
+        }
+    }, 
+    "name": "default_defendant_trusted", 
+    "orderId": 100, 
+    "rulesType": "Report"
+}

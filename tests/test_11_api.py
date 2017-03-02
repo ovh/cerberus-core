@@ -72,7 +72,7 @@ class ApiTestCase(GlobalTestCase):
 
         with open('tests/samples/sample3', 'r') as file_d:
             content = file_d.read()
-            report.create_from_email(email_content=content, send_ack=False)
+            report.create_from_email(email_content=content)
 
         response = self.tester.post(
             '/api/auth',
@@ -123,7 +123,7 @@ class ApiTestCase(GlobalTestCase):
 
         with open('tests/samples/sample3', 'r') as file_d:
             content = file_d.read()
-            report.create_from_email(email_content=content, send_ack=False)
+            report.create_from_email(email_content=content)
 
         response = self.tester.post(
             '/api/auth',
@@ -163,7 +163,7 @@ class ApiTestCase(GlobalTestCase):
 
         with open('tests/samples/sample3', 'r') as file_d:
             content = file_d.read()
-            report.create_from_email(email_content=content, send_ack=False)
+            report.create_from_email(email_content=content)
 
         response = self.tester.post(
             '/api/auth',
@@ -248,7 +248,7 @@ class ApiTestCase(GlobalTestCase):
 
         with open('tests/samples/sample3', 'r') as file_d:
             content = file_d.read()
-            report.create_from_email(email_content=content, send_ack=False)
+            report.create_from_email(email_content=content)
 
         response = self.tester.post(
             '/api/auth',

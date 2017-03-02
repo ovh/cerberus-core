@@ -24,81 +24,79 @@
 
 from io import BytesIO
 
-from flask import Blueprint, json, g, make_response, request, send_file
+from flask import Blueprint, g, request, send_file
+from voluptuous import Any, Optional
 
 from api.controllers import ReportItemsController, ReportsController
-from decorators import jsonify, perm_required
+from decorators import perm_required, validate_body
 
 report_views = Blueprint('report_views', __name__)
 
 
 @report_views.route('/api/reports', methods=['GET'])
-@jsonify
 def get_all_reports():
     """ Get abuse reports
 
         Filtering is possible through "filters" query string, JSON double encoded format
     """
-    if 'filters' in request.args:
-        code, resp, nb_reps = ReportsController.index(filters=request.args['filters'], user=g.user)
-    else:
-        code, resp, nb_reps = ReportsController.index(user=g.user)
-    return code, resp
+    resp, _ = ReportsController.index(filters=request.args.get('filters'), user=g.user)
+    return resp
 
 
 @report_views.route('/api/reports/<report>', methods=['GET'])
-@jsonify
 @perm_required
 def get_report(report=None):
     """ Get a given report
     """
-    code, resp = ReportsController.show(report)
-    return code, resp
+    return ReportsController.show(report)
 
 
 @report_views.route('/api/reports/<report>', methods=['PUT', 'DELETE'])
-@jsonify
 @perm_required
 def update_report(report=None):
     """ Update a given report
     """
     if request.method == 'PUT':
         body = request.get_json()
-        code, resp = ReportsController.update(report, body, g.user)
+        return ReportsController.update(report, body, g.user)
     else:
-        code, resp = ReportsController.destroy(report)
-    return code, resp
+        return ReportsController.destroy(report)
+
+
+@report_views.route('/api/reports/<report>/validate', methods=['POST'])
+@perm_required
+@validate_body({
+    Optional('domainToRequest'): Any(str, unicode, None)
+})
+def validate_report(report=None):
+    """
+        Parse now validated "ToValidate" `abuse.models.Report`
+    """
+    body = request.get_json()
+    return ReportsController.validate(report, body, g.user)
 
 
 @report_views.route('/api/reports/<report>/items', methods=['GET'])
-@jsonify
 @perm_required
 def get_report_items(report=None):
     """ Get all items for a given report
 
         Filtering is possible through "filters" query string, JSON double encoded format
     """
-    if 'filters' in request.args:
-        code, resp = ReportItemsController.get_items_report(rep=report, filters=request.args['filters'])
-    else:
-        code, resp = ReportItemsController.get_items_report(rep=report)
-    return code, resp
+    return ReportItemsController.get_items_report(rep=report, filters=request.args.get('filters'))
 
 
 @report_views.route('/api/reports/<report>/items', methods=['POST'])
-@jsonify
 @perm_required
 def create_report_item(report=None):
     """ Add item to report
     """
     body = request.get_json()
     body['report'] = report
-    code, resp = ReportItemsController.create(body, g.user)
-    return code, resp
+    return ReportItemsController.create(body, g.user)
 
 
 @report_views.route('/api/reports/<report>/items/<item>', methods=['PUT', 'DELETE'])
-@jsonify
 @perm_required
 def update_report_item(report=None, item=None):
     """ Update an item
@@ -106,76 +104,64 @@ def update_report_item(report=None, item=None):
     if request.method == 'PUT':
         body = request.get_json()
         body['report'] = report
-        code, resp = ReportItemsController.update(item, body, g.user)
+        return ReportItemsController.update(item, body, g.user)
     else:
-        code, resp = ReportItemsController.delete_from_report(item, report, g.user)
-    return code, resp
+        return ReportItemsController.delete_from_report(item, report, g.user)
 
 
 @report_views.route('/api/reports/<report>/items/<item>/screenshots', methods=['GET'])
-@jsonify
 @perm_required
 def get_item_screenshot(report=None, item=None):
     """ Get available screenshots for given item
     """
-    code, resp = ReportItemsController.get_screenshot(item, report)
-    return code, resp
+    return ReportItemsController.get_screenshot(item, report)
 
 
 @report_views.route('/api/reports/<report>/items/screenshots', methods=['GET'])
-@jsonify
 @perm_required
 def get_all_items_screenshot(report=None):
     """ Get all available screenshots for given report
     """
-    if 'filters' in request.args:
-        code, resp = ReportsController.get_items_screenshot(report=report, filters=request.args['filters'])
-    else:
-        code, resp = ReportsController.get_items_screenshot(report=report)
-    return code, resp
+    return ReportsController.get_items_screenshot(
+        report=report,
+        filters=request.args.get('filters')
+    )
 
 
 @report_views.route('/api/reports/<report>/items/<item>/unblock', methods=['POST'])
-@jsonify
 @perm_required
 def unblock_report_item(report=None, item=None):
     """ Unblock an item
     """
-    code, resp = ReportItemsController.unblock_item(item_id=item, report_id=report)
-    return code, resp
+    return ReportItemsController.unblock_item(item_id=item, report_id=report)
 
 
 @report_views.route('/api/reports/<report>/raw', methods=['GET'])
-@jsonify
 @perm_required
 def get_raw_report(report=None):
     """ Get raw email for a report
     """
-    code, resp = ReportsController.get_raw(report)
-    return code, resp
+    return ReportsController.get_raw(report)
 
 
 @report_views.route('/api/reports/<report>/dehtmlify', methods=['GET'])
-@jsonify
 @perm_required
 def get_dehtmlified_report(report=None):
     """ Get raw email for a report
     """
-    code, resp = ReportsController.get_dehtmlified(report)
-    return code, resp
+    return ReportsController.get_dehtmlified(report)
 
 
 @report_views.route('/api/reports/<report>/attachments', methods=['GET'])
-@jsonify
 @perm_required
 def get_all_report_attachments(report=None):
     """ Get attached documents for a report
     """
-    if 'filters' in request.args:
-        code, resp, nb_attached = ReportsController.get_all_attachments(report=report, filters=request.args['filters'])
-    else:
-        code, resp, nb_attached = ReportsController.get_all_attachments(report=report)
-    return code, resp
+    resp, _ = ReportsController.get_all_attachments(
+        report=report,
+        filters=request.args.get('filters')
+    )
+    return resp
 
 
 @report_views.route('/api/reports/<report>/attachments/<attachment>', methods=['GET'])
@@ -183,55 +169,49 @@ def get_all_report_attachments(report=None):
 def get_report_attachment(report=None, attachment=None):
     """ Get attached documents for a report
     """
-    code, resp = ReportsController.get_attachment(report, attachment)
-    if code != 200:
-        return make_response(json.dumps(resp), code, {'content-type': 'application/json'})
-
+    resp = ReportsController.get_attachment(report, attachment)
     bytes_io = BytesIO(resp['raw'])
-    return send_file(bytes_io, attachment_filename=resp['filename'], mimetype=resp['filetype'], as_attachment=True)
+    return send_file(
+        bytes_io,
+        attachment_filename=resp['filename'],
+        mimetype=resp['filetype'],
+        as_attachment=True
+    )
 
 
 @report_views.route('/api/reports/<report>/tags', methods=['POST'])
-@jsonify
 @perm_required
 def add_report_tag(report=None):
     """ Add tag to report
     """
     body = request.get_json()
-    code, resp = ReportsController.add_tag(report, body)
-    return code, resp
+    return ReportsController.add_tag(report, body)
 
 
 @report_views.route('/api/reports/<report>/tags/<tag>', methods=['DELETE'])
-@jsonify
 @perm_required
 def delete_report_tag(report=None, tag=None):
     """ Delete report tag
     """
-    code, resp = ReportsController.remove_tag(report, tag)
-    return code, resp
+    return ReportsController.remove_tag(report, tag)
 
 
 @report_views.route('/api/reports/bulk', methods=['PUT', 'DELETE'])
-@jsonify
 @perm_required
 def bulk_add_reports():
     """ Bulk add on reports
     """
     body = request.get_json()
     if request.method == 'PUT':
-        code, resp = ReportsController.bulk_add(body, g.user, request.method)
+        return ReportsController.bulk_add(body, g.user, request.method)
     else:
-        code, resp = ReportsController.bulk_delete(body, g.user, request.method)
-    return code, resp
+        return ReportsController.bulk_delete(body, g.user, request.method)
 
 
 @report_views.route('/api/reports/<report>/feedback', methods=['POST'])
-@jsonify
 @perm_required
 def post_feedback(report=None):
     """ Post feeback
     """
     body = request.get_json()
-    code, resp = ReportsController.parse_screenshot_feedback(report, body, g.user)
-    return code, resp
+    return ReportsController.parse_screenshot_feedback(report, body, g.user)

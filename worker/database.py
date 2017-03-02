@@ -35,11 +35,11 @@ from django.db.models import Q, ObjectDoesNotExist
 
 from abuse.models import (Category, DefendantRevision, Defendant, EmailFilterTag, History,
                           DefendantHistory, Provider, Report, Service, Tag, Ticket, UrlStatus,
-                          User)
+                          User, Comment, TicketComment)
 
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.kpi.abstract import KPIServiceException
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory as implementations
 from parsing import regexp
 from utils import schema, utils
 from worker import Logger
@@ -103,14 +103,24 @@ def get_item_status_score(item_id, last=3):
     """
         Get item scoring
     """
-    return UrlStatus.objects.filter(item_id=item_id).values_list('score', flat=True).order_by('-date')[:last]
+    return UrlStatus.objects.filter(
+        item_id=item_id
+    ).values_list(
+        'score',
+        flat=True
+    ).order_by('-date')[:last]
 
 
 def get_item_status_phishing(item_id, last=3):
     """
         Get item scoring
     """
-    return UrlStatus.objects.filter(item_id=item_id).values_list('isPhishing', flat=True).order_by('-date')[:last]
+    return UrlStatus.objects.filter(
+        item_id=item_id
+    ).values_list(
+        'isPhishing',
+        flat=True
+    ).order_by('-date')[:last]
 
 
 def log_action_on_ticket(ticket=None, action=None, user=None, **kwargs):
@@ -131,7 +141,7 @@ def log_action_on_ticket(ticket=None, action=None, user=None, **kwargs):
         ticketStatus=ticket.status,
     )
 
-    if ImplementationFactory.instance.is_implemented('KPIServiceBase'):
+    if implementations.instance.is_implemented('KPIServiceBase'):
         _generates_kpi_infos(ticket, log_msg)
 
     Logger.debug(
@@ -174,8 +184,8 @@ def _get_log_message(ticket, action, user, **kwargs):
         reason = ', reason : %s' % close_reason if close_reason else ''
         log_msg = 'change status from %s to %s%s' % (previous_value, new_value, reason)
     elif action == 'change_treatedby':
-        before = previous_value if previous_value else 'nobody'
-        after = new_value if new_value else 'nobody'
+        before = previous_value or 'nobody'
+        after = new_value or 'nobody'
         log_msg = 'change treatedBy from %s to %s' % (before, after)
     elif action == 'send_email':
         log_msg = 'sent an email to %s' % email
@@ -230,7 +240,7 @@ def _generates_onassign_kpi(ticket):
         Kpi on ticket assignation
     """
     try:
-        ImplementationFactory.instance.get_singleton_of('KPIServiceBase').new_ticket_assign(ticket)
+        implementations.instance.get_singleton_of('KPIServiceBase').new_ticket_assign(ticket)
     except KPIServiceException as ex:
         Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
 
@@ -240,7 +250,7 @@ def _generates_onclose_kpi(ticket):
         Kpi on ticket close
     """
     try:
-        ImplementationFactory.instance.get_singleton_of('KPIServiceBase').close_ticket(ticket)
+        implementations.instance.get_singleton_of('KPIServiceBase').close_ticket(ticket)
     except KPIServiceException as ex:
         Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
 
@@ -259,7 +269,7 @@ def _genereates_oncreate_kpi(ticket):
     )
 
     try:
-        ImplementationFactory.instance.get_singleton_of('KPIServiceBase').new_ticket(ticket)
+        implementations.instance.get_singleton_of('KPIServiceBase').new_ticket(ticket)
     except KPIServiceException as ex:
         Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
 
@@ -369,7 +379,7 @@ def create_ticket(defendant, category, service, priority='Normal', attach_new=Tr
                 priority=priority,
                 update=True,
             )
-            if all((defendant, service, category)) and attach_new:   # Automatically attach similar reports
+            if all((defendant, service, category)) and attach_new:   # attach similar reports
                 Report.objects.filter(
                     service=service,
                     defendant=defendant,
@@ -391,24 +401,33 @@ def set_ticket_higher_priority(ticket):
         Set `abuse.models.Ticket` higher priority available through it's
         `abuse.models.Report`'s `abuse.models.Provider`
     """
-    defendant = Defendant.objects.get(customerId=ticket.defendant.customerId)
-    if defendant.details.creationDate >= datetime.now() - timedelta(days=30):
-        ticket.priority = sorted(PRIORITY_LEVEL.items(), key=operator.itemgetter(1))[1][0]  # High
-        ticket.save()
-        return
+    ticket_priority = 'Normal'
 
     priorities = list(set(ticket.reportTicket.all().values_list('provider__priority', flat=True)))
     for priority, _ in sorted(PRIORITY_LEVEL.items(), key=operator.itemgetter(1)):
         if priority in priorities:
-            Logger.debug(unicode('set priority %s to ticket %d' % (priority, ticket.id)))
-            ticket.priority = priority
-            ticket.save()
-            return
+            ticket_priority = priority
+            break
+
+    if ticket.defendant:  # Warning for new customer or "big" ticket
+        defendant = Defendant.objects.get(customerId=ticket.defendant.customerId)
+        if PRIORITY_LEVEL[ticket_priority] > PRIORITY_LEVEL['High']:
+            if (defendant.details.creationDate >= datetime.now() - timedelta(days=30) or
+                    ticket.reportTicket.count() > settings.GENERAL_CONFIG['ticket_high_count']):
+                ticket_priority = 'High'
+
+    Logger.debug(unicode('set priority %s to ticket %d' % (ticket_priority, ticket.id)))
+    ticket.priority = ticket_priority
+    ticket.save()
 
 
 def get_category(name):
     """
-        Create category or get it if exists
+        Get `abuse.models.Category` instance
+
+        :param str name: the name of the category
+        :rtype: `abuse.models.Category`
+        :return: a `abuse.models.Category` instance
     """
     return Category.objects.get(name=name)
 
@@ -443,44 +462,44 @@ def get_tags(provider, recipients, subject, body):
     return tags
 
 
-def add_phishing_blocked_tag(report):
+def add_ticket_comment(ticket, comment):
     """
-        Add Phishing blocked tag to report
-    """
-    try:
-        tag = Tag.objects.get(tagType='Report', name=settings.TAGS['phishing_autoblocked'])
-        report.tags.add(tag)
-        report.save()
-    except ObjectDoesNotExist:
-        pass
+        Add a `abuse.models.Comment` to given `abuse.models.Ticket`
 
+        :param `abuse.models.Ticket` ticket: a `abuse.models.Ticket` instance
+        :param str comment: the comment to add
+    """
+    user = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
 
-def add_mass_contact_tag(ticket, campaign_name):
-    """
-        Add mass contact tag to report
-    """
-    try:
-        tag, _ = Tag.objects.get_or_create(tagType='Ticket', name=campaign_name)
-        ticket.tags.add(tag)
-        ticket.save()
-    except ObjectDoesNotExist:
-        pass
+    comment = Comment.objects.create(
+        user=user,
+        comment=comment
+    )
+    TicketComment.objects.create(ticket=ticket, comment=comment)
+    log_action_on_ticket(
+        ticket=ticket,
+        action='add_comment'
+    )
 
 
 def refresh_defendant_infos(defendant_id=None):
     """
         Try to update `abuse.models.Defendant`'s revision
     """
-    try:
-        defendant = Defendant.objects.get(id=defendant_id)
-    except (AttributeError, ObjectDoesNotExist, ValueError):
-        pass
-
+    defendant = Defendant.objects.get(id=defendant_id)
     fresh_defendant_infos = None
 
     try:
-        fresh_defendant_infos = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_customer_infos(defendant.customerId)
-        schema.valid_adapter_response('CustomerDaoBase', 'get_customer_infos', fresh_defendant_infos)
+        fresh_defendant_infos = implementations.instance.get_singleton_of(
+            'CustomerDaoBase'
+        ).get_customer_infos(
+            defendant.customerId
+        )
+        schema.valid_adapter_response(
+            'CustomerDaoBase',
+            'get_customer_infos',
+            fresh_defendant_infos
+        )
         fresh_defendant_infos.pop('customerId', None)
         if DefendantRevision.objects.filter(**fresh_defendant_infos).count():
             revision = DefendantRevision.objects.filter(**fresh_defendant_infos).last()
@@ -506,9 +525,9 @@ def log_new_report(report):
         }
     )
 
-    if ImplementationFactory.instance.is_implemented('KPIServiceBase'):
+    if implementations.instance.is_implemented('KPIServiceBase'):
         try:
-            ImplementationFactory.instance.get_singleton_of('KPIServiceBase').new_report(report)
+            implementations.instance.get_singleton_of('KPIServiceBase').new_report(report)
         except KPIServiceException as ex:
             Logger.error(unicode('Error while pushing KPI - %s' % (ex)))
 

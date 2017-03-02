@@ -28,6 +28,7 @@ from django.core.exceptions import FieldError
 from django.db import IntegrityError
 from django.db.models import Q, ObjectDoesNotExist, ProtectedError
 from django.forms.models import model_to_dict
+from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
 from abuse.models import Tag
 
@@ -43,7 +44,7 @@ def index(**kwargs):
 
     where = reduce(operator.and_, where)
     tags = Tag.objects.filter(where)
-    return 200, [model_to_dict(tag) for tag in tags]
+    return [model_to_dict(tag) for tag in tags]
 
 
 def show(tag_id):
@@ -52,8 +53,8 @@ def show(tag_id):
     try:
         tag = Tag.objects.get(id=tag_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
-    return 200, model_to_dict(tag)
+        raise NotFound('Tag not found')
+    return model_to_dict(tag)
 
 
 def create(body):
@@ -62,16 +63,16 @@ def create(body):
     try:
         body.pop('id', None)
         if body.get('tagType') not in TAG_TYPE:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid or missing tag type'}
+            raise BadRequest('Invalid or missing tag type')
 
         existing = [tag.lower() for tag in Tag.objects.all().values_list('name', flat=True)]
         if body['name'].lower().strip() in existing:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Tag already exists'}
+            raise BadRequest('Tag already exists')
         body['codename'] = body['name'].lower().replace(' ', '_')
         tag = Tag.objects.get_or_create(**body)[0]
     except (AttributeError, KeyError, FieldError, IntegrityError, ValueError):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
-    return 201, model_to_dict(tag)
+        raise BadRequest('Invalid fields in body')
+    return model_to_dict(tag)
 
 
 def update(tag_id, body):
@@ -80,19 +81,20 @@ def update(tag_id, body):
     try:
         tag = Tag.objects.get(id=tag_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Tag not found')
     try:
         body.pop('id', None)
 
-        existing = [tg.lower() for tg in Tag.objects.exclude(id=tag.id).values_list('name', flat=True)]
+        existing = Tag.objects.exclude(id=tag.id).values_list('name', flat=True)
+        existing = [tg.lower() for tg in existing]
         if body['name'].lower().strip() in existing:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Tag already exists'}
+            raise BadRequest('Tag already exists')
 
         Tag.objects.filter(pk=tag.pk).update(**body)
         tag = Tag.objects.get(pk=tag.pk)
     except (AttributeError, KeyError, FieldError, IntegrityError, ValueError, TypeError):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid fields in body'}
-    return 200, model_to_dict(tag)
+        raise BadRequest('Invalid fields in body')
+    return model_to_dict(tag)
 
 
 def destroy(tag_id):
@@ -101,12 +103,12 @@ def destroy(tag_id):
     try:
         tag = Tag.objects.get(id=tag_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Tag not found')
     try:
         tag.delete()
-        return 200, {'status': 'OK', 'code': 200, 'message': 'Tag successfully removed'}
+        return {'message': 'Tag successfully removed'}
     except ProtectedError:
-        return 403, {'status': 'Forbidden', 'message': 'Tag still referenced in reports/tickets', 'code': 403}
+        raise Forbidden('Tag still referenced in reports/tickets')
 
 
 def get_tag_type():

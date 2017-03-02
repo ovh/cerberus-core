@@ -25,66 +25,53 @@
 from flask import Blueprint, request
 
 from api.controllers import ProvidersController
-from decorators import admin_required, jsonify
+from decorators import admin_required
 
 provider_views = Blueprint('provider_views', __name__)
 
 
 @provider_views.route('/api/providers', methods=['GET'])
-@jsonify
 def get_providers():
     """ Get list of providers
 
         Filtering is possible through "filters" query string, JSON double encoded format
     """
-    if 'filters' in request.args:
-        code, resp = ProvidersController.index(filters=request.args['filters'])
-    else:
-        code, resp = ProvidersController.index()
-    return code, resp
+    return ProvidersController.index(filters=request.args.get('filters'))
 
 
 @provider_views.route('/api/providers', methods=['POST'])
-@jsonify
 @admin_required
 def create_provider():
     """ Create a new provider
     """
     body = request.get_json()
-    code, resp = ProvidersController.create(body)
-    return code, resp
+    return ProvidersController.create(body)
 
 
 @provider_views.route('/api/providers/<provider>', methods=['PUT', 'DELETE'])
-@jsonify
 @admin_required
 def update_provider(provider=None):
     """ Update a given provider
     """
     if request.method == 'PUT':
         body = request.get_json()
-        code, resp = ProvidersController.update(provider, body)
+        return ProvidersController.update(provider, body)
     else:
-        code, resp = ProvidersController.destroy(provider)
-    return code, resp
+        return ProvidersController.destroy(provider)
 
 
 @provider_views.route('/api/providers/<provider>/tags', methods=['POST'])
-@jsonify
 @admin_required
 def add_provider_tag(provider=None):
     """ Add tag to provider
     """
     body = request.get_json()
-    code, resp = ProvidersController.add_tag(provider, body)
-    return code, resp
+    return ProvidersController.add_tag(provider, body)
 
 
 @provider_views.route('/api/providers/<provider>/tags/<tag>', methods=['DELETE'])
-@jsonify
 @admin_required
 def delete_provider_tag(provider=None, tag=None):
     """ Remove provider tag
     """
-    code, resp = ProvidersController.remove_tag(provider, tag)
-    return code, resp
+    return ProvidersController.remove_tag(provider, tag)

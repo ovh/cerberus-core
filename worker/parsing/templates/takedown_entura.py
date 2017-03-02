@@ -28,10 +28,10 @@ TEMPLATE = {
     'fallback': False,
     'regexp': {
         'ips': {
-            'pattern': r'(?:IP\s*addresses\s*:\s*\n*)' + regexp.IPV4,
+            'pattern': r'(?:IP\s*addresses\s*:\s*\n*|OVH\s*IP\s*Address\s*)' + regexp.IPV4,
         },
         'urls': {
-            'pattern': r'(?:that\s*point\s*to\s*infringing\s*works\s*:\s*\n*)' + regexp.URL,
+            'pattern': r'(?:that\s*point\s*to\s*infringing\s*works\s*:\s*\n*|Infringing\s*URLs\s*\/\s*Identifiers\s*:\s*\n*)' + regexp.URL,
         },
         'category': {
             'value': 'Copyright',

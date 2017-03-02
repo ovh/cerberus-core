@@ -2,12 +2,8 @@
 
 ## Summary ##
 
-This tool aims to help ISP manage abuse on their network by providing
-a set of tools such as an email parser and classification, a ticketing
-system, an API and an UX for operators (with cerberus-ux project).
-
-This tool can be easily expanded by implementing new `python-rq`jobs.
-
+Cerberus is a toolkit to receive, parse, process and automate abuse reports handling received by ISP or hosting providers.
+This toolkit includes an email fetcher, abuse reports parsers, a business rules engine and a ticketing system.
 
 ## Try it ##
 
@@ -58,7 +54,6 @@ You can now insert theses entries in your favorite scheduler:
 
  * Schedule `rqcheduler`, `event/email_fetcher.py`, `worker/worker.py` and `uwsgi --http-socket 8080 api/uwsgi.ini` to be run as a daemon.
  * Schedule `event/workflow.py` to be run every minute.
- * Schedule `event/stats.py` to be run every quarter hour.
 
 The whole project use `python-rq` and `rq-scheduler`. You can see jobs status with:
 
@@ -99,6 +94,11 @@ Fraudulent URL/IP/FQDN found in an email.
 
 An action on a customer's service (suspend, shutdown, breach of contract).
 
+## Business Rules ##
+
+Cerberus business rules engine is based on [https://github.com/venmo/business-rules](https://github.com/venmo/business-rules)
+You can find business rules example in `tests/rules/`
+
 ## Workflow ##
 
 An email can generates one or more reports (if multiple defendants are identified). Just one if no defendant is identified.
@@ -133,7 +133,7 @@ You can see full cerberus models's relationship in `doc/source/models.png`.
 
 ### General settings ###
 
-For security purpose, most of setting values must be defined as VARENV. So, to configure the tool, you just have to export following environment variables:
+Default secrets are defined as VARENV. To configure the tool, you have to export following environment variables:
 
  * EMAIL_STORAGE_DIR: The folder where to store fetched and sent emails
  * MAGIC_SMTP_HEADER: King of tag in SMTP header defining e-mail source (see next section)
@@ -152,7 +152,7 @@ For security purpose, most of setting values must be defined as VARENV. So, to c
  * PG_HOST: The IP address of PostgreSQL db
  * PG_PORT: The TCP port of PostgreSQL db
 
-In `settings.py` you can see how this different varenv are used + other settings description. **Really, you should edit this file.**
+In `config/settings.py` you can see how this different varenv are used + other settings description. **Really, you should edit this file.**
 
 ### A "trusted" email ? ###
 
@@ -171,7 +171,7 @@ Everything you have to do is opening the file utils/ips.py and add your CIDRs (o
 
 ### Implementing your own core functions ###
 
-You'll maybe see in the file `settings.py`, there is a way to provide your implementation(s).
+You'll maybe see in the file `config/settings.py`, there is a way to provide your implementation(s).
 By default, a very basic implementation is provided for each adapter. (see abstract documentation)
 
 Required adapters implementations are:
@@ -200,9 +200,9 @@ You can add template for provider in `worker/parsing/templates`. If your templat
 
 ## API ##
 
-Once everything is running, you can start using the API. By default, it's listening to the port 8080. Full endpoints description are available in documentation
+Once everything is running, you can start using the API. By default, it's listening on port 8080. Full endpoints description are available in documentation
 
-**Be careful, this is not a RESTFul API.** The main goal of this API is to interface DB with `ovh/cerberus-ux` project.
+**Be careful, this is not a RESTFul API.** The main goal of this API is to interface DB with [https://github.com/ovh/cerberus-ux](https://github.com/ovh/cerberus-ux) project.
 
 ## Documentation ##
 

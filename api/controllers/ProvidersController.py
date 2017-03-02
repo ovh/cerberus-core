@@ -30,6 +30,7 @@ from django.core.exceptions import FieldError
 from django.db import IntegrityError
 from django.db.models import ObjectDoesNotExist, ProtectedError, Q
 from django.forms.models import model_to_dict
+from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
 from abuse.models import Category, Provider, Tag
 
@@ -41,11 +42,11 @@ def index(**kwargs):
     """
     filters = {}
 
-    if 'filters' in kwargs:
+    if kwargs.get('filters'):
         try:
             filters = json.loads(unquote(unquote(kwargs['filters'])))
         except (ValueError, SyntaxError, TypeError) as ex:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+            raise BadRequest(str(ex.message))
     try:
         limit = int(filters['paginate']['resultsPerPage'])
         offset = int(filters['paginate']['currentPage'])
@@ -56,7 +57,7 @@ def index(**kwargs):
     try:
         where = __generate_request_filter(filters)
     except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+        raise BadRequest(str(ex.message))
 
     try:
         sort = ['-' + k if v < 0 else k for k, v in filters['sortBy'].iteritems()]
@@ -69,19 +70,29 @@ def index(**kwargs):
         fields = [f.name for f in Provider._meta.fields]
 
     try:
+        fields.remove('tags')
+    except ValueError:
+        pass
+
+    try:
         count = Provider.objects.filter(where).count()
-        providers = Provider.objects.filter(where).values('email', 'tags', *fields).order_by(*sort)
+        providers = Provider.objects.filter(
+            where
+        ).values(
+            'email',
+            *fields
+        ).order_by(*sort).distinct()
         providers = providers[(offset - 1) * limit:limit * offset]
         len(providers)  # Force django to evaluate query now
     except (KeyError, FieldError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+        raise BadRequest(str(ex.message))
 
     for provider in providers:
         provider.pop('apiKey', None)
         tags = Provider.objects.get(email=provider['email']).tags.all()
         provider['tags'] = [model_to_dict(tag) for tag in tags]
 
-    return 200, {'providers': list(providers), 'providersCount': count}
+    return {'providers': list(providers), 'providersCount': count}
 
 
 def __generate_request_filter(filters):
@@ -107,23 +118,23 @@ def show(provider_email):
     try:
         provider = Provider.objects.get(email=provider_email)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Provider does not exist'}
+        raise NotFound('Provider does not exist')
 
     provider = model_to_dict(provider)
     provider.pop('apiKey', None)
     tags = Provider.objects.get(email=provider['email']).tags.all()
     provider['tags'] = [model_to_dict(tag) for tag in tags]
 
-    return 200, provider
+    return provider
 
 
 def create(body):
     """ Create provider
     """
     if 'email' not in body:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Email field required'}
+        raise BadRequest('Email field required')
     if len(Provider.objects.filter(email=body['email'])) > 1:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Provider already exists'}
+        raise BadRequest('Provider already exists')
 
     try:
         cat = None
@@ -132,9 +143,9 @@ def create(body):
         body.pop('defaultCategory', None)
         body = {k: v for k, v in body.iteritems() if k in PROVIDER_FIELDS}
         provider = Provider.objects.create(defaultCategory=cat, **body)
-        return 201, model_to_dict(provider)
+        return model_to_dict(provider)
     except (FieldError, IntegrityError, ObjectDoesNotExist) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+        raise BadRequest(str(ex.message))
 
 
 def update(prov, body):
@@ -143,7 +154,7 @@ def update(prov, body):
     try:
         provider = Provider.objects.get(email=prov)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Provider does not exist'}
+        raise NotFound('Provider does not exist')
     try:
         body = {k: v for k, v in body.iteritems() if k in PROVIDER_FIELDS}
         cat = None
@@ -153,8 +164,8 @@ def update(prov, body):
         Provider.objects.filter(pk=provider.pk).update(defaultCategory=cat, **body)
         provider = Provider.objects.get(pk=provider.pk)
     except (FieldError, IntegrityError, ObjectDoesNotExist) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
-    return 200, model_to_dict(provider)
+        raise BadRequest(str(ex.message))
+    return model_to_dict(provider)
 
 
 def destroy(prov):
@@ -163,12 +174,12 @@ def destroy(prov):
     try:
         provider = Provider.objects.filter(email=prov)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Provider not found')
     try:
         provider.delete()
-        return 200, {'status': 'OK', 'code': 200, 'message': 'Provider successfully removed'}
+        return {'message': 'Provider successfully removed'}
     except ProtectedError:
-        return 403, {'status': 'Provider still referenced in reports', 'code': 403}
+        raise Forbidden('Provider still referenced in reports')
 
 
 def get_provider_by_key(key):
@@ -196,14 +207,14 @@ def add_tag(provider_email, body):
         provider = Provider.objects.get(email=provider_email)
 
         if provider.__class__.__name__ != tag.tagType:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid tag for provider'}
+            raise BadRequest('Invalid tag for provider')
 
         provider.tags.add(tag)
         provider.save()
 
     except (KeyError, FieldError, IntegrityError, ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
-    return 200, model_to_dict(provider)
+        raise NotFound('Provider or tag not found')
+    return model_to_dict(provider)
 
 
 def remove_tag(provider_email, tag_id):
@@ -214,11 +225,11 @@ def remove_tag(provider_email, tag_id):
         provider = Provider.objects.get(email=provider_email)
 
         if provider.__class__.__name__ != tag.tagType:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid tag for provider'}
+            raise BadRequest('Invalid tag for provider')
 
         provider.tags.remove(tag)
         provider.save()
 
     except (ObjectDoesNotExist, FieldError, IntegrityError, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
-    return 200, model_to_dict(provider)
+        raise NotFound('Provider or tag not found')
+    return model_to_dict(provider)

@@ -23,10 +23,14 @@
 """
 
 import base64
+import hashlib
 import json
 import os
 import re
 import socket
+
+from datetime import datetime
+from functools import wraps
 from time import sleep
 from urlparse import urlparse
 
@@ -38,9 +42,12 @@ from cryptography.fernet import Fernet, InvalidSignature, InvalidToken
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from django.db.models import ObjectDoesNotExist
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator, validate_ipv46_address
+from django.template import (Context, TemplateEncodingError,
+                             TemplateSyntaxError, loader)
 from redis import ConnectionError as RedisError
 from redis import Redis
 from requests.exceptions import (ChunkedEncodingError, ConnectionError,
@@ -49,7 +56,8 @@ from rq import Queue
 from rq_scheduler import Scheduler
 from simplejson import JSONDecodeError
 
-from abuse.models import Role, User
+from abuse.models import MailTemplate, Role, User
+from adapters.services.mailer.abstract import Email
 from logger import get_logger
 
 Logger = get_logger(os.path.basename(__file__))
@@ -85,6 +93,22 @@ html2text.ignore_links = True
 DNS_ERROR = {
     '-2': 'NXDOMAIN'
 }
+
+
+class EmailThreadTemplateNotFound(Exception):
+    """
+        EmailThreadTemplateNotFound
+    """
+    def __init__(self, message):
+        super(EmailThreadTemplateNotFound, self).__init__(message)
+
+
+class EmailThreadTemplateSyntaxError(Exception):
+    """
+        EmailThreadTemplateSyntaxError
+    """
+    def __init__(self, message):
+        super(EmailThreadTemplateSyntaxError, self).__init__(message)
 
 
 class CryptoException(Exception):
@@ -156,7 +180,7 @@ class RoleCache(object):
             :param str method: The HTTP method
             :param str endpoint: The API endpoint
             :rtype: bool
-            :returns: if allowed or not
+            :return: if allowed or not
         """
         return (method, endpoint) in self.routes[role]
 
@@ -181,7 +205,8 @@ class RequestException(Exception):
         self.code = code
 
 
-def request_wrapper(url, auth=None, params=None, as_json=False, method='POST', headers=None, timeout=30):
+def request_wrapper(url, auth=None, params=None, as_json=False,
+                    method='POST', headers=None, timeout=30):
     """
         Python-requests wrapper
     """
@@ -212,21 +237,30 @@ def request_wrapper(url, auth=None, params=None, as_json=False, method='POST', h
         except HTTPError as ex:
             if 500 <= int(ex.response.status_code) <= 599:
                 if retry == max_tries - 1:
-                    raise RequestException(__get_request_exception_message(request, url, params, ex), ex.response.status_code)
+                    raise RequestException(
+                        _get_request_exception_message(request, url, params, ex),
+                        ex.response.status_code
+                    )
                 else:
                     sleep(1)
             else:
-                raise RequestException(__get_request_exception_message(request, url, params, ex), ex.response.status_code)
+                raise RequestException(
+                    _get_request_exception_message(request, url, params, ex),
+                    ex.response.status_code
+                )
         except Timeout as ex:
-            raise RequestException(__get_request_exception_message(request, url, params, ex), None)
+            raise RequestException(_get_request_exception_message(request, url, params, ex), None)
         except (ChunkedEncodingError, ConnectionError, JSONDecodeError) as ex:
             if retry == max_tries - 1:
-                raise RequestException(__get_request_exception_message(request, url, params, ex), None)
+                raise RequestException(
+                    _get_request_exception_message(request, url, params, ex),
+                    None
+                )
             else:
                 sleep(1)
 
 
-def __get_request_exception_message(request, url, params, exception):
+def _get_request_exception_message(request, url, params, exception):
     """
         Try to extract message from requests exeption
     """
@@ -246,10 +280,10 @@ def get_url_hostname(url):
 
         :param str url: The url to extract hostname
         :rtype: str
-        :returns: the hostname or None
+        :return: the hostname or None
     """
     try:
-        validate = URLValidator()
+        validate = URLValidator(schemes=('http', 'https', 'ftp', 'ftps', 'rtsp', 'rtmp'))
         validate(url)
     except (ValueError, ValidationError):
         return None
@@ -264,7 +298,7 @@ def get_ips_from_url(url):
 
         :param str url: The url to resolve
         :rtype: list
-        :returns: the list of resolved IP address for given url
+        :return: the list of resolved IP address for given url
     """
     try:
         parsed = urlparse(url)
@@ -282,7 +316,7 @@ def get_ips_from_fqdn(fqdn):
 
         :param str fqdn: The FQDN to resolve
         :rtype: list
-        :returns: the list of resolved IP address for given FQDN
+        :return: the list of resolved IP address for given FQDN
     """
     try:
         socket.setdefaulttimeout(5)
@@ -300,7 +334,7 @@ def get_reverses_for_item(item, nature='IP', replace_exception=False):
         :param str nature: The nature of the item
         :param bool replace_exception: Replace socket error by NXDOMAIN or TIMEOUT
         :rtype: dict
-        :returns: a dict containing reverse infos
+        :return: a dict containing reverse infos
     """
     hostname = None
     reverses = {}
@@ -311,7 +345,8 @@ def get_reverses_for_item(item, nature='IP', replace_exception=False):
             validate_ipv46_address(item)
             reverses['ipReverse'] = socket.gethostbyaddr(item)[0]
             reverses['ipReverseResolved'] = socket.gethostbyname(reverses['ipReverse'])
-        except (IndexError, socket.error, socket.gaierror, socket.herror, socket.timeout, TypeError, ValidationError):
+        except (IndexError, socket.error, socket.gaierror, socket.herror,
+                socket.timeout, TypeError, ValidationError):
             pass
     elif nature == 'URL':
         reverses['url'] = item
@@ -333,10 +368,10 @@ def get_reverses_for_item(item, nature='IP', replace_exception=False):
                     reverses['fqdnResolved'] = DNS_ERROR[str(ex.args[0])]
                 except KeyError:
                     reverses['fqdnResolved'] = 'NXDOMAIN'
-        except (socket.error, socket.timeout, socket.herror):
+        except socket.timeout:
             if replace_exception:
                 reverses['fqdnResolved'] = 'TIMEOUT'
-        except (IndexError, TypeError):
+        except (IndexError, TypeError, socket.error, socket.herror):
             pass
 
     return reverses
@@ -370,7 +405,7 @@ def get_user_notifications(username, limit=3):
         :param str username: The username of the user
         :param int limit: The number of notifications to return
         :rtype: list
-        :returns: A list of dict
+        :return: A list of dict
     """
     notification_queue = 'cerberus:notification:%s' % (username)
     response = []
@@ -393,7 +428,7 @@ def dehtmlify(body):
 
         :param str body: The html content
         :rtype: str
-        :returns: The dehtmlified content
+        :return: The dehtmlified content
     """
     html = html2text.HTML2Text()
     html.body_width = 0
@@ -410,7 +445,7 @@ def decode_every_charset_in_the_world(content, supposed_charset=None):
         :param str content: The content to decode
         :param str supposed_charset: A supposed encoding for given content
         :rtype: str
-        :returns: The decoded content
+        :return: The decoded content
     """
     try:
         guessed_charset = chardet.detect(content)['encoding']
@@ -437,7 +472,7 @@ def get_ip_network(ip_str):
 
         :param str ip_str: The IP address
         :rtype: str
-        :returns: The owner if find else None
+        :return: The owner if find else None
     """
     try:
         ip_addr = netaddr.IPAddress(ip_str)
@@ -457,7 +492,7 @@ def is_ipaddr_ignored(ip_str):
 
         :param str ip_str: The IP address
         :rtype: bool
-        :returns: If the ip_addr has to be ignored
+        :return: If the ip_addr has to be ignored
     """
     ip_addr = netaddr.IPAddress(ip_str)
 
@@ -473,7 +508,7 @@ def is_valid_ipaddr(ip_addr):
 
         :param str ip_str: The IP address
         :rtype: bool
-        :returns: If the ip_addr is valid
+        :return: If the ip_addr is valid
     """
     try:
         validate_ipv46_address(ip_addr)
@@ -488,7 +523,105 @@ def string_to_underscore_case(string):
 
         :param str string: The sting to convert
         :rtype: str
-        :returns: The converted string
+        :return: The converted string
     """
     tmp = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', tmp).lower()
+
+
+def get_attachment_storage_filename(hash_string=None, content=None, filename=None):
+    """
+        Generate a pseudo-unique filename based on content and filename
+
+        :param str hash_string: a hash if it has been previously computed
+        :param str content: the content of the file
+        :param str filename: the real name of the file
+    """
+    storage_filename = None
+
+    if content:
+        hash_string = hashlib.sha256(content).hexdigest()
+
+    storage_filename = hash_string + '-attach-'
+    storage_filename = storage_filename.encode('utf-8')
+    storage_filename = storage_filename + filename
+    return storage_filename
+
+
+def get_email_thread_content(ticket, emails):
+    """
+        Generate `abuse.models.Ticket` emails thred history
+        based on 'email_thread' `abuse.models.MailTemplate`
+
+        :param `abuse.models.Ticket` ticket: The cererus ticket
+        :param list emails: a list of `adapters.services.mailer.abstract.Email`
+        :rtype: tuple
+        :return: The content and the filetype
+    """
+    try:
+        template = MailTemplate.objects.get(codename='email_thread')
+        is_html = '<html>' in template.body
+    except ObjectDoesNotExist:
+        raise EmailThreadTemplateNotFound('Unable to find email thread template')
+
+    _emails = []
+
+    for email in emails:
+        _emails.append(Email(
+            sender=email.sender,
+            subject=email.subject,
+            recipient=email.recipient,
+            body=email.body.replace('\n', '<br>') if is_html else email.body,
+            created=datetime.fromtimestamp(email.created),
+            category=None,
+            attachments=None,
+        ))
+
+    domain = ticket.service.name if ticket.service else None
+
+    try:
+        template = loader.get_template_from_string(template.body)
+        context = Context({
+            'publicId': ticket.publicId,
+            'creationDate': ticket.creationDate,
+            'domain': domain,
+            'emails': _emails
+        })
+        content = template.render(context)
+    except (TemplateEncodingError, TemplateSyntaxError) as ex:
+        raise EmailThreadTemplateSyntaxError(str(ex))
+
+    try:
+        import pdfkit
+        from pyvirtualdisplay import Display
+        display = Display(visible=0, size=(1366, 768))
+        display.start()
+        content = pdfkit.from_string(content, False)
+        display.stop()
+        return content, 'application/pdf'
+    except:
+        return content.encode('utf-8'), 'text/html' if is_html else 'text/plain'
+
+
+def redis_lock(key):
+    """
+        Decorator using redis as a lock manager
+
+        :param str string: The redis key to monitor
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            count = 0
+            while redis.exists(key):
+                if count > 180:
+                    raise Exception('%s seems locked' % key)
+                count += 1
+                sleep(1)
+            redis.set(key, True)
+            try:
+                return func(*args, **kwargs)
+            finally:
+                redis.delete(key)
+        return wrapper
+    return decorator

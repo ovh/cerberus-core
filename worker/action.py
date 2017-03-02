@@ -19,25 +19,24 @@
 
 
 """
-    Action functions for worker
+    Service Action functions for worker
 """
 
 from datetime import datetime
 
 from django.conf import settings
-from django.db.models import ObjectDoesNotExist
 from rq import get_current_job
 
 import common
-import database
 from abuse.models import (ServiceActionJob, ContactedProvider, Resolution, Ticket,
                           User)
 from adapters.services.action.abstract import ActionServiceException
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory as implementations
 from worker import Logger
 
 
-def apply_if_no_reply(ticket_id=None, action_id=None, ip_addr=None, resolution_id=None, user_id=None, close=False):
+def apply_if_no_reply(ticket_id=None, action_id=None, ip_addr=None,
+                      resolution_id=None, user_id=None, close=False):
     """
         Action if no reply from customer
 
@@ -48,53 +47,31 @@ def apply_if_no_reply(ticket_id=None, action_id=None, ip_addr=None, resolution_i
         :param int user_id: The id of the Cerberus `User`
         :param bool close: If the ticket has to be closed after action
     """
-    # Checking conformance
-    if not all((ticket_id, action_id, user_id)):
-        Logger.error(unicode(
-            'Invalid parameters [ticket_id=%s, action_id=%s, user_id=%s]' % (ticket_id, action_id, user_id)
-        ))
-        return
+    ticket = Ticket.objects.get(id=ticket_id)
+    user = User.objects.get(id=user_id)
 
-    if close and not resolution_id:
-        Logger.error(unicode('Close requested but no resolution submitted'))
-        return
-
-    if resolution_id and not Resolution.objects.filter(id=resolution_id).exists():
-        Logger.error(unicode('Ticket resolution %d not found, Skipping...' % (resolution_id)))
-        return
+    resolution = None
+    if close and resolution_id:
+        resolution = Resolution.objects.get(id=resolution_id)
 
     # Apply action
     applied = apply_action(ticket_id, action_id, ip_addr, user_id)
     if not applied:
         return
 
-    # Updating ticket info
-    ticket = Ticket.objects.get(id=ticket_id)
-    user = User.objects.get(id=user_id)
-    ticket.previousStatus = ticket.status
-    ticket.snoozeDuration = None
-    ticket.snoozeStart = None
-
-    close_reason = None
     if close and resolution_id:
-        __close_ticket(ticket, resolution_id)
-        close_reason = ticket.resolution.codename
+        _close_ticket(ticket, resolution.codename, user)
     else:
-        ticket.status = 'Alarm'
-
-    ticket.save()
-    database.log_action_on_ticket(
-        ticket=ticket,
-        action='change_status',
-        user=user,
-        previous_value=ticket.previousStatus,
-        new_value=ticket.status,
-        close_reason=close_reason
-    )
-    Logger.info(unicode('Ticket %d processed. Next !' % (ticket_id)))
+        common.set_ticket_status(
+            ticket,
+            'Alarm',
+            user=user,
+            reset_snooze=True
+        )
 
 
-def apply_then_close(ticket_id=None, action_id=None, ip_addr=None, resolution_id=None, user_id=None):
+def apply_then_close(ticket_id=None, action_id=None, ip_addr=None,
+                     resolution_id=None, user_id=None):
     """
         Action on service then close
 
@@ -104,33 +81,17 @@ def apply_then_close(ticket_id=None, action_id=None, ip_addr=None, resolution_id
         :param int resolution_id: The id of the Cerberus `Resolution`
         :param int user_id: The id of the Cerberus `User`
     """
-    # Checking conformance
-    if not all((ticket_id, action_id, resolution_id, user_id)):
-        msg = 'Invalid parameters submitted [ticket_id=%d, action_id=%s, resolution_id=%s, user_id=%s]'
-        Logger.error(unicode(msg % (ticket_id, action_id, resolution_id, user_id)))
-        return
+    ticket = Ticket.objects.get(id=ticket_id)
+    resolution = Resolution.objects.get(id=resolution_id)
+    user = User.objects.get(id=user_id)
 
     # Apply action
     applied = apply_action(ticket_id, action_id, ip_addr, user_id)
     if not applied:
         return
 
-    # Closing ticket and updating ticket info
-    ticket = Ticket.objects.get(id=ticket_id)
-    user = User.objects.get(id=user_id)
-    __close_ticket(ticket, resolution_id)
-    database.log_action_on_ticket(
-        ticket=ticket,
-        action='change_status',
-        user=user,
-        previous_value=ticket.previousStatus,
-        new_value=ticket.status,
-        close_reason=ticket.resolution.codename
-    )
-    ticket.resolution_id = resolution_id
-    ticket.save()
-
-    Logger.info(unicode('Ticket %d processed. Next !' % (ticket_id)))
+    # Closing ticket
+    _close_ticket(ticket, resolution.codename, user)
 
 
 def apply_action(ticket_id=None, action_id=None, ip_addr=None, user_id=None):
@@ -141,42 +102,25 @@ def apply_action(ticket_id=None, action_id=None, ip_addr=None, user_id=None):
         :param int action_id: The id of the Cerberus `ServiceAction`
         :param int user_id: The id of the Cerberus `User`
         :rtype: bool
-        :returns: if action has been applied
+        :return: if action has been applied
     """
     current_job = get_current_job()
 
-    # Checking conformance
-    if not all((ticket_id, action_id, user_id)):
-        msg = 'Invalid parameters submitted [ticket_id=%d, action_id=%s, user_id=%s]'
-        Logger.error(unicode(msg % (ticket_id, action_id, user_id)))
-        return False
+    ticket = Ticket.objects.get(id=ticket_id)
+    user = User.objects.get(id=user_id)
 
-    # Fetching Django model object
-    Logger.info(unicode('Starting process ticket %d with params [%d]' % (ticket_id, action_id)))
-    try:
-        ticket = Ticket.objects.get(id=ticket_id)
-        user = User.objects.get(id=user_id)
-    except (ObjectDoesNotExist, ValueError):
-        Logger.error(unicode('Ticket %d or user %d cannot be found in DB. Skipping...' % (ticket_id, user_id)))
-        return False
-
-    if ticket.status in ['Closed', 'Answered']:
-        __cancel_by_status(ticket)
-        ticket.previousStatus = ticket.status
-        ticket.status = 'ActionError'
-        ticket.save()
-        database.log_action_on_ticket(
-            ticket=ticket,
-            action='change_status',
-            user=user,
-            previous_value=ticket.previousStatus,
-            new_value=ticket.status,
+    if ticket.status in ('Closed', 'Answered'):
+        _cancel_by_status(ticket)
+        common.set_ticket_status(
+            ticket,
+            'ActionError',
+            user=user
         )
         return False
 
     # Call action service
     try:
-        result = ImplementationFactory.instance.get_singleton_of(
+        result = implementations.instance.get_singleton_of(
             'ActionServiceBase'
         ).apply_action_on_service(
             ticket_id,
@@ -184,34 +128,32 @@ def apply_action(ticket_id=None, action_id=None, ip_addr=None, user_id=None):
             ip_addr,
             user.id
         )
-        _update_job(current_job.id, todo_id=result.todo_id, status=result.status, comment=result.comment)
+        _update_job(
+            current_job.id,
+            todo_id=result.todo_id,
+            status=result.status,
+            comment=result.comment
+        )
         return True
     except ActionServiceException as ex:
-        Logger.info(unicode('Service Action not apply for ticket %d' % (ticket_id)))
         _update_job(current_job.id, status='actionError', comment=str(ex))
-        ticket.previousStatus = ticket.status
-        ticket.status = 'ActionError'
-        ticket.save()
-        database.log_action_on_ticket(
-            ticket=ticket,
-            action='change_status',
-            user=user,
-            previous_value=ticket.previousStatus,
-            new_value=ticket.status,
+        common.set_ticket_status(
+            ticket,
+            'ActionError',
+            user=user
         )
         return False
 
 
-def __close_ticket(ticket, resolution_id):
-    """
-        Close ticket
+def _close_ticket(ticket, resolution_codename, user):
 
-        :param `Ticket` ticket : A Cerberus `Ticket` instance
-        :param int resolution_id: The id of the Cerberus `Resolution`
-
-    """
     # Send mail to providers and defendant
-    providers_emails = ContactedProvider.objects.filter(ticket_id=ticket.id).values_list('provider__email', flat=True).distinct()
+    providers_emails = ContactedProvider.objects.filter(
+        ticket_id=ticket.id
+    ).values_list(
+        'provider__email',
+        flat=True
+    ).distinct()
     providers_emails = list(set(providers_emails))
 
     common.send_email(
@@ -219,17 +161,14 @@ def __close_ticket(ticket, resolution_id):
         providers_emails,
         settings.CODENAMES['case_closed']
     )
-
-    # Close ticket
-    if ticket.mailerId:
-        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
-
-    ticket.previousStatus = ticket.status
-    ticket.status = 'Closed'
-    ticket.resolution_id = resolution_id
+    common.close_ticket(
+        ticket,
+        user=user,
+        resolution_codename=resolution_codename
+    )
 
 
-def __cancel_by_status(ticket):
+def _cancel_by_status(ticket):
     """
         Action cancelled because of ticket status
     """

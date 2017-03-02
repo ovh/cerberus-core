@@ -27,6 +27,7 @@ from django.db.models import ObjectDoesNotExist
 from abuse.models import ServiceAction, Ticket
 from adapters.services.action.abstract import (ActionResult, ActionServiceBase,
                                                ActionServiceException)
+from default.adapters.dao.customer import impl as customer_dao
 
 
 class DefaultActionService(ActionServiceBase):
@@ -35,27 +36,81 @@ class DefaultActionService(ActionServiceBase):
     """
 
     @staticmethod
+    def close_service(ticket, user=None):
+        """
+            Close `abuse.models.Ticket` related `abuse.models.Service`
+
+            :param int ticket: The id of the Cerberus `abuse.models.Ticket`
+            :param in user: The id of the Cerberus User
+            :raises `adapters.services.action.abstract.ActionServiceException`: if any error occur
+        """
+        customer_id = ticket.defendant.customerId
+        service_id = ticket.service.serviceId
+        services = [s for s in customer_dao.SERVICES[customer_id] if s['serviceId'] != service_id]
+        customer_dao.SERVICES[customer_id] = services
+
+    @staticmethod
+    def close_all_services(ticket, user=None):
+        """
+            Close all `abuse.models.Defendant` `abuse.models.Service`
+
+            :param int ticket: The id of the Cerberus `abuse.models.Ticket`
+                               where `abuse.models.Defendant` is attached
+            :param in user: The id of the Cerberus User
+            :raises `adapters.services.action.abstract.ActionServiceException`: if any error occur
+        """
+        pass
+
+    @staticmethod
+    def close_defendant(ticket, user=None):
+        """
+            Close `abuse.models.Defendant`, breach of contract
+
+            :param int ticket: The id of the Cerberus `abuse.models.Ticket`
+                               where `abuse.models.Defendant` is attached
+            :param in user: The id of the Cerberus User
+            :raises `adapters.services.action.abstract.ActionServiceException`: if any error occur
+        """
+        pass
+
+    @staticmethod
+    def block_outbound_emails(ticket, user=None):
+        """
+            Disallow outbound emails for `abuse.models.Ticket` related `abuse.models.Service`
+
+            :param int ticket: The id of the Cerberus `abuse.models.Ticket`
+                               where `abuse.models.Defendant` is attached
+            :param in user: The id of the Cerberus User
+            :raises `adapters.services.action.abstract.ActionServiceException`: if any error occur
+        """
+        pass
+
+    @staticmethod
     def apply_action_on_service(ticket, action, ip_addr=None, user=None):
         """
             Apply given action on service
 
-            :param int ticket: The id of the Cerberus `Ticket`
-            :param int action: The id of the Cerberus `ServiceAction`
+            :param int ticket: The id of the Cerberus `abuse.models.Ticket`
+            :param int action: The id of the Cerberus `abuse.models.ServiceAction`
             :param str ip_addr: The IP address
-            :param in user: The id of the Cerberus `User`
-            :raises ActionServiceException: if any error occur
+            :param int user: The id of the Cerberus `User`
+            :raises `adapters.services.action.abstract.ActionServiceException`: if any error occur
         """
         if not isinstance(ticket, Ticket):
             try:
                 ticket = Ticket.objects.get(id=ticket)
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-                raise ActionServiceException('Ticket %s cannot be found in DB. Skipping...' % (str(ticket)))
+                raise ActionServiceException(
+                    'Ticket %s cannot be found in DB. Skipping...' % (str(ticket))
+                )
 
         if not isinstance(action, ServiceAction):
             try:
                 action = ServiceAction.objects.get(id=action)
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-                raise ActionServiceException('Action %s cannot be found in DB. Skipping...' % (str(action)))
+                raise ActionServiceException(
+                    'Action %s cannot be found in DB. Skipping...' % (str(action))
+                )
 
         return ActionResult(todo_id='123456', status='ok', comment='ok')
 
@@ -64,15 +119,17 @@ class DefaultActionService(ActionServiceBase):
         """
             Returns action to apply when ticket timeout
 
-            :param `Ticket` ticket: A Cerberus `ticket` instance
+            :param `abuse.models.Ticket` ticket: A Cerberus Ticket instance
             :rtype: `abuse.models.ServiceAction`
-            :returns: The `abuse.models.ServiceAction` to apply
+            :return: The `abuse.models.ServiceAction` to apply
         """
         if not isinstance(ticket, Ticket):
             try:
                 ticket = Ticket.objects.get(id=ticket)
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-                raise ActionServiceException('Ticket %s cannot be found in DB. Skipping...' % (str(ticket)))
+                raise ActionServiceException(
+                    'Ticket %s cannot be found in DB. Skipping...' % (str(ticket))
+                )
 
         action = None
         if ServiceAction.objects.count():
@@ -87,13 +144,15 @@ class DefaultActionService(ActionServiceBase):
 
             :param `abuse.models.Ticket` ticket: A Cerberus `abuse.models.Ticket` instance
             :rtype list:
-            :returns: The list of possible `abuse.models.ServiceAction` for given ticket
+            :return: The list of possible `abuse.models.ServiceAction` for given ticket
         """
         if not isinstance(ticket, Ticket):
             try:
                 ticket = Ticket.objects.get(id=ticket)
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-                raise ActionServiceException('Ticket %s cannot be found in DB. Skipping...' % (str(ticket)))
+                raise ActionServiceException(
+                    'Ticket %s cannot be found in DB. Skipping...' % (str(ticket))
+                )
 
         actions = ServiceAction.objects.all()
         return actions

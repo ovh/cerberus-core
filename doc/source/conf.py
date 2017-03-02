@@ -12,26 +12,29 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import inspect
 import sys
 import os
 
-CURRENTDIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-PARENTDIR = os.path.dirname(CURRENTDIR)
-PARENTDIR = os.path.dirname(PARENTDIR)
-sys.path.insert(0, PARENTDIR)
-
-import django
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
-django.setup()
-
-from factory.factory import ImplementationFactory
-
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../..'))
 sys.path.insert(0, os.path.abspath('.'))
+
+# Init settings
+import django
+from django.conf import ImproperlyConfigured
+
+try:
+    django.setup()
+    from django.conf import settings
+except ImproperlyConfigured:
+    from django.conf import global_settings, settings
+    from config import settings as custom_settings
+
+    for attr in dir(custom_settings):
+        if not callable(getattr(custom_settings, attr)) and not attr.startswith("__"):
+            setattr(global_settings, attr, getattr(custom_settings, attr))
+
+    settings.configure()
+    django.setup()
 
 # -- General configuration ------------------------------------------------
 

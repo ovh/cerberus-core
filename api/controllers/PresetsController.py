@@ -29,6 +29,7 @@ from django.core.exceptions import FieldError
 from django.db import transaction
 from django.db.models import ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
+from werkzeug.exceptions import BadRequest, NotFound
 
 from abuse.models import (MailTemplate, Ticket, TicketAction,
                           TicketActionParams, TicketWorkflowPreset,
@@ -49,7 +50,7 @@ def index(user, **kwargs):
         try:
             filters = json.loads(unquote(unquote(kwargs['filters'])))
         except (ValueError, SyntaxError, TypeError) as ex:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+            raise BadRequest(str(ex.message))
 
     with_template = False
     if not filters.get('queryFields') or 'templates' in filters['queryFields']:
@@ -65,9 +66,9 @@ def index(user, **kwargs):
     try:
         presets = _get_ordered_presets(user, fields, with_template)
     except (KeyError, FieldError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+        raise BadRequest(str(ex.message))
 
-    return 200, presets
+    return presets
 
 
 def _get_ordered_presets(user, fields, with_template):
@@ -121,24 +122,27 @@ def get_prefetch_preset(user, ticket_id, preset_id, lang=None):
                 params = {param.codename: param.value for param in preset.config.params.all()}
         preset = model_to_dict(preset)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Ticket or preset not found'}
+        raise NotFound('Ticket or preset not found')
 
     preset['templates'] = []
-    templates_codename = list(set(MailTemplate.objects.filter(ticketworkflowpreset=preset['id']).values_list('codename', flat=True)))
+    templates_codename = MailTemplate.objects.filter(
+        ticketworkflowpreset=preset['id']
+    ).values_list(
+        'codename',
+        flat=True
+    )
+    templates_codename = list(set(templates_codename))
+
     for codename in templates_codename:
         template = MailTemplate.objects.get(codename=codename)
-        code, resp = TemplatesController.get_prefetch_template(ticket.id, template.id, lang=lang)
-
-        if code != 200:
-            return code, resp
-        else:
-            preset['templates'].append(resp)
+        resp = TemplatesController.get_prefetch_template(ticket.id, template.id, lang=lang)
+        preset['templates'].append(resp)
 
     preset['action'] = action
     if action and params:
         preset['action']['params'] = params
 
-    return 200, preset
+    return preset
 
 
 def show(user, preset_id):
@@ -148,7 +152,7 @@ def show(user, preset_id):
     try:
         preset = TicketWorkflowPreset.objects.get(id=preset_id, roles=user.operator.role)
     except (IndexError, ObjectDoesNotExist, ValueError, TypeError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Preset not found'}
+        raise NotFound('Preset not found')
 
     action = params = None
     if preset.config:
@@ -157,7 +161,8 @@ def show(user, preset_id):
             params = {param.codename: param.value for param in preset.config.params.all()}
 
     preset = model_to_dict(preset)
-    preset['templates'] = [model_to_dict(m) for m in MailTemplate.objects.filter(ticketworkflowpreset=preset['id'])]
+    preset['templates'] = MailTemplate.objects.filter(ticketworkflowpreset=preset['id'])
+    preset['templates'] = [model_to_dict(m) for m in preset['templates']]
     preset['action'] = action
     if action and params:
         preset['action']['params'] = params
@@ -169,85 +174,70 @@ def show(user, preset_id):
         flat=True
     ).distinct())
 
-    return 200, preset
+    return preset
 
 
-@transaction.commit_manually
-def create(user, body):
+@transaction.atomic
+def create(body):
     """
         Create a new preset
     """
-    if not all(key in body for key in ('templates', 'action', 'name')):
-        transaction.rollback()
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing params in body, expecting templates, action and name'}
-
     try:
         body['codename'] = body['name'].strip().lower().replace(' ', '_')
-        if TicketWorkflowPreset.objects.filter(codename=body['codename'], name=body['name']).count():
+        existing = TicketWorkflowPreset.objects.filter(
+            codename=body['codename'],
+            name=body['name']
+        ).count()
+        if existing:
             transaction.rollback()
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Preset with same codename/name exists'}
+            raise BadRequest('Preset with same codename/name exists')
         preset = TicketWorkflowPreset.objects.create(codename=body['codename'], name=body['name'])
     except (AttributeError, FieldError, ValueError) as ex:
-        transaction.rollback()
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': ex}
+        raise BadRequest(ex)
 
-    if body.get('action'):
-        try:
-            preset.config = __get_preset_config(body)
-        except (AttributeError, KeyError, ObjectDoesNotExist, TypeError, ValueError):
-            transaction.rollback()
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid or missing params in action'}
+    try:
+        preset.config = __get_preset_config(body)
+    except (AttributeError, KeyError, ObjectDoesNotExist, TypeError, ValueError):
+        raise BadRequest('Invalid or missing params in action')
 
-    if body.get('templates'):
+    if body.get('templates') is not None:
         for template_id in body['templates']:
             try:
                 template = MailTemplate.objects.get(id=template_id)
                 preset.templates.add(template)
             except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
-                transaction.rollback()
-                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid template id'}
+                raise BadRequest('Invalid template id')
 
-    if body.get('roles'):
-        preset.roles.clear()
-        for role_codename in body['roles']:
-            try:
-                role = Role.objects.get(codename=role_codename)
-                preset.roles.add(role)
-            except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
-                transaction.rollback()
-                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid role codename'}
+    preset.roles.clear()
+    for role_codename in body['roles']:
+        try:
+            role = Role.objects.get(codename=role_codename)
+            preset.roles.add(role)
+        except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
+            raise BadRequest('Invalid role codename')
 
     preset.save()
-    code, resp = show(user, preset.id)
-    transaction.commit()
-    return code, resp
+    return {'message': 'Preset successfully updated'}
 
 
-@transaction.commit_manually
+@transaction.atomic
 def update(user, preset_id, body):
     """
         Update preset
     """
-    if not all(key in body and body.get(key) for key in ('codename', 'name')):
-        transaction.rollback()
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing params in body, expecting codename and name'}
-
     try:
         preset = TicketWorkflowPreset.objects.get(id=preset_id, roles=user.operator.role)
     except (ObjectDoesNotExist, ValueError):
-        transaction.rollback()
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Preset not found'}
+        raise NotFound('Preset not found')
 
     if TicketWorkflowPreset.objects.filter(~Q(id=preset_id), name=body['name']).count():
-        transaction.rollback()
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Preset with same name already exists'}
+        raise BadRequest('Preset with same name already exists')
 
     if body.get('action'):
         try:
             preset.config = __get_preset_config(body)
         except (AttributeError, KeyError, ObjectDoesNotExist, TypeError, ValueError):
-            transaction.rollback()
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid or missing params in action'}
+            raise BadRequest('Invalid or missing params in action')
 
     if body.get('templates') is not None:
         preset.templates.clear()
@@ -256,24 +246,20 @@ def update(user, preset_id, body):
                 template = MailTemplate.objects.get(id=template_id)
                 preset.templates.add(template)
             except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
-                transaction.rollback()
-                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid template id'}
+                raise BadRequest('Invalid template id')
 
-    if body.get('roles') is not None:
-        preset.roles.clear()
-        for role_codename in body['roles']:
-            try:
-                role = Role.objects.get(codename=role_codename)
-                preset.roles.add(role)
-            except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
-                transaction.rollback()
-                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid role codename'}
+    preset.roles.clear()
+    for role_codename in body['roles']:
+        try:
+            role = Role.objects.get(codename=role_codename)
+            preset.roles.add(role)
+        except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
+            raise BadRequest('Invalid role codename')
 
     preset.name = body['name']
     preset.save()
-    code, resp = show(user, preset.id)
-    transaction.commit()
-    return code, resp
+    resp = show(user, preset.id)
+    return resp
 
 
 def __get_preset_config(body):
@@ -298,7 +284,7 @@ def delete(user, preset_id):
     try:
         TicketWorkflowPreset.objects.get(id=preset_id, roles=user.operator.role)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Preset not found'}
+        raise NotFound('Preset not found')
 
     TicketWorkflowPreset.objects.filter(id=preset_id).delete()
     return index(user)
@@ -320,5 +306,5 @@ def update_order(user, body):
                 order_id += 1
             group_id += 1
     except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Bad Request'}
+        raise BadRequest('Bad Request')
     return index(user)

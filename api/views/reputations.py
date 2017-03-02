@@ -25,65 +25,50 @@
 from flask import Blueprint, request
 
 from api.controllers import ReputationController
-from decorators import jsonify
+from decorators import validate_body
 
 reputation_views = Blueprint('reputation_views', __name__)
 
 
 @reputation_views.route('/api/reputation/ip/<ip_addr>/rbl', methods=['GET'])
-@jsonify
 def get_ip_rbl_reputation(ip_addr=None):
     """ Get live rbl reputation for ip
     """
-    code, resp = ReputationController.get_ip_rbl_reputation(ip_addr)
-    return code, resp
+    return ReputationController.get_ip_rbl_reputation(ip_addr)
 
 
 @reputation_views.route('/api/reputation/ip/<ip_addr>/internal', methods=['GET'])
-@jsonify
 def get_ip_internal_reputation(ip_addr=None):
     """ Get live internal reputation for ip
     """
-    code, resp = ReputationController.get_ip_internal_reputation(ip_addr)
-    return code, resp
+    return ReputationController.get_ip_internal_reputation(ip_addr)
 
 
 @reputation_views.route('/api/reputation/ip/<ip_addr>/external', methods=['GET'])
-@jsonify
 def get_ip_external_reputation(ip_addr=None):
     """ Get live external reputation for ip
     """
-    code, resp = ReputationController.get_ip_external_reputation(ip_addr)
-    return code, resp
+    return ReputationController.get_ip_external_reputation(ip_addr)
 
 
 @reputation_views.route('/api/reputation/url/external', methods=['POST'])
-@jsonify
+@validate_body({'url': unicode})
 def get_url_external_reputation():
     """ Get live external reputation for url
     """
     body = request.get_json()
-    if not body or not body.get('url'):
-        resp = {'status': 'Bad Request', 'code': 400, 'message': 'Url field not found in body'}
-        return 400, resp
-
-    code, resp = ReputationController.get_url_external_reputation(body['url'])
-    return code, resp
+    return ReputationController.get_url_external_reputation(body['url'])
 
 
 @reputation_views.route('/api/reputation/ip/<ip_addr>/external/<source>', methods=['GET'])
-@jsonify
 def get_ip_external_detail(ip_addr=None, source=None):
     """ Get detail for external reputation
     """
-    code, resp = ReputationController.get_ip_external_detail(ip_addr, source)
-    return code, resp
+    return ReputationController.get_ip_external_detail(ip_addr, source)
 
 
 @reputation_views.route('/api/reputation/ip/<ip_addr>/tool', methods=['GET'])
-@jsonify
 def get_ip_tool(ip_addr=None):
     """ Get tool
     """
-    code, resp = ReputationController.get_ip_tools(ip_addr)
-    return code, resp
+    return ReputationController.get_ip_tools(ip_addr)

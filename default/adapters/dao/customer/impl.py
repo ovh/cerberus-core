@@ -37,6 +37,7 @@ JOHN_DOE = {
     'city': 'Paris',
     'country': 'FR',
     'address': '1 rue de la mer',
+    'legalForm': 'individual',
     'zip': '75000',
     'lang': 'FR',
     'creationDate': datetime.fromtimestamp(1444336416),
@@ -50,6 +51,10 @@ DEFAULT_SERVICE = {
     'componentType': 'HOSTING',
     'componentSubType': 'WEB',
     'reference': 'hosting.pro.2016',
+}
+
+SERVICES = {
+    'john.doe.42': [DEFAULT_SERVICE]
 }
 
 
@@ -67,15 +72,36 @@ class DefaultCustomerDao(CustomerDaoBase):
             :param list fqdn: List of fqdn
             :return: The result of the parsing of given items
             :rtype: dict
-            :raises CustomerDaoException: if any error occur
+            :raises `adapters.dao.customer.abstract.CustomerDaoException`: if any error occur
         """
         response = []
         if ips:  # Totally absurd example, just keep managed IPs
             ips = [ip_addr for ip_addr in ips if utils.get_ip_network(ip_addr) == 'managed']
             if ips:
-                response = get_default_struct(ServiceClass(DEFAULT_SERVICE), DefendantClass(**JOHN_DOE), ips=ips, urls=[], fqdn=[])
-        elif urls:
-            response = get_default_struct(ServiceClass(DEFAULT_SERVICE), DefendantClass(**JOHN_DOE), ips=[], urls=urls, fqdn=[])
+                response = get_default_struct(
+                    ServiceClass(DEFAULT_SERVICE),
+                    DefendantClass(**JOHN_DOE),
+                    ips=ips,
+                    urls=[],
+                    fqdn=[]
+                )
+        elif urls and 'http://www.cdnproxy-protected-domain.com/testcdn' not in urls:
+            response = get_default_struct(
+                ServiceClass(DEFAULT_SERVICE),
+                DefendantClass(**JOHN_DOE),
+                ips=[],
+                urls=urls,
+                fqdn=[]
+            )
+        elif fqdn:
+            response = get_default_struct(
+                ServiceClass(DEFAULT_SERVICE),
+                DefendantClass(**JOHN_DOE),
+                ips=[],
+                urls=[],
+                fqdn=fqdn
+            )
+
         return response
 
     @staticmethod
@@ -86,7 +112,7 @@ class DefaultCustomerDao(CustomerDaoBase):
             :param str customer_id: The reference to the customer
             :return: A `adapters.dao.customer.abstract.DefendantClass` instance
             :rtype: `adapters.dao.customer.abstract.DefendantClass`
-            :raises CustomerDaoException: if any error occur
+            :raises `adapters.dao.customer.abstract.CustomerDaoException`: if any error occur
         """
         if customer_id == JOHN_DOE['customerId']:
             return DefendantClass(**JOHN_DOE)
@@ -101,7 +127,7 @@ class DefaultCustomerDao(CustomerDaoBase):
             :param str service_id: The reference to the service
             :return: A `adapters.dao.customer.abstract.ServiceClass` instance
             :rtype: `adapters.dao.customer.abstract.ServiceClass`
-            :raises CustomerDaoException: if any error occur
+            :raises `adapters.dao.customer.abstract.CustomerDaoException`: if any error occur
         """
         if service_id == DEFAULT_SERVICE['serviceId']:
             return ServiceClass(**DEFAULT_SERVICE)
@@ -130,18 +156,14 @@ class DefaultCustomerDao(CustomerDaoBase):
             :param str customer_id: The reference to the customer
             :return: The list of services
             :rtype: list
-            :raises CustomerDaoException: if any error occur
+            :raises `adapters.dao.customer.abstract.CustomerDaoException`: if any error occur
         """
+        if customer_id != JOHN_DOE['customerId']:
+            raise CustomerDaoException('Customer not found')
+
         response = [{
             'zone': 'EMEA',
-            'services': [{
-                'name': 'test',
-                'reference': 'vps.test',
-                'componentType': 'VPS',
-                'creationDate': 1452686304,
-                'expirationDate': 1453686304,
-                'state': 'active',
-            }]
+            'services': SERVICES[JOHN_DOE['customerId']]
         }]
         return response
 

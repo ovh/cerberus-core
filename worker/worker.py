@@ -24,19 +24,30 @@
 """
 
 import argparse
-import inspect
 import os
 import sys
 
-CURRENTDIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-PARENTDIR = os.path.dirname(CURRENTDIR)
-sys.path.insert(0, PARENTDIR)
+# Add the project to the python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir))
 
+# Init settings
 import django
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
-django.setup()
+from django.conf import ImproperlyConfigured
 
-from django.conf import settings
+try:
+    django.setup()
+    from django.conf import settings
+except ImproperlyConfigured:
+    from django.conf import global_settings, settings
+    from config import settings as custom_settings
+
+    for attr in dir(custom_settings):
+        if not callable(getattr(custom_settings, attr)) and not attr.startswith("__"):
+            setattr(global_settings, attr, getattr(custom_settings, attr))
+
+    settings.configure()
+    django.setup()
+
 from redis import StrictRedis
 from rq import Connection, Queue, Worker
 

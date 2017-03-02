@@ -29,31 +29,44 @@ from django.core.validators import validate_email
 
 import database
 from abuse.models import Proof, Resolution, User
-from factory.factory import ImplementationFactory
-from utils import utils
+from django.conf import settings
 from parsing import regexp
+from factory.implementation import ImplementationFactory as implementations
+from utils import utils
+
+BOT_USER = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
+CDN_REQUEST_CACHE_EXPIRATION_DAYS = 15
+CDN_REQUEST_REDIS_QUEUE = 'cdnrequest:%s:request'
+CDN_REQUEST_LOCK = 'cdnrequest:lock'
+STORAGE_DIR = settings.GENERAL_CONFIG['email_storage_dir']
 
 
-def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report_id=None):
+def send_email(ticket, emails, template_codename, lang='EN',
+               acknowledged_report_id=None, inject_proof=False):
     """
         Wrapper to send email
     """
-    prefetched_email = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').prefetch_email_from_template(
+    temp_proofs = []
+    if inject_proof:
+        temp_proofs = _get_temp_proofs(ticket)
+
+    prefetched_email = _get_prefetched_email(
         ticket,
         template_codename,
-        lang=lang,
-        acknowledged_report=acknowledged_report_id,
+        lang,
+        acknowledged_report_id
     )
 
     for email in emails:
+        _email = email.strip()
         try:
-            validate_email(email)
+            validate_email(_email)
         except ValidationError:
             continue
 
-        ImplementationFactory.instance.get_singleton_of('MailerServiceBase').send_email(
+        implementations.instance.get_singleton_of('MailerServiceBase').send_email(
             ticket,
-            email,
+            _email,
             prefetched_email.subject,
             prefetched_email.body,
             prefetched_email.category
@@ -61,21 +74,50 @@ def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report
         database.log_action_on_ticket(
             ticket=ticket,
             action='send_email',
-            email=email
+            email=_email
         )
+
+    if inject_proof and temp_proofs:
+        for proof in temp_proofs:
+            Proof.objects.filter(id=proof.id).delete()
+
+
+def _get_prefetched_email(ticket, template_codename, lang,
+                          acknowledged_report_id=None):
+
+    return implementations.instance.get_singleton_of(
+        'MailerServiceBase'
+    ).prefetch_email_from_template(
+        ticket,
+        template_codename,
+        lang=lang,
+        acknowledged_report=acknowledged_report_id,
+    )
 
 
 def create_ticket(report, denied_by=None, attach_new=False):
     """
         Create a `abuse.models.Ticket`
     """
-    ticket = database.create_ticket(report.defendant, report.category, report.service, priority=report.provider.priority, attach_new=attach_new)
+    ticket = database.create_ticket(
+        report.defendant,
+        report.category,
+        report.service,
+        priority=report.provider.priority,
+        attach_new=attach_new
+    )
     database.log_action_on_ticket(
         ticket=ticket,
         action='attach_report',
         new_ticket=True,
         report=report
     )
+
+    report.ticket = ticket
+    report.status = 'Attached'
+    report.save()
+
+    database.set_ticket_higher_priority(ticket)
 
     if denied_by:
         user = User.objects.get(id=denied_by)
@@ -89,37 +131,43 @@ def create_ticket(report, denied_by=None, attach_new=False):
     return ticket
 
 
-def close_ticket(report, resolution_codename=None, user=None):
+def close_ticket(ticket, resolution_codename=None, user=None):
     """
         Close a `abuse.models.Ticket`
     """
     resolution = Resolution.objects.get(codename=resolution_codename)
-    report.ticket.resolution = resolution
-    report.ticket.previousStatus = report.ticket.status
-    report.ticket.status = 'Closed'
-    report.status = 'Archived'
+    ticket.resolution = resolution
+    ticket.previousStatus = ticket.status
 
-    database.log_action_on_ticket(
-        ticket=report.ticket,
-        action='change_status',
+    set_ticket_status(
+        ticket,
+        'Closed',
+        reset_snooze=True,
         user=user,
-        previous_value=report.ticket.previousStatus,
-        new_value=report.ticket.status,
-        close_reason=report.ticket.resolution.codename
+        resolution_codename=resolution_codename
     )
 
-    report.ticket.save()
-    report.save()
+    ticket.reportTicket.all().update(
+        status='Archived'
+    )
+
+    if ticket.mailerId:
+        implementations.instance.get_singleton_of(
+            'MailerServiceBase'
+        ).close_thread(ticket)
+
+    ticket.save()
 
 
-def get_temp_proofs(ticket, only_urls=False):
+def _get_temp_proofs(ticket, only_urls=False):
     """
         Get report's ticket content
     """
     temp_proofs = []
     for report in ticket.reportTicket.all():
         if only_urls:
-            content = '\n'.join([item.rawItem for item in report.reportItemRelatedReport.filter(itemType='URL')])
+            items = report.reportItemRelatedReport.filter(itemType='URL')
+            content = '\n'.join([item.rawItem for item in items])
         else:
             content = 'From: %s\nDate: %s\nSubject: %s\n\n%s\n'
             content = content % (
@@ -137,3 +185,38 @@ def get_temp_proofs(ticket, only_urls=False):
             )
         )
     return temp_proofs
+
+
+def set_ticket_status(ticket, status, resolution_codename=None,
+                      reset_snooze=False, user=None):
+    """
+        Update `abuse.models.Ticket` and log action
+    """
+    ticket.previousStatus = ticket.status
+    ticket.status = status
+
+    if reset_snooze:
+        ticket.snoozeStart = None
+        ticket.snoozeDuration = None
+
+    ticket.save()
+
+    database.log_action_on_ticket(
+        ticket=ticket,
+        action='change_status',
+        user=user,
+        previous_value=ticket.previousStatus,
+        new_value=ticket.status,
+        close_reason=resolution_codename
+    )
+
+
+def save_email(filename, email):
+    """
+        Push email storage service
+
+        :param str filename: The filename of the email
+        :param str email: The content of the email
+    """
+    with implementations.instance.get_instance_of('StorageServiceBase', STORAGE_DIR) as cnx:
+        cnx.write(filename, email)

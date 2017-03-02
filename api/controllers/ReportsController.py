@@ -25,9 +25,7 @@
 import json
 import operator
 import re
-import time
 from base64 import b64encode
-from datetime import datetime
 from Queue import Queue
 from threading import Thread
 from urllib import unquote
@@ -39,40 +37,26 @@ from django.db import IntegrityError, transaction
 from django.db.models import FieldDoesNotExist, ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
 from netaddr import AddrConversionError, AddrFormatError, IPNetwork
+from werkzeug.exceptions import (BadRequest, Forbidden, InternalServerError,
+                                 NotFound)
 
-from abuse.models import (AbusePermission, AttachedDocument, Defendant,
-                          Plaintiff, Report, ReportItem, Service, Tag, Ticket)
+from abuse.models import (AbusePermission, Defendant, Plaintiff,
+                          Report, ReportItem, Service, Tag, Ticket)
 from adapters.services.search.abstract import SearchServiceException
 from adapters.services.storage.abstract import StorageServiceException
+from api.constants import (IP_CIDR_RE, REPORT_STATUS, REPORT_FILTER_MAPPING,
+                           REPORT_FIELDS, REPORT_ATTACHMENT_FIELDS)
 from api.controllers import (DefendantsController, GeneralController,
                              ProvidersController, ReportItemsController,
                              TicketsController)
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from utils import utils
 from worker import database
+from worker.parsing import regexp
 
-IP_CIDR_RE = re.compile(r"(?<!\d\.)(?<!\d)(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}(?!\d|(?:\.\d))")
-STATUS = [status[0].lower() for status in Report.REPORT_STATUS]
 html2text.ignore_images = True
 html2text.images_to_alt = True
 html2text.ignore_links = True
-
-# Mapping JSON fields name to django syntax
-FILTER_MAPPING = (
-    ('reportTag', 'tags__name'),
-    ('providerEmail', 'provider__email'),
-    ('providerTag', 'provider__tags__name'),
-    ('defendantCustomerId', 'defendant__customerId'),
-    ('defendantCountry', 'defendant__details__country'),
-    ('defendantEmail', 'defendant__details__email'),
-    ('defendantTag', 'defendant__tags__name'),
-    ('itemRawItem', 'reportItemRelatedReport__rawItem'),
-    ('itemIpReverse', 'reportItemRelatedReport__ipReverse'),
-    ('itemFqdnResolved', 'reportItemRelatedReport__fqdnResolved'),
-)
-
-ATTACHMENT_FIELDS = [fld.name for fld in AttachedDocument._meta.fields]
-REPORT_FIELDS = [fld.name for fld in Report._meta.fields]
 
 
 def index(**kwargs):
@@ -81,11 +65,11 @@ def index(**kwargs):
     """
     # Parse filters from request
     filters = {}
-    if 'filters' in kwargs:
+    if kwargs.get('filters'):
         try:
             filters = json.loads(unquote(unquote(kwargs['filters'])))
         except (ValueError, SyntaxError, TypeError) as ex:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
+            raise BadRequest(str(ex.message))
     try:
         limit = int(filters['paginate']['resultsPerPage'])
         offset = int(filters['paginate']['currentPage'])
@@ -96,8 +80,9 @@ def index(**kwargs):
     # Generate Django filter based on parsed filters
     try:
         where = __generate_request_filters(filters, kwargs['user'])
-    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
+    except (AttributeError, KeyError, IndexError, FieldError,
+            SyntaxError, TypeError, ValueError) as ex:
+        raise BadRequest(str(ex.message))
 
     # Try to identify sortby in request
     try:
@@ -119,11 +104,12 @@ def index(**kwargs):
         reports = Report.objects.filter(where).values(*fields).distinct().order_by(*sort)
         reports = reports[(offset - 1) * limit:limit * offset]
         len(reports)  # Force django to evaluate query now
-    except (AttributeError, KeyError, IndexError, FieldError, SyntaxError, TypeError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
+    except (AttributeError, KeyError, IndexError, FieldError,
+            SyntaxError, TypeError, ValueError) as ex:
+        raise BadRequest(str(ex.message))
 
     __format_report_response(reports)
-    return 200, list(reports), nb_record_filtered
+    return list(reports), nb_record_filtered
 
 
 def __generate_request_filters(filters, user):
@@ -148,13 +134,13 @@ def __generate_request_filters(filters, user):
         if 'in' in keys:
             for i in filters['where']['in']:
                 for key, val in i.iteritems():
-                    field = reduce(lambda a, kv: a.replace(*kv), FILTER_MAPPING, key)
+                    field = reduce(lambda a, kv: a.replace(*kv), REPORT_FILTER_MAPPING, key)
                     where.append(reduce(operator.or_, [Q(**{field: i}) for i in val]))
         if 'like' in keys:
             like = []
             for i in filters['where']['like']:
                 for key, val in i.iteritems():
-                    field = reduce(lambda a, kv: a.replace(*kv), FILTER_MAPPING, key)
+                    field = reduce(lambda a, kv: a.replace(*kv), REPORT_FILTER_MAPPING, key)
                     field = field + '__icontains'
                     like.append(Q(**{field: val[0]}))
             if len(like):
@@ -173,9 +159,6 @@ def __format_report_response(reports):
     """ Convert datetime object and add flat foreign key
     """
     for rep in reports:
-        for key, val in rep.iteritems():
-            if isinstance(val, datetime):
-                rep[key] = time.mktime(val.timetuple())
 
         # Flat foreign models
         if rep.get('defendant'):
@@ -187,7 +170,7 @@ def __format_report_response(reports):
         if rep.get('service'):
             rep['service'] = model_to_dict(Service.objects.get(id=rep['service']))
         if rep.get('provider'):
-            rep['provider'] = ProvidersController.show(rep['provider'])[1]
+            rep['provider'] = ProvidersController.show(rep['provider'])
         if rep.get('tags'):
             tags = Report.objects.get(id=rep['id']).tags.all()
             rep['tags'] = [model_to_dict(tag) for tag in tags]
@@ -209,7 +192,9 @@ def _add_search_filters(filters, query):
         except (AttributeError, IndexError, AddrFormatError, AddrConversionError):
             pass
     try:
-        reports = ImplementationFactory.instance.get_singleton_of('SearchServiceBase').search_reports(search_query)
+        reports = ImplementationFactory.instance.get_singleton_of(
+            'SearchServiceBase'
+        ).search_reports(search_query)
         if not reports:
             reports = [None]
     except SearchServiceException:
@@ -233,12 +218,7 @@ def show(report_id):
     try:
         report = Report.objects.filter(id=report_id).values(*REPORT_FIELDS)[0]
     except (IndexError, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
-
-    # Convert date
-    for key, val in report.iteritems():
-        if isinstance(val, datetime):
-            report[key] = time.mktime(val.timetuple())
+        raise NotFound('Report not found')
 
     # Add related infos
     if report.get('plaintiff'):
@@ -246,14 +226,14 @@ def show(report_id):
     if report.get('service'):
         report['service'] = model_to_dict(Service.objects.get(id=report['service']))
     if report.get('defendant'):
-        report['defendant'] = DefendantsController.show(report['defendant'])[1]
+        report['defendant'] = DefendantsController.show(report['defendant'])
     if report.get('provider'):
-        report['provider'] = ProvidersController.show(report['provider'])[1]
+        report['provider'] = ProvidersController.show(report['provider'])
 
     tags = Report.objects.get(id=report['id']).tags.all()
     report['tags'] = [model_to_dict(tag) for tag in tags]
 
-    return 200, report
+    return report
 
 
 def update(report_id, body, user):
@@ -261,18 +241,17 @@ def update(report_id, body, user):
     """
     allowed, body = _precheck_user_fields_update_authorizations(user, body)
     if not allowed:
-        return 403, {'status': 'Forbidden', 'code': 403, 'message': 'You are not allowed to edit any fields'}
+        raise Forbidden('You are not allowed to edit any fields')
 
     try:
         report = Report.objects.get(id=int(report_id))
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Report not found')
 
     # Update status
     if body.get('status') != report.status:
-        code, resp = _update_status(body, report, user)
-        if code != 200:
-            return code, resp
+        _update_status(body, report, user)
+        return show(report_id)
 
     # Update defendant
     if 'defendant' in body:
@@ -283,10 +262,9 @@ def update(report_id, body, user):
             report.save()
             body['ticket'] = None
             body['status'] = 'New'
-        elif report.defendant and body.get('defendant') and body['defendant'].get('customerId') != report.defendant.customerId:
-            code, resp = update_defendant(body, report)
-            if code != 200:
-                return code, resp
+        elif report.defendant and body.get('defendant') and \
+                body['defendant'].get('customerId') != report.defendant.customerId:
+            update_defendant(body, report)
     try:
         body['defendant'] = body['defendant']['id']
     except (AttributeError, KeyError, TypeError, ValueError):
@@ -301,7 +279,7 @@ def update(report_id, body, user):
         if report.ticket:
             database.set_ticket_higher_priority(report.ticket)
     except (KeyError, FieldDoesNotExist, FieldError, IntegrityError, TypeError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+        raise BadRequest(str(ex.message))
 
     return show(report_id)
 
@@ -310,11 +288,11 @@ def _update_status(body, report, user):
     """
         Update report status
     """
-    if body['status'].lower() not in STATUS:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid status'}
+    if body['status'].lower() not in REPORT_STATUS:
+        raise BadRequest('Invalid status')
 
     # Detach report if requested status is "New"
-    # If status in ['attached', 'validated'], try to attach to existing ticket
+    # If status in ['attached'], try to attach to existing ticket
     #
     if body['status'].lower() == 'new':
         if report.ticket and report.ticket.reportTicket.count() == 1:  # Close corresponding ticket
@@ -324,19 +302,13 @@ def _update_status(body, report, user):
         body['ticket'] = None
         report.status = 'New'
         report.save()
-    elif report.status.lower() == 'tovalidate' and body['status'].lower() == 'attached':
-        report.status = 'Attached'
-        report.save()
-        utils.email_queue.enqueue(
-            'report.reparse_validated',
-            report_id=report.id,
-            user_id=user.id,
-        )
-        return 201, {'status': 'OK', 'code': 201, 'message': 'Report successfully updated'}
-    elif body['status'].lower() == 'attached' and not report.ticket and all((report.category, report.defendant, report.service)):
+    elif body['status'].lower() == 'attached' and not report.ticket:
         return TicketsController.create(body, user)
+    elif body['status'].lower() == 'archived':
+        report.status = 'Archived'
+        report.save()
 
-    return 200, body
+    return body
 
 
 def update_defendant(body, report):
@@ -347,9 +319,9 @@ def update_defendant(body, report):
         defendant = DefendantsController.get_or_create(customer_id=body['defendant']['customerId'])
         body['defendant'] = defendant.id
         if not defendant:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Defendant not found'}
+            raise BadRequest('Defendant not found')
     except KeyError:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing customerId in defendant object'}
+        raise BadRequest('Missing customerId in defendant object')
 
     # If this report is attached to a ticket and the defendant is different
     # Try to attach ticket to an existing
@@ -357,7 +329,8 @@ def update_defendant(body, report):
     #
     if report.ticket and report.ticket.defendant and (report.ticket.defendant != defendant):
         # If related ticket has just this report attached, close this ticket
-        if report.ticket.reportTicket.count() == 1 and report.ticket.reportTicket.all()[0].id == int(report.id):
+        if report.ticket.reportTicket.count() == 1 and \
+                report.ticket.reportTicket.all()[0].id == int(report.id):
             try:
                 ticket = Ticket.objects.get(id=report.ticket.id)
                 ticket.status = 'Closed'
@@ -385,7 +358,7 @@ def update_defendant(body, report):
         report.save()
         body.pop('ticket', None)
 
-    return 200, body
+    return body
 
 
 def destroy(report_id):
@@ -393,9 +366,48 @@ def destroy(report_id):
     """
     report = Report.objects.filter(id=report_id)
     if not report:
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Report not found')
     report.update(status='Archived')
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Report successfully archived'}
+    return {'message': 'Report successfully archived'}
+
+
+def validate(report_id, body, user):
+    """
+        Parse now validated "ToValidate" `abuse.models.Report`
+    """
+    try:
+        report = Report.objects.get(id=int(report_id))
+        if report.status.lower() != 'tovalidate':
+            raise BadRequest('Report is not in ToValidate state')
+    except (ObjectDoesNotExist, ValueError):
+        raise NotFound('Report not found')
+
+    function = None
+    params = {
+        'report_id': report.id,
+        'user_id': user.id,
+        'domain_to_request': None
+    }
+
+    if report.defendant and report.service:
+        function = 'report.validate_with_defendant'
+    else:
+        if body.get('domainToRequest'):
+            search = re.search(regexp.DOMAIN_RE, body['domainToRequest'])
+            if not search:
+                raise BadRequest('Not a valid domain name')
+            function = 'report.cdn_request'
+            params['domain_to_request'] = search.group()
+        else:
+            function = 'report.validate_without_defendant'
+
+    report.status = 'Attached'
+    report.save()
+
+    params = {k: v for k, v in params.iteritems() if v}
+    utils.email_queue.enqueue(function, **params)
+
+    return {'message': 'Report successfully validated'}
 
 
 def get_raw(report_id):
@@ -405,7 +417,7 @@ def get_raw(report_id):
     try:
         report = Report.objects.get(id=report_id)
         if not report.filename:
-            return 200, {'raw': report.body}
+            return {'raw': report.body}
 
         raw = None
         try:
@@ -415,11 +427,11 @@ def get_raw(report_id):
             pass
 
         if not raw:
-            return 404, {'status': 'Not Found', 'code': 404, 'message': 'Raw not found'}
+            raise NotFound('Raw not found')
 
-        return 200, {'raw': raw.decode('utf-8')}
+        return {'raw': raw.decode('utf-8')}
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Report not found'}
+        raise NotFound('Report not found')
 
 
 def get_dehtmlified(report_id):
@@ -431,20 +443,20 @@ def get_dehtmlified(report_id):
         html.body_width = 0
         body = html.handle(report.body.replace('\r\n', '<br/>'))
         body = re.sub(r'^(\s*\n){2,}', '\n', body, flags=re.MULTILINE)
-        return 200, {'dehtmlify': body}
+        return {'dehtmlify': body}
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Report not found'}
+        raise NotFound('Report not found')
 
 
 def get_all_attachments(**kwargs):
     """ Get attached documents for a report
     """
     filters = {}
-    if 'filters' in kwargs:
+    if kwargs.get('filters'):
         try:
             filters = json.loads(unquote(unquote(kwargs['filters'])))
         except (ValueError, SyntaxError, TypeError) as ex:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
+            raise BadRequest(str(ex.message))
     try:
         limit = int(filters['paginate']['resultsPerPage'])
         offset = int(filters['paginate']['currentPage'])
@@ -455,17 +467,17 @@ def get_all_attachments(**kwargs):
     try:
         report = Report.objects.get(id=kwargs['report'])
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Report not found'}, 0
+        raise NotFound('Report not found')
 
     try:
         nb_record_filtered = report.attachments.count()
-        attached = report.attachments.all().values(*ATTACHMENT_FIELDS)
+        attached = report.attachments.all().values(*REPORT_ATTACHMENT_FIELDS)
         attached = attached[(offset - 1) * limit:limit * offset]
         len(attached)  # Force django to evaluate query now
     except (AttributeError, KeyError, FieldError, SyntaxError, TypeError, ValueError) as ex:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}, 0
+        raise BadRequest(str(ex.message))
 
-    return 200, list(attached), nb_record_filtered
+    return list(attached), nb_record_filtered
 
 
 def get_attachment(report_id, attachment_id):
@@ -475,7 +487,7 @@ def get_attachment(report_id, attachment_id):
         report = Report.objects.get(id=report_id)
         attachment = report.attachments.get(id=attachment_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Report or attachment not found'}
+        raise NotFound('Report or attachment not found')
 
     resp = None
     try:
@@ -490,93 +502,71 @@ def get_attachment(report_id, attachment_id):
         pass
 
     if not resp:
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Raw attachment not found'}
+        raise NotFound('Raw attachment not found')
 
-    return 200, resp
+    return resp
 
 
-@transaction.commit_manually
+@transaction.atomic
 def bulk_add(body, user, method):
     """ Update multiple reports
     """
     if not body.get('reports') or not body.get('properties'):
-        transaction.rollback()
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing reports or properties in body'}
+        raise BadRequest('Missing reports or properties in body')
 
     try:
         reports = Report.objects.filter(id__in=list(body['reports']))
     except (TypeError, ValueError):
-        transaction.rollback()
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid report(s) id'}
+        raise BadRequest('Invalid report(s) id')
 
     for report in reports:
-        code, resp = GeneralController.check_perms(method=method, user=user, report=report.id)
-        if code != 200:
-            transaction.rollback()
-            return code, resp
+        GeneralController.check_perms(method=method, user=user, report=report.id)
 
-    if 'status' in body['properties'] and body['properties']['status'].lower() not in STATUS:
-        transaction.rollback()
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Status not supported'}
+    if body['properties'].get('status') and \
+            body['properties']['status'].lower() not in REPORT_STATUS:
+        raise BadRequest('Status not supported')
 
     # Update tags
     if 'tags' in body['properties'] and isinstance(body['properties']['tags'], list):
         for report in reports:
             for tag in body['properties']['tags']:
-                code, resp = add_tag(report.id, tag)
-                if code != 200:
-                    transaction.rollback()
-                    return code, resp
+                add_tag(report.id, tag)
 
     valid_fields = ['category', 'status', 'ticket']
     properties = {k: v for k, v in body['properties'].iteritems() if k in valid_fields}
 
     # Update general fields
     for report in reports:
-        code, resp = update(report.id, properties, user)
-        if code != 200:
-            transaction.rollback()
-            return code, resp
+        update(report.id, properties, user)
 
-    transaction.commit()
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Report(s) successfully updated'}
+    return {'message': 'Report(s) successfully updated'}
 
 
-@transaction.commit_manually
+@transaction.atomic
 def bulk_delete(body, user, method):
     """ Delete infos from multiple tickets
     """
     if not body.get('reports') or not body.get('properties'):
-        transaction.rollback()
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing reports or properties in body'}
+        raise BadRequest('Missing reports or properties in body')
 
     try:
         reports = Report.objects.filter(id__in=list(body['reports']))
     except (TypeError, ValueError):
-        transaction.rollback()
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid report(s) id'}
+        raise BadRequest('Invalid report(s) id')
 
     for report in reports:
-        code, resp = GeneralController.check_perms(method=method, user=user, ticket=report.id)
-        if code != 200:
-            transaction.rollback()
-            return code, resp
+        GeneralController.check_perms(method=method, user=user, ticket=report.id)
 
     # Update tags
     try:
         if 'tags' in body['properties'] and isinstance(body['properties']['tags'], list):
             for report in reports:
                 for tag in body['properties']['tags']:
-                    code, resp = remove_tag(report.id, tag['id'])
-                    if code != 200:
-                        transaction.rollback()
-                        return code, resp
+                    remove_tag(report.id, tag['id'])
     except (KeyError, TypeError, ValueError):
-        transaction.rollback()
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid or missing tag(s) id'}
+        raise BadRequest('Invalid or missing tag(s) id')
 
-    transaction.commit()
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Report(s) successfully updated'}
+    return {'message': 'Report(s) successfully updated'}
 
 
 def add_tag(report_id, body):
@@ -587,15 +577,15 @@ def add_tag(report_id, body):
         report = Report.objects.get(id=report_id)
 
         if report.__class__.__name__ != tag.tagType:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid tag for report'}
+            raise BadRequest('Invalid tag for report')
 
         report.tags.add(tag)
         report.save()
     except MultipleObjectsReturned:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Please use tag id'}
+        raise BadRequest('Please use tag id')
     except (KeyError, FieldError, IntegrityError, ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Tag successfully added'}
+        raise NotFound('Report or tag not found')
+    return {'message': 'Tag successfully added'}
 
 
 def remove_tag(report_id, tag_id):
@@ -606,14 +596,14 @@ def remove_tag(report_id, tag_id):
         report = Report.objects.get(id=report_id)
 
         if report.__class__.__name__ != tag.tagType:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid tag for report'}
+            raise BadRequest('Invalid tag for report')
 
         report.tags.remove(tag)
         report.save()
 
     except (ObjectDoesNotExist, FieldError, IntegrityError, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
-    return 200, {'status': 'OK', 'code': 200, 'message': 'Tag successfully removed'}
+        raise NotFound('Report or tag not found')
+    return {'message': 'Tag successfully removed'}
 
 
 def get_items_screenshot(**kwargs):
@@ -621,11 +611,11 @@ def get_items_screenshot(**kwargs):
     """
     # Parse filters from request
     filters = {}
-    if 'filters' in kwargs:
+    if kwargs.get('filters'):
         try:
             filters = json.loads(unquote(unquote(kwargs['filters'])))
         except (ValueError, SyntaxError, TypeError) as ex:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': str(ex.message)}
+            raise BadRequest(str(ex.message))
     try:
         limit = int(filters['paginate']['resultsPerPage'])
         offset = int(filters['paginate']['currentPage'])
@@ -640,9 +630,14 @@ def get_items_screenshot(**kwargs):
     try:
         report = Report.objects.get(id=kwargs['report'])
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Report not found'}
+        raise NotFound('Report not found')
 
-    items = report.reportItemRelatedReport.filter(itemType='URL').values_list('id', flat=True)[(offset - 1) * limit:limit * offset]
+    items = report.reportItemRelatedReport.filter(
+        itemType='URL'
+    ).values_list(
+        'id',
+        flat=True
+    )[(offset - 1) * limit:limit * offset]
     items = list(set(items))
 
     queue = Queue()
@@ -660,15 +655,16 @@ def get_items_screenshot(**kwargs):
 
     for res in results:
         if not res:
-            return 502, {'status': 'Proxy Error', 'code': 502, 'message': 'Error while loading screenshots'}
-    return 200, results
+            raise InternalServerError('Error while loading screenshots')
+    return results
 
 
 def __get_url_screenshot(item_id, report_id, queue, only_taken=False):
     """ Get screenshots for given url
     """
-    code, resp = ReportItemsController.get_screenshot(item_id, report_id)
-    if code != 200:
+    try:
+        resp = ReportItemsController.get_screenshot(item_id, report_id)
+    except (NotFound, BadRequest, InternalServerError):
         resp = None
 
     queue.put(resp)
@@ -680,13 +676,14 @@ def parse_screenshot_feedback(report_id, body, user):
     try:
         report = Report.objects.get(id=report_id)
         if report.status != 'PhishToCheck':
-            message = 'Report status is now %s, maybe already checked by someone else' % (report.status)
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': message}
+            message = 'Report status is now %s, maybe already ' \
+                      'checked by someone else' % (report.status)
+            raise BadRequest(message)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404, 'message': 'Report not found'}
+        raise NotFound('Report not found')
 
     if not body:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid or missing body'}
+        raise BadRequest('Invalid or missing body')
 
     # Parse result and update Phishing Service
     try:
@@ -697,7 +694,7 @@ def parse_screenshot_feedback(report_id, body, user):
                 feedback=item.get('feedback'),
             )
     except (AttributeError, KeyError, TypeError):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing key in item body'}
+        raise BadRequest('Missing key in item body')
 
     result = {item.get('screenshotId'): item.get('feedback') for item in body}
 
@@ -710,11 +707,19 @@ def parse_screenshot_feedback(report_id, body, user):
     report.status = 'New'
     report.save()
     if not any(result.values()):
-        utils.default_queue.enqueue('phishing.close_because_all_down', report=report.id, denied_by=user.id)
-        return 200, {'status': 'OK', 'code': 200, 'message': 'Report successfully archived and mail sent to provider'}
+        utils.default_queue.enqueue(
+            'phishing.close_because_all_down',
+            report=report.id,
+            denied_by=user.id
+        )
+        return {'message': 'Report successfully archived and mail sent to provider'}
     else:  # Else create/attach report to ticket + block_url + mail to defendant + email to provider
-        utils.default_queue.enqueue('ticket.create_ticket_from_phishtocheck', report=report.id, user=user.id)
-        return 200, {'status': 'OK', 'code': 200, 'message': 'Report will be attached to ticket in few seconds'}
+        utils.default_queue.enqueue(
+            'ticket.create_ticket_from_phishtocheck',
+            report=report.id,
+            user=user.id
+        )
+        return {'message': 'Report will be attached to ticket in few seconds'}
 
 
 def _precheck_user_fields_update_authorizations(user, body):

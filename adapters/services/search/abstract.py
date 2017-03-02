@@ -52,7 +52,7 @@ class SearchServiceBase(object):
             :param ParsedEmail parsed_email: `ParsedEmail` instance
             :param str filename: The filename associated with the email
             :param list reports_id: The list of corresponding Cerberus report(s) id
-            :raises SearchServiceException: if any error occur
+            :raises `adapters.services.search.abstract.SearchServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'index_email'" % (cls))
@@ -65,7 +65,7 @@ class SearchServiceBase(object):
             :param str query: The query
             :rtype: list
             :return: The list of matching report(s) id
-            :raises SearchServiceException: if any error occur
+            :raises `adapters.services.search.abstract.SearchServiceException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'search_reports'" % (cls))

@@ -24,9 +24,10 @@
 
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator, validate_ipv4_address
+from werkzeug.exceptions import BadRequest
 
 from adapters.dao.reputation.abstract import ReputationDaoException
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 
 
 def get_ip_rbl_reputation(ip_addr):
@@ -36,17 +37,19 @@ def get_ip_rbl_reputation(ip_addr):
     try:
         validate_ipv4_address(ip_addr)
     except ValidationError:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Not a valid IPV4'}
+        raise BadRequest('Not a valid IPV4')
 
     results = []
 
     if ImplementationFactory.instance.is_implemented('ReputationDaoBase'):
         try:
-            results = ImplementationFactory.instance.get_singleton_of('ReputationDaoBase').get_ip_rbl_reputations(ip_addr)
+            results = ImplementationFactory.instance.get_singleton_of(
+                'ReputationDaoBase'
+            ).get_ip_rbl_reputations(ip_addr)
         except ReputationDaoException:
             pass
 
-    return 200, results
+    return results
 
 
 def get_ip_internal_reputation(ip_addr):
@@ -56,17 +59,19 @@ def get_ip_internal_reputation(ip_addr):
     try:
         validate_ipv4_address(ip_addr)
     except ValidationError:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Not a valid IPV4'}
+        raise BadRequest('Not a valid IPV4')
 
     results = []
 
     if ImplementationFactory.instance.is_implemented('ReputationDaoBase'):
         try:
-            results = ImplementationFactory.instance.get_singleton_of('ReputationDaoBase').get_ip_internal_reputations(ip_addr)
+            results = ImplementationFactory.instance.get_singleton_of(
+                'ReputationDaoBase'
+            ).get_ip_internal_reputations(ip_addr)
         except ReputationDaoException:
             pass
 
-    return 200, results
+    return results
 
 
 def get_ip_external_reputation(ip_addr):
@@ -76,17 +81,19 @@ def get_ip_external_reputation(ip_addr):
     try:
         validate_ipv4_address(ip_addr)
     except ValidationError:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Not a valid IPV4'}
+        raise BadRequest('Not a valid IPV4')
 
     results = []
 
     if ImplementationFactory.instance.is_implemented('ReputationDaoBase'):
         try:
-            results = ImplementationFactory.instance.get_singleton_of('ReputationDaoBase').get_ip_external_reputations(ip_addr)
+            results = ImplementationFactory.instance.get_singleton_of(
+                'ReputationDaoBase'
+            ).get_ip_external_reputations(ip_addr)
         except ReputationDaoException:
             pass
 
-    return 200, results
+    return results
 
 
 def get_ip_external_detail(ip_addr, source):
@@ -96,17 +103,22 @@ def get_ip_external_detail(ip_addr, source):
     try:
         validate_ipv4_address(ip_addr)
     except ValidationError:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Not a valid IPV4'}
+        raise BadRequest('Not a valid IPV4')
 
     results = []
 
     if ImplementationFactory.instance.is_implemented('ReputationDaoBase'):
         try:
-            results = ImplementationFactory.instance.get_singleton_of('ReputationDaoBase').get_ip_external_details(ip_addr, source)
+            results = ImplementationFactory.instance.get_singleton_of(
+                'ReputationDaoBase'
+            ).get_ip_external_details(
+                ip_addr,
+                source
+            )
         except ReputationDaoException:
             pass
 
-    return 200, results
+    return results
 
 
 def get_url_external_reputation(url):
@@ -117,17 +129,19 @@ def get_url_external_reputation(url):
         validate = URLValidator()
         validate(url)
     except (ValueError, ValidationError):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Not a valid URL'}
+        raise BadRequest('Not a valid URL')
 
     results = []
 
     if ImplementationFactory.instance.is_implemented('ReputationDaoBase'):
         try:
-            results = ImplementationFactory.instance.get_singleton_of('ReputationDaoBase').get_url_external_reputations(url)
+            results = ImplementationFactory.instance.get_singleton_of(
+                'ReputationDaoBase'
+            ).get_url_external_reputations(url)
         except ReputationDaoException:
             pass
 
-    return 200, results
+    return results
 
 
 def get_ip_tools(ip_addr):
@@ -137,14 +151,16 @@ def get_ip_tools(ip_addr):
     try:
         validate_ipv4_address(ip_addr)
     except ValidationError:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Not a valid IPV4'}
+        raise BadRequest('Not a valid IPV4')
 
     results = []
 
     if ImplementationFactory.instance.is_implemented('ReputationDaoBase'):
         try:
-            results = ImplementationFactory.instance.get_singleton_of('ReputationDaoBase').get_ip_tools(ip_addr)
+            results = ImplementationFactory.instance.get_singleton_of(
+                'ReputationDaoBase'
+            ).get_ip_tools(ip_addr)
         except ReputationDaoException:
             pass
 
-    return 200, results
+    return results

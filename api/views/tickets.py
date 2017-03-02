@@ -24,298 +24,278 @@
 
 from io import BytesIO
 
-from flask import Blueprint, json, g, make_response, request, send_file
+from flask import Blueprint, g, request, send_file
+from voluptuous import Any, Optional
+from werkzeug.exceptions import BadRequest
 
 from api.controllers import (CommentsController, TicketsController,
                              PresetsController, ReportItemsController,
                              TemplatesController)
-from decorators import jsonify, perm_required
+from decorators import perm_required, validate_body
 
 ticket_views = Blueprint('ticket_views', __name__)
 
 
 @ticket_views.route('/api/tickets', methods=['GET'])
-@jsonify
 def get_tickets():
     """ Get all abuse tickets
 
         Filtering is possible through "filters" query string, JSON double encoded format
     """
-    if 'filters' in request.args:
-        code, resp, nb_tickets = TicketsController.index(filters=request.args['filters'], user=g.user)
-    else:
-        code, resp, nb_tickets = TicketsController.index(user=g.user)
-    return code, resp
+    resp, _ = TicketsController.index(filters=request.args.get('filters'), user=g.user)
+    return resp
 
 
 @ticket_views.route('/api/my-tickets', methods=['GET'])
-@jsonify
 def get_user_tickets():
     """ Get abuse tickets for logged g.user
 
         Filtering is possible through "filters" query string, JSON double encoded format
     """
-    if 'filters' in request.args:
-        code, resp, nb_tickets = TicketsController.index(filters=request.args['filters'], treated_by=g.user.id, user=g.user)
-    else:
-        code, resp, nb_tickets = TicketsController.index(treated_by=g.user.id, user=g.user)
-    return code, resp
+    resp, _ = TicketsController.index(
+        filters=request.args.get('filters'),
+        treated_by=g.user.id,
+        user=g.user
+    )
+    return resp
 
 
 @ticket_views.route('/api/tickets/todo', methods=['GET'])
-@jsonify
 def get_todo_tickets():
     """ Get all abuse todo tickets
     """
-    code, resp = TicketsController.get_todo_tickets(filters=request.args.get('filters'), user=g.user)
-    return code, resp
+    return TicketsController.get_todo_tickets(filters=request.args.get('filters'), user=g.user)
 
 
 @ticket_views.route('/api/tickets/<ticket>', methods=['GET'])
-@jsonify
 @perm_required
 def get_ticket(ticket=None):
     """ Get a given ticket
     """
-    code, resp = TicketsController.show(ticket, g.user)
-    return code, resp
+    return TicketsController.show(ticket, g.user)
 
 
 @ticket_views.route('/api/tickets/<ticket>/items', methods=['GET'])
-@jsonify
 @perm_required
 def get_ticket_items(ticket=None):
     """ Get all items for a given ticket
 
         Filtering is possible through "filters" query string, JSON double encoded format
     """
-    if 'filters' in request.args:
-        code, resp = ReportItemsController.get_items_ticket(ticket=ticket, filters=request.args['filters'])
-    else:
-        code, resp = ReportItemsController.get_items_ticket(ticket=ticket)
-    return code, resp
+    return ReportItemsController.get_items_ticket(
+        ticket=ticket,
+        filters=request.args.get('filters')
+    )
+
+
+@ticket_views.route('/api/tickets/<ticket>/items/toproof', methods=['POST'])
+@perm_required
+def add_items_to_proof(ticket=None):
+    """
+        Add all `abuse.models.ReportItems` to `abuse.models.Ticket`'s `abuse.models.Proof`
+    """
+    return TicketsController.add_items_to_proof(ticket_id=ticket, user=g.user)
 
 
 @ticket_views.route('/api/tickets/<ticket>/items/<item>', methods=['PUT', 'DELETE'])
-@jsonify
 @perm_required
 def update_ticket_item(ticket=None, item=None):
     """ Delete an item
     """
     if request.method == 'PUT':
         body = request.get_json()
-        code, resp = ReportItemsController.update(item, body, g.user)
+        return ReportItemsController.update(item, body, g.user)
     else:
-        code, resp = ReportItemsController.delete_from_ticket(item, ticket)
-    return code, resp
+        return ReportItemsController.delete_from_ticket(item, ticket)
 
 
 @ticket_views.route('/api/tickets/<ticket>/items/<item>/unblock', methods=['POST'])
-@jsonify
 @perm_required
 def unblock_ticket_item(ticket=None, item=None):
     """ Unblock an item
     """
-    code, resp = ReportItemsController.unblock_item(item_id=item, ticket_id=ticket)
-    return code, resp
+    return ReportItemsController.unblock_item(item_id=item, ticket_id=ticket)
 
 
 @ticket_views.route('/api/tickets/<ticket>/proof', methods=['GET', 'POST'])
-@jsonify
 @perm_required
 def get_ticket_proof(ticket=None):
     """ Get all proof for a given ticket
     """
     if request.method == 'GET':
-        code, resp = TicketsController.get_proof(ticket)
+        return TicketsController.get_proof(ticket)
     else:
         body = request.get_json()
-        code, resp = TicketsController.add_proof(ticket, body, g.user)
-    return code, resp
+        return TicketsController.add_proof(ticket, body, g.user)
 
 
 @ticket_views.route('/api/tickets/bulk', methods=['PUT', 'DELETE'])
-@jsonify
 def bulk_add_tickets():
     """ Bulk add on tickets
     """
     body = request.get_json()
     if request.method == 'PUT':
-        code, resp = TicketsController.bulk_update(body, g.user, request.method)
+        return TicketsController.bulk_update(body, g.user, request.method)
     else:
-        code, resp = TicketsController.bulk_delete(body, g.user, request.method)
-    return code, resp
+        return TicketsController.bulk_delete(body, g.user, request.method)
 
 
 @ticket_views.route('/api/tickets/<ticket>/proof/<proof>', methods=['PUT', 'DELETE'])
-@jsonify
 @perm_required
 def update_ticket_proof(ticket=None, proof=None):
     """ Update ticket proof
     """
     if request.method == 'PUT':
         body = request.get_json()
-        code, resp = TicketsController.update_proof(ticket, proof, body, g.user)
+        return TicketsController.update_proof(ticket, proof, body, g.user)
     else:
-        code, resp = TicketsController.delete_proof(ticket, proof, g.user)
-    return code, resp
-
-
-@ticket_views.route('/api/tickets', methods=['POST'])
-@jsonify
-@perm_required
-def create_ticket():
-    """ Post a new ticket
-    """
-    body = request.get_json()
-    code, resp = TicketsController.create(body, g.user)
-    return code, resp
+        return TicketsController.delete_proof(ticket, proof, g.user)
 
 
 @ticket_views.route('/api/tickets/<ticket>', methods=['PUT'])
-@jsonify
 @perm_required
 def update_ticket(ticket=None):
     """ Update an existing ticket
     """
     body = request.get_json()
-    code, resp = TicketsController.update(ticket, body, g.user)
-    return code, resp
+    return TicketsController.update(ticket, body, g.user)
 
 
 @ticket_views.route('/api/tickets/<ticket>/snoozeDuration', methods=['PATCH'])
-@jsonify
 @perm_required
 def update_ticket_snooze(ticket=None):
     """ Update ticket snoozeDuration
     """
     body = request.get_json()
-    code, resp = TicketsController.update_snooze_duration(ticket, body, g.user)
-    return code, resp
+    return TicketsController.update_snooze_duration(ticket, body, g.user)
 
 
 @ticket_views.route('/api/tickets/<ticket>/pauseDuration', methods=['PATCH'])
-@jsonify
 @perm_required
 def update_ticket_pause(ticket=None):
     """ Update ticket pauseDuration
     """
     body = request.get_json()
-    code, resp = TicketsController.update_pause_duration(ticket, body, g.user)
-    return code, resp
+    return TicketsController.update_pause_duration(ticket, body, g.user)
 
 
 @ticket_views.route('/api/tickets/<ticket>/defendant', methods=['PUT'])
-@jsonify
 @perm_required
 def update_ticket_defendant(ticket=None):
     """ Update ticket defendant
     """
     body = request.get_json()
-    code, resp = TicketsController.update(ticket, body, g.user)
-    return code, resp
+    return TicketsController.update(ticket, body, g.user)
 
 
 @ticket_views.route('/api/tickets/<ticket>/emails', methods=['GET'])
-@jsonify
 @perm_required
 def get_mails(ticket=None):
     """ Get all emails sent and received for this ticket
     """
-    code, resp = TicketsController.get_emails(ticket)
-    return code, resp
+    return TicketsController.get_emails(ticket)
 
 
 @ticket_views.route('/api/tickets/<ticket>/status/<status>', methods=['PUT'])
-@jsonify
 @perm_required
 def update_status(ticket=None, status=None):
     """ Update ticket status
     """
     if status and status.lower() == 'closed':
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'To close ticket, please use Interact'}
+        raise BadRequest('To close ticket, please use Interact')
 
     body = request.get_json()
-    code, resp = TicketsController.update_status(ticket, status, body, g.user)
-    return code, resp
+    return TicketsController.update_status(ticket, status, body, g.user)
 
 
 @ticket_views.route('/api/tickets/<ticket>/templates/<template>', methods=['GET'])
-@jsonify
 @perm_required
 def get_ticket_prefetched_template(ticket=None, template=None):
     """ Get a template prefetched with ticket infos
     """
-    code, resp = TemplatesController.get_prefetch_template(ticket, template)
-    return code, resp
+    return TemplatesController.get_prefetch_template(ticket, template)
 
 
 @ticket_views.route('/api/tickets/<ticket>/presets/<preset>', methods=['GET'])
-@jsonify
 @perm_required
 def get_ticket_prefetched_preset(ticket=None, preset=None):
     """ Get a template prefetched with ticket infos
     """
-    code, resp = PresetsController.get_prefetch_preset(g.user, ticket, preset)
-    return code, resp
+    return PresetsController.get_prefetch_preset(g.user, ticket, preset)
 
 
 @ticket_views.route('/api/tickets/<ticket>/tags', methods=['POST'])
-@jsonify
 @perm_required
 def add_ticket_tag(ticket=None):
     """ Add tag to ticket
     """
     body = request.get_json()
-    code, resp = TicketsController.add_tag(ticket, body, g.user)
-    return code, resp
+    return TicketsController.add_tag(ticket, body, g.user)
 
 
 @ticket_views.route('/api/tickets/<ticket>/tags/<tag>', methods=['DELETE'])
-@jsonify
 @perm_required
 def delete_ticket_tag(ticket=None, tag=None):
     """ Remove ticket tag
     """
-    code, resp = TicketsController.remove_tag(ticket, tag, g.user)
-    return code, resp
+    return TicketsController.remove_tag(ticket, tag, g.user)
 
 
 @ticket_views.route('/api/tickets/<ticket>/interact', methods=['POST'])
-@jsonify
 @perm_required
+@validate_body({
+    'action': {
+        Optional('id'): int,
+        'codename': Any(str, unicode),
+        'params': {
+            Optional('ip'): Any(str, unicode),
+            Optional('action'): int,
+            Optional('snoozeDuration'): int,
+            Optional('pauseDuration'): int,
+            Optional('resolution'): int
+        }
+    },
+    Optional('emails'): [{
+        'category': Any(str, unicode),
+        'to': [Any(str, unicode)],
+        'subject': Any(str, unicode),
+        'body': Any(str, unicode),
+        Optional('attachments'): [{
+            Optional('name'): Any(str, unicode),
+            Optional('content'): Any(str, unicode),
+            Optional('id'): int,
+            Optional('filename'): Any(str, unicode),
+            'filetype': Any(str, unicode),
+        }],
+        Optional('attachEmailThread'): bool
+    }]
+})
 def interact(ticket=None):
     """ Magic endpoint to save operator's time
     """
     body = request.get_json()
-    code, resp = TicketsController.interact(ticket, body, g.user)
-    return code, resp
+    return TicketsController.interact(ticket, body, g.user)
 
 
 @ticket_views.route('/api/tickets/<ticket>/actions/list', methods=['GET'])
-@jsonify
 @perm_required
 def get_actions(ticket=None):
     """
         List all available actions
     """
-    code, resp = TicketsController.get_actions_list(ticket, g.user)
-    return code, resp
+    return TicketsController.get_actions_list(ticket, g.user)
 
 
 @ticket_views.route('/api/tickets/<ticket>/jobs', methods=['GET'])
-@jsonify
 @perm_required
 def get_jobs(ticket=None):
     """
         Get actions status
     """
-    code, resp = TicketsController.get_jobs_status(ticket)
-    return code, resp
+    return TicketsController.get_jobs_status(ticket)
 
 
 @ticket_views.route('/api/tickets/<ticket>/jobs', methods=['POST'])
-@jsonify
 @perm_required
 def schedule_job(ticket=None):
     """
@@ -323,66 +303,76 @@ def schedule_job(ticket=None):
     """
     body = request.get_json()
     if not body.get('action') or not body.get('delay'):
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing action or delay in body'}
-    code, resp = TicketsController.schedule_asynchronous_job(ticket, body.get('action'), g.user, body.get('delay'))
-    return code, resp
+        return BadRequest('Missing action or delay in body')
+    return TicketsController.schedule_asynchronous_job(
+        ticket,
+        body.get('action'),
+        g.user,
+        body.get('delay')
+    )
 
 
 @ticket_views.route('/api/tickets/<ticket>/jobs/<job>', methods=['DELETE'])
-@jsonify
 @perm_required
 def cancel_job(ticket=None, job=None):
     """
         Cancel action
     """
-    code, resp = TicketsController.cancel_asynchronous_job(ticket, job, g.user)
-    return code, resp
+    return TicketsController.cancel_asynchronous_job(ticket, job, g.user)
 
 
 @ticket_views.route('/api/tickets/<ticket>/comments', methods=['POST'])
-@jsonify
 @perm_required
 def add_comment(ticket=None):
     """ Add comment to ticket
     """
     body = request.get_json()
-    code, resp = CommentsController.create(body, ticket_id=ticket, user_id=g.user.id)
-    return code, resp
+    return CommentsController.create(body, ticket_id=ticket, user_id=g.user.id)
 
 
 @ticket_views.route('/api/tickets/<ticket>/comments/<comment>', methods=['PUT', 'DELETE'])
-@jsonify
 @perm_required
 def update_or_delete_comment(ticket=None, comment=None):
     """ Update or delete ticket comments
     """
     if request.method == 'PUT':
         body = request.get_json()
-        code, resp = CommentsController.update(body, comment_id=comment, ticket_id=ticket, user_id=g.user.id)
+        return CommentsController.update(
+            body,
+            comment_id=comment,
+            ticket_id=ticket,
+            user_id=g.user.id
+        )
     else:
-        code, resp = CommentsController.delete(comment_id=comment, ticket_id=ticket, user_id=g.user.id)
-
-    return code, resp
+        return CommentsController.delete(
+            comment_id=comment,
+            ticket_id=ticket,
+            user_id=g.user.id
+        )
 
 
 @ticket_views.route('/api/tickets/<ticket>/providers', methods=['GET'])
-@jsonify
 @perm_required
 def get_providers(ticket=None):
     """ Get ticket's providers
     """
-    code, resp = TicketsController.get_providers(ticket)
-    return code, resp
+    return TicketsController.get_providers(ticket)
 
 
 @ticket_views.route('/api/tickets/<ticket>/timeline', methods=['GET'])
-@jsonify
 @perm_required
 def get_timeline(ticket=None):
     """ Get ticket's timeline
     """
-    code, resp = TicketsController.get_timeline(ticket, filters=request.args.get('filters'))
-    return code, resp
+    return TicketsController.get_timeline(ticket, filters=request.args.get('filters'))
+
+
+@ticket_views.route('/api/tickets/<ticket>/attachments', methods=['GET'])
+@perm_required
+def get_ticket_attachments(ticket=None):
+    """ Get all `abuse.models.Ticket`'s `abuse.models.AttachedDocument`
+    """
+    return TicketsController.get_ticket_attachments(ticket)
 
 
 @ticket_views.route('/api/tickets/<ticket>/attachments/<attachment>', methods=['GET'])
@@ -390,9 +380,24 @@ def get_timeline(ticket=None):
 def get_ticket_attachment(ticket=None, attachment=None):
     """ Get `abuse.models.Ticket`'s `abuse.models.AttachedDocument`
     """
-    code, resp = TicketsController.get_attachment(ticket, attachment)
-    if code != 200:
-        return make_response(json.dumps(resp), code, {'content-type': 'application/json'})
-
+    resp = TicketsController.get_attachment(ticket, attachment)
     bytes_io = BytesIO(resp['raw'])
-    return send_file(bytes_io, attachment_filename=resp['filename'], mimetype=resp['filetype'], as_attachment=True)
+    return send_file(
+        bytes_io,
+        attachment_filename=resp['filename'],
+        mimetype=resp['filetype'],
+        as_attachment=True
+    )
+
+
+@ticket_views.route('/api/tickets/<ticket>/star', methods=['POST', 'DELETE'])
+@perm_required
+def ticket_star_management(ticket=None):
+    """
+        Star/Unstar given `abuse.models.Ticket` for given `abuse.models.User`
+
+    :status 200: when category is successfully created
+    :status 400: when parameters are missing or invalid
+    :status 404: when ticket is not found
+    """
+    return TicketsController.star_ticket_management(ticket, g.user, method=request.method)

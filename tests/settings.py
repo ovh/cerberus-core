@@ -32,18 +32,6 @@ CUSTOM_IMPLEMENTATIONS = (
     'default.adapters.services.action.impl.DefaultActionService',
 )
 
-CUSTOM_REPORT_WORKFLOWS = (
-    'worker.workflows.report.phishing.PhishingReportWorkflow',
-    'worker.workflows.report.copyright.CopyrightReportWorkflow',
-    'worker.workflows.report.acns.AcnsReportWorkflow',
-)
-
-CUSTOM_TICKET_ANSWER_WORKFLOWS = (
-    'worker.workflows.ticket.mailerdaemon.MailerDaemonWorkflow',
-    'worker.workflows.ticket.customeranswer.CustomerAnswerWorkflow',
-    'worker.workflows.ticket.default.DefaultAnswerWorkflow',
-)
-
 CUSTOM_SCHEDULING_ALGORITHMS = (
     'api.controllers.scheduling.global.GlobalSchedulingAlgorithm',
     'api.controllers.scheduling.limitedOpen.LimitedOpenSchedulingAlgorithm',
@@ -86,7 +74,7 @@ TAGS = {
 CODENAMES = {
     'ack_received': 'ack_report_received',
     'case_closed': 'case_closed',
-    'first_alert': 'first_alert',
+    'customer_notification': 'customer_notification',
     'fixed_customer': 'fixed_by_customer',
     'fixed': 'fixed',
     'forward_acns': 'forward_acns',
@@ -108,17 +96,8 @@ GENERAL_CONFIG = {
         'up_threshold': 0,
         'down_threshold': 75,
     },
-    'copyright': {
-        'wait': 172800,
-        'acns_patterns': ('www.acns.net/ACNS',),
-        'trusted_copyright_providers': ['supertrusted@copyrightprovider.com'],
-    },
     'magic_smtp_header': 'Test-Magic-Smtp-Header',
-    'report_timeout': 30,
-    'mailer_daemon_patterns': [
-        'mailer-daemon',
-        '@my.provider.com'
-    ],
+    'ticket_high_count': 50,
 }
 
 DATABASES = {

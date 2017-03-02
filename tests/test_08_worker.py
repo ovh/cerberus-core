@@ -27,9 +27,9 @@ import os
 from django.conf import settings
 from mock import patch
 
-from abuse.models import (ContactedProvider, Defendant, Report, User, Stat,
-                          ReportThreshold, DefendantHistory)
-from factory.factory import ImplementationFactory
+from abuse.models import (ContactedProvider, Defendant, Report,
+                          DefendantHistory)
+from factory.implementation import ImplementationFactory
 from tests import GlobalTestCase
 
 SAMPLES_DIRECTORY = 'tests/samples'
@@ -115,7 +115,7 @@ class TestWorkers(GlobalTestCase):
         mock_rq.return_value = None
         sample = self._samples['sample3']
         content = sample.read()
-        report.create_from_email(email_content=content, send_ack=True)
+        report.create_from_email(email_content=content)
         self.assertEqual(1, Report.objects.count())
         report = Report.objects.last()
         self.assertEqual('newsletter@ipm.dhnet.be', report.provider.email)
@@ -131,13 +131,6 @@ class TestWorkers(GlobalTestCase):
         self.assertEqual(1, len(emails))
         self.assertEqual(1, ContactedProvider.objects.count())
         self.assertIn(report.ticket.publicId, emails[0].subject)
-
-        # Test stats
-        from worker import stats
-        stats.update_defendants_history()
-        stat = Stat.objects.get(defendant=report.defendant, category='Copyright')
-        self.assertEqual(1, stat.reports)
-        self.assertEqual(1, stat.tickets)
 
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
     def test_report_with_attachments(self, mock_rq):
@@ -178,46 +171,6 @@ class TestWorkers(GlobalTestCase):
         self.assertEqual('Doe', defendant.details.name)
 
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
-    def test_report_threshold(self, mock_rq):
-        """
-        """
-        from worker import report
-
-        mock_rq.return_value = None
-        sample = self._samples['sample2']
-        content = sample.read()
-        report.create_from_email(email_content=content)
-        report.create_ticket_with_threshold()
-        cerberus_report = Report.objects.last()
-        self.assertEqual('New', cerberus_report.status)
-        ReportThreshold.objects.all().update(threshold=1)
-        report.create_ticket_with_threshold()
-        cerberus_report = Report.objects.last()
-        self.assertEqual('Attached', cerberus_report.status)
-
-    @patch('rq.queue.Queue.enqueue')
-    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
-    def test_ticket_from_phishtocheck(self, mock_rq, mock_rq_enqueue):
-
-        from worker import report, ticket
-
-        mock_rq.return_value = None
-        mock_rq_enqueue.return_value = FakeJob()
-        sample = self._samples['sample7']
-        content = sample.read()
-        report.create_from_email(email_content=content, send_ack=False)
-
-        self.assertEqual(1, Report.objects.count())
-        cerberus_report = Report.objects.last()
-        user = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
-        ticket.create_ticket_from_phishtocheck(report=cerberus_report.id, user=user.id)
-        cerberus_report = Report.objects.last()
-        self.assertEqual('Attached', cerberus_report.status)
-        self.assertEqual(1, cerberus_report.ticket.id)
-        emails = ImplementationFactory.instance.get_singleton_of('MailerServiceBase').get_emails(cerberus_report.ticket)
-        self.assertEqual(1, len(emails))
-
-    @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
     def test_ticket_change_priority(self, mock_rq):
         """
             Test if ticket is actually changing priority
@@ -228,21 +181,23 @@ class TestWorkers(GlobalTestCase):
 
         sample = self._samples['sample11']  # Low
         content = sample.read()
-        report.create_from_email(email_content=content, send_ack=True)
-        cerberus_report = Report.objects.last()
-        self.assertEqual('Low', cerberus_report.ticket.priority)
+        report.create_from_email(email_content=content)
+        cerberus_report_1 = Report.objects.last()
+        self.assertEqual('Low', cerberus_report_1.ticket.priority)
 
         sample = self._samples['sample13']  # Critical
         content = sample.read()
-        report.create_from_email(email_content=content, send_ack=True)
-        cerberus_report = Report.objects.last()
-        self.assertEqual('Critical', cerberus_report.ticket.priority)
+        report.create_from_email(email_content=content)
+        cerberus_report_2 = Report.objects.last()
+        self.assertEqual(cerberus_report_1.ticket.id, cerberus_report_2.ticket.id)
+        self.assertEqual('Critical', cerberus_report_2.ticket.priority)
 
         sample = self._samples['sample12']  # Normal
         content = sample.read()
-        report.create_from_email(email_content=content, send_ack=True)
-        cerberus_report = Report.objects.last()
-        self.assertEqual('Critical', cerberus_report.ticket.priority)
+        report.create_from_email(email_content=content)
+        cerberus_report_3 = Report.objects.last()
+        self.assertEqual(cerberus_report_1.ticket.id, cerberus_report_3.ticket.id)
+        self.assertEqual('Critical', cerberus_report_3.ticket.priority)
 
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
     def test_blacklisted_provider(self, mock_rq):
@@ -255,7 +210,7 @@ class TestWorkers(GlobalTestCase):
 
         sample = self._samples['sample14']  # Blacklisted
         content = sample.read()
-        report.create_from_email(email_content=content, send_ack=True)
+        report.create_from_email(email_content=content)
         self.assertEqual(0, Report.objects.count())
 
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
@@ -269,7 +224,7 @@ class TestWorkers(GlobalTestCase):
 
         sample = self._samples['sample22']
         content = sample.read()
-        report.create_from_email(email_content=content, send_ack=True)
+        report.create_from_email(email_content=content)
         cerberus_report = Report.objects.last()
         self.assertEqual('New', cerberus_report.status)
 
@@ -284,6 +239,6 @@ class TestWorkers(GlobalTestCase):
 
         sample = self._samples['sample21']  # Low
         content = sample.read()
-        report.create_from_email(email_content=content, send_ack=True)
+        report.create_from_email(email_content=content)
         cerberus_report = Report.objects.last()
         self.assertEqual('ToValidate', cerberus_report.status)

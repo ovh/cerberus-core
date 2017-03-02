@@ -25,72 +25,61 @@
 from flask import Blueprint, request
 
 from api.controllers import TagsController
-from decorators import admin_required, Cached, InvalidateCache, jsonify
+from decorators import admin_required, Cached, InvalidateCache
 
 tag_views = Blueprint('tag_views', __name__)
 
 
 @tag_views.route('/api/tags', methods=['GET'])
-@jsonify
 @Cached(timeout=43200)
 def get_all_tags():
     """ Returns all abuse tags
     """
     if 'tagType' in request.args:
-        code, resp = TagsController.index(tagType=request.args['tagType'])
+        return TagsController.index(tagType=request.args['tagType'])
     else:
-        code, resp = TagsController.index()
-    return code, resp
+        return TagsController.index()
 
 
 @tag_views.route('/api/tags/types', methods=['GET'])
-@jsonify
 @Cached(timeout=43200)
 def get_tag_type():
     """ Get status list for ticket or report
     """
-    return 200, TagsController.get_tag_type()
+    return TagsController.get_tag_type()
 
 
 @tag_views.route('/api/tags/<tag>', methods=['GET'])
-@jsonify
 def get_tag(tag=None):
     """ Return infos for a given tag
     """
-    code, resp = TagsController.show(tag)
-    return code, resp
+    return TagsController.show(tag)
 
 
 @tag_views.route('/api/tags', methods=['POST'])
-@jsonify
 @admin_required
 @InvalidateCache(routes=['/api/tags'])
 def create_tag():
     """ Create a new tags
     """
     body = request.get_json()
-    code, resp = TagsController.create(body)
-    return code, resp
+    return TagsController.create(body)
 
 
 @tag_views.route('/api/tags/<tag>', methods=['PUT'])
-@jsonify
 @admin_required
 @InvalidateCache(routes=['/api/tags'])
 def update_tag(tag=None):
     """ Update an existing tag
     """
     body = request.get_json()
-    code, resp = TagsController.update(tag, body)
-    return code, resp
+    return TagsController.update(tag, body)
 
 
 @tag_views.route('/api/tags/<tag>', methods=['DELETE'])
-@jsonify
 @admin_required
 @InvalidateCache(routes=['/api/tags'])
 def delete_tag(tag=None):
     """ Delete a given tag
     """
-    code, resp = TagsController.destroy(tag)
-    return code, resp
+    return TagsController.destroy(tag)

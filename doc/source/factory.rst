@@ -1,7 +1,12 @@
 Factory
 =======
 
-Factory
-------------------
-.. automodule:: factory.factory
+Implementation
+--------------------
+.. automodule:: factory.implementation
+    :members:
+
+TicketScheduling
+--------------------
+.. automodule:: factory.ticketscheduling
     :members:

@@ -19,7 +19,7 @@
 
 
 """
-    Defined Customer DAO abstract Class and related Defendant/Service class
+    Defines Customer DAO abstract Class and related Defendant/Service class
 """
 
 import abc
@@ -137,7 +137,7 @@ class CustomerDaoBase(object):
             :param list fqdn: List of fqdn
             :return: The result of the parsing of given items
             :rtype: dict
-            :raises CustomerDaoException: if any error occur
+            :raises `adapters.dao.customer.abstract.CustomerDaoException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'get_services_from_items'" % (cls))
@@ -150,7 +150,7 @@ class CustomerDaoBase(object):
             :param str customer_id: The reference to the customer
             :return: A `adapters.dao.customer.abstract.DefendantClass` instance
             :rtype: `adapters.dao.customer.abstract.DefendantClass`
-            :raises CustomerDaoException: if any error occur
+            :raises `adapters.dao.customer.abstract.CustomerDaoException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'get_customer_infos'" % (cls))
@@ -163,7 +163,7 @@ class CustomerDaoBase(object):
             :param str service_id: The reference to the service
             :return: A `adapters.dao.customer.abstract.ServiceClass` instance
             :rtype: `adapters.dao.customer.abstract.ServiceClass`
-            :raises CustomerDaoException: if any error occur
+            :raises `adapters.dao.customer.abstract.CustomerDaoException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'get_service_infos'" % (cls))
@@ -196,7 +196,7 @@ class CustomerDaoBase(object):
             :param str customer_id: The reference to the customer
             :return: The list of services
             :rtype: list
-            :raises CustomerDaoException: if any error occur
+            :raises `adapters.dao.customer.abstract.CustomerDaoException`: if any error occur
         """
         cls = self.__class__.__name__
         raise NotImplementedError("'%s' object does not implement the method 'get_customer_services'" % (cls))
@@ -204,6 +204,8 @@ class CustomerDaoBase(object):
 
 ###
 #     A DefendantClass : (see abuse.models to customize your DEFENDANT_REVISION_FIELDS)
+#
+#     E.g:
 #
 #     {
 #         'customerId': 'john.doe.123456',  # reference to customer uid in enterprise CRM/DB
@@ -254,6 +256,8 @@ class DefendantClass(dict):
 
 ###
 #    A Service : (see abuse.models to customize your SERVICE_FIELDS)
+#
+#    E.g:
 #
 #    {
 #        'serviceId': '123456',  # reference to service uid in enterprise CRM/DB

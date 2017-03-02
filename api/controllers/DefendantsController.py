@@ -23,18 +23,19 @@
 """
 
 from collections import Counter
-from time import mktime, time
+from time import mktime
 
 from django.core.exceptions import FieldError
 from django.db import IntegrityError
 from django.db.models import ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
+from werkzeug.exceptions import BadRequest, InternalServerError, NotFound
 
-from abuse.models import (Category, Defendant, DefendantComment,
-                          DefendantHistory, DefendantRevision, Report, Stat,
-                          Tag, Ticket)
+from abuse.models import (Defendant, DefendantComment,
+                          DefendantHistory, DefendantRevision,
+                          Report, Tag, Ticket)
 from adapters.dao.customer.abstract import CustomerDaoException
-from factory.factory import ImplementationFactory
+from factory.implementation import ImplementationFactory
 from utils import schema, utils
 from worker import database
 
@@ -48,7 +49,7 @@ def show(defendant_id):
     try:
         defendant = Defendant.objects.get(id=defendant_id)
     except (ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Defendant not found')
 
     # BTW, refresh defendant infos
     utils.default_queue.enqueue('database.refresh_defendant_infos', defendant_id=defendant.id)
@@ -74,7 +75,7 @@ def show(defendant_id):
     tags = Defendant.objects.get(id=defendant.id).tags.all()
     defendant_dict['tags'] = [model_to_dict(tag) for tag in tags]
 
-    return 200, defendant_dict
+    return defendant_dict
 
 
 def add_tag(defendant_id, body, user):
@@ -85,7 +86,7 @@ def add_tag(defendant_id, body, user):
         defendant = Defendant.objects.get(id=defendant_id)
 
         if defendant.__class__.__name__ != tag.tagType:
-            return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Invalid tag for defendant'}
+            raise BadRequest('Invalid tag for defendant')
 
         for defendt in Defendant.objects.filter(customerId=defendant.customerId):
 
@@ -100,10 +101,9 @@ def add_tag(defendant_id, body, user):
                 )
 
     except (KeyError, FieldError, IntegrityError, ObjectDoesNotExist, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Defendant or tag not found')
 
-    code, resp = show(defendant_id)
-    return code, resp
+    return show(defendant_id)
 
 
 def remove_tag(defendant_id, tag_id, user):
@@ -126,10 +126,9 @@ def remove_tag(defendant_id, tag_id, user):
                 )
 
     except (ObjectDoesNotExist, FieldError, IntegrityError, ValueError):
-        return 404, {'status': 'Not Found', 'code': 404}
+        raise NotFound('Defendant or tag not found')
 
-    code, resp = show(defendant_id)
-    return code, resp
+    return show(defendant_id)
 
 
 def get_or_create(customer_id=None):
@@ -145,7 +144,9 @@ def get_or_create(customer_id=None):
         defendant = Defendant.objects.get(customerId=customer_id)
     except (TypeError, ObjectDoesNotExist):
         try:
-            revision_infos = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_customer_infos(customer_id)
+            revision_infos = ImplementationFactory.instance.get_singleton_of(
+                'CustomerDaoBase'
+            ).get_customer_infos(customer_id)
             schema.valid_adapter_response('CustomerDaoBase', 'get_customer_infos', revision_infos)
             revision_infos.pop('customerId', None)
         except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound):
@@ -161,13 +162,26 @@ def get_or_create(customer_id=None):
 def get_defendant_top20():
     """ Get top 20 defendant with open tickets/reports
     """
-    ticket = Ticket.objects.filter(~Q(defendant=None), ~Q(status='Closed')).values_list('defendant__id', flat=True)
+    ticket = Ticket.objects.filter(
+        ~Q(defendant=None),
+        ~Q(status='Closed')
+    ).values_list(
+        'defendant__id',
+        flat=True
+    )
     ticket = Counter(ticket).most_common(20)
-    report = Report.objects.filter(~Q(defendant=None), ~Q(status='Archived')).values_list('defendant__id', flat=True)
+
+    report = Report.objects.filter(
+        ~Q(defendant=None),
+        ~Q(status='Archived')
+    ).values_list(
+        'defendant__id',
+        flat=True
+    )
     report = Counter(report).most_common(20)
 
     res = {'report': [], 'ticket': []}
-    for kind in res.keys():
+    for kind in res:
         for defendant_id, count in locals()[kind]:
             defendant = Defendant.objects.get(id=defendant_id)
             res[kind].append({
@@ -176,7 +190,7 @@ def get_defendant_top20():
                 'email': defendant.details.email,
                 'count': count
             })
-    return 200, res
+    return res
 
 
 def get_defendant_services(customer_id):
@@ -184,44 +198,11 @@ def get_defendant_services(customer_id):
         Get services for a defendant
     """
     try:
-        response = ImplementationFactory.instance.get_singleton_of('CustomerDaoBase').get_customer_services(customer_id)
+        response = ImplementationFactory.instance.get_singleton_of(
+            'CustomerDaoBase'
+        ).get_customer_services(customer_id)
         schema.valid_adapter_response('CustomerDaoBase', 'get_customer_services', response)
     except (CustomerDaoException, schema.InvalidFormatError, schema.SchemaNotFound) as ex:
-        return 500, {'status': 'Internal Server Error', 'code': 500, 'message': str(ex)}
+        return InternalServerError(str(ex))
 
-    return 200, response
-
-
-def get_defendant_stats(**kwargs):
-    """
-        Get abuse stats for a defendant
-    """
-    if 'defendant' in kwargs:
-        customer_id = kwargs['defendant']
-    else:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'No defendant specified'}
-
-    if 'nature' in kwargs:
-        nature = kwargs['nature']
-    else:
-        return 400, {'status': 'Bad Request', 'code': 400, 'message': 'No type specified'}
-
-    defendants = Defendant.objects.filter(customerId=customer_id)
-    if not len(defendants):
-        return 404, {'status': 'Not Found', 'code': 404}
-
-    resp = []
-    now = int(time())
-
-    for category in Category.objects.all():
-        data = {'name': category.name}
-        stats = Stat.objects.filter(defendant__in=defendants, category=category.name).order_by('date')
-        #  * 1000 for HighCharts
-        data['data'] = [[mktime(stat.date.timetuple()) * 1000, getattr(stat, nature)] for stat in stats]
-        try:
-            data['data'].append([now * 1000, data['data'][-1][1]])
-        except IndexError:
-            pass
-        resp.append(data)
-
-    return 200, resp
+    return response

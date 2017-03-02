@@ -25,62 +25,52 @@
 from flask import Blueprint, request
 
 from api.controllers import ThresholdController
-from decorators import admin_required, Cached, InvalidateCache, jsonify
+from decorators import admin_required, Cached, InvalidateCache
 
 threshold_views = Blueprint('threshold_views', __name__)
 
 
 @threshold_views.route('/api/admin/threshold', methods=['GET'])
-@jsonify
 @admin_required
 @Cached(timeout=43200)
 def get_all_threshold():
     """ Get all report's threshold
     """
-    code, resp = ThresholdController.get_all()
-    return code, resp
+    return ThresholdController.get_all()
 
 
 @threshold_views.route('/api/admin/threshold/<threshold>', methods=['GET'])
-@jsonify
 @admin_required
 def get_threshold(threshold=None):
     """ Get given threshold
     """
-    code, resp = ThresholdController.show(threshold)
-    return code, resp
+    return ThresholdController.show(threshold)
 
 
 @threshold_views.route('/api/admin/threshold', methods=['POST'])
-@jsonify
 @admin_required
 @InvalidateCache(routes=['/api/admin/threshold'])
 def create_threshold():
     """ Post a new threshold
     """
     body = request.get_json()
-    code, resp = ThresholdController.create(body)
-    return code, resp
+    return ThresholdController.create(body)
 
 
 @threshold_views.route('/api/admin/threshold/<threshold>', methods=['PUT'])
-@jsonify
 @admin_required
 @InvalidateCache(routes=['/api/admin/threshold'])
 def update_threshold(threshold=None):
     """ Update given threshold
     """
     body = request.get_json()
-    code, resp = ThresholdController.update(threshold, body)
-    return code, resp
+    return ThresholdController.update(threshold, body)
 
 
 @threshold_views.route('/api/admin/threshold/<threshold>', methods=['DELETE'])
-@jsonify
 @admin_required
 @InvalidateCache(routes=['/api/admin/threshold'])
 def delete_threshold(threshold=None):
     """ Delete given threshold
     """
-    code, resp = ThresholdController.destroy(threshold)
-    return code, resp
+    return ThresholdController.destroy(threshold)

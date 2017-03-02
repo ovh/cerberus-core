@@ -29,9 +29,10 @@ from functools import wraps
 from time import mktime
 
 from django.conf import settings
-from flask import g, Response, request
+from flask import g, request
 from voluptuous import Invalid, MultipleInvalid, Schema
 from werkzeug.contrib.cache import RedisCache, SimpleCache
+from werkzeug.exceptions import BadRequest, Forbidden
 
 from api.controllers import GeneralController
 from utils import logger
@@ -98,16 +99,15 @@ class InvalidateCache(object):
             response = func(*args, **kwargs)
             if not USE_CACHE:
                 return response
-            if response[0] == 200:
-                for path in self.routes:
-                    route = '%s,%s,%s' % (path, json.dumps(self.args), None)
+            for path in self.routes:
+                route = '%s,%s,%s' % (path, json.dumps(self.args), None)
+                Cache.delete(unicode(route))
+                user = kwargs.get('user', None) if self.clear_for_user else None
+                Logger.debug(unicode('clear %s from cache' % (route)))
+                if user:
+                    route = '%s,%s,%s' % (path, json.dumps(self.args), user)
                     Cache.delete(unicode(route))
-                    user = kwargs.get('user', None) if self.clear_for_user else None
                     Logger.debug(unicode('clear %s from cache' % (route)))
-                    if user:
-                        route = '%s,%s,%s' % (path, json.dumps(self.args), user)
-                        Cache.delete(unicode(route))
-                        Logger.debug(unicode('clear %s from cache' % (route)))
             return response
         return decorator
 
@@ -116,13 +116,13 @@ class TimestampJSONEncoder(json.JSONEncoder):
     """
         JSONEncoder subclass that convert datetime to timestamp
     """
-    def default(self, o):
+    def default(self, obj):
         # See "Date Time String Format" in the ECMA-262 specification.
-        if isinstance(o, datetime.datetime):
-            timestamp = int(mktime(o.timetuple()))
+        if isinstance(obj, datetime.datetime):
+            timestamp = int(mktime(obj.timetuple()))
             return timestamp
         else:
-            return super(TimestampJSONEncoder, self).default(o)
+            return super(TimestampJSONEncoder, self).default(obj)
 
 
 def admin_required(func):
@@ -131,7 +131,7 @@ def admin_required(func):
     @wraps(func)
     def check_admin(*args, **kwargs):
         if not g.user.operator.role.codename == 'admin':
-            return 403, {'status': 'Forbidden', 'code': 403, 'message': 'Forbidden'}
+            raise Forbidden('Forbidden')
         return func(*args, **kwargs)
     return check_admin
 
@@ -142,43 +142,33 @@ def perm_required(func):
     @wraps(func)
     def check_perm(*args, **kwargs):
         if 'report' in kwargs:
-            code, resp = GeneralController.check_perms(method=request.method, user=g.user, report=kwargs['report'])
-            if code != 200:
-                return code, resp
+            GeneralController.check_perms(
+                method=request.method,
+                user=g.user,
+                report=kwargs['report']
+            )
         if 'ticket' in kwargs:
-            code, resp = GeneralController.check_perms(method=request.method, user=g.user, ticket=kwargs['ticket'])
-            if code != 200:
-                return code, resp
+            GeneralController.check_perms(
+                method=request.method,
+                user=g.user,
+                ticket=kwargs['ticket']
+            )
         if 'defendant' in kwargs and request.method != 'GET':
-            code, resp = GeneralController.check_perms(method=request.method, user=g.user, defendant=kwargs['defendant'])
-            if code != 200:
-                return code, resp
+            GeneralController.check_perms(
+                method=request.method,
+                user=g.user,
+                defendant=kwargs['defendant']
+            )
         return func(*args, **kwargs)
     return check_perm
 
 
-def jsonify(func):
-    """ Make Json response
-    """
-    @wraps(func)
-    def decorated_function(*args, **kwargs):
-        retval = func(*args, **kwargs)
-        response = Response(
-            json.dumps(
-                retval[1],
-                cls=TimestampJSONEncoder,
-            ),
-            status=retval[0],
-            content_type='application/json'
-        )
-        return response
-    return decorated_function
-
-
 def validate_body(schema_desc):
-    """ Validate json body
+    """
+        Validate json body
     """
     def real_decorator(func):
+        @wraps(func)
         def wrapper(*args, **kwargs):
             try:
                 body = request.get_json()
@@ -186,8 +176,10 @@ def validate_body(schema_desc):
                     Schemas[func.__name__] = Schema(schema_desc, required=True)
                     Logger.debug(unicode('registering schema for %s' % (func.__name__)))
                 Schemas[func.__name__](body)
-            except (Invalid, MultipleInvalid):
-                return 400, {'status': 'Bad Request', 'code': 400, 'message': 'Missing or invalid field(s) in body'}
+            except (Invalid, MultipleInvalid) as ex:
+                Logger.error(unicode(ex))
+                msg = 'Missing or invalid field(s) in body, expecting {}'.format(schema_desc)
+                raise BadRequest(msg)
             return func(*args, **kwargs)
         return wrapper
     return real_decorator

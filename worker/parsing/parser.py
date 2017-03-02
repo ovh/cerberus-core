@@ -27,11 +27,9 @@ from __future__ import unicode_literals
 import glob
 import hashlib
 import imp
-import inspect
 import mimetypes
 import os
 import re
-import sys
 import time
 from email.errors import HeaderParseError
 from email.Header import decode_header
@@ -41,10 +39,7 @@ from email.utils import mktime_tz, parsedate_tz
 from bs4 import BeautifulSoup
 from django.conf import settings
 from django.db.models import ObjectDoesNotExist
-
-CURRENTDIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-PARENTDIR = os.path.dirname(CURRENTDIR)
-sys.path.insert(0, PARENTDIR)
+from django.utils.text import get_valid_filename
 
 import regexp
 from abuse.models import Category, Provider
@@ -57,7 +52,8 @@ TEMPLATE_DIR = '/templates'
 
 class ParsedEmail(dict):
     """
-        An abuse parsed_email (syntactic sugar of dict), not using namedtuple because of dynamic setattr
+        An abuse parsed_email (syntactic sugar of dict),
+        not using namedtuple because of dynamic setattr
     """
     def __init__(self):
         self.category = 'Other'
@@ -85,7 +81,7 @@ class EmailParser(object):
 
     def __init__(self):
         self._parser = Parser()
-        self._templates = self.__load_templates()
+        self._templates = self._load_templates()
 
     def parse(self, content):
         """
@@ -93,7 +89,7 @@ class EmailParser(object):
 
             :param str content: The raw email
             :rtype: `worker.parsing.parser.ParsedEmail`
-            :returns: The parsed email
+            :return: The parsed email
         """
 
         parsed_email = ParsedEmail()
@@ -112,7 +108,6 @@ class EmailParser(object):
         setattr(parsed_email, 'recipients', get_recipients_from_headers(headers))
         setattr(parsed_email, 'subject', get_subject_from_headers(headers))
         setattr(parsed_email, 'trusted', is_provider_trusted(headers))
-        setattr(parsed_email, 'ack', is_email_ack(parsed_email.provider, parsed_email.subject, body))
 
         content_to_parse = parsed_email.subject + '\n' + parsed_email.body
         templates = get_ordered_template_names_list(parsed_email, content_to_parse)
@@ -126,20 +121,28 @@ class EmailParser(object):
             if any((parsed_email.urls, parsed_email.ips, parsed_email.fqdn)) or template.get('fallback') is False:
                 break
 
+        # Try attachments
+        if not any((parsed_email.urls, parsed_email.ips, parsed_email.fqdn)):
+            template = self.get_template('default')
+            for attachment in parsed_email.attachments:
+                self.update_parsed_email(parsed_email, attachment['content'], template)
+                if any((parsed_email.urls, parsed_email.ips, parsed_email.fqdn)):
+                    break
+
         # Checking if a default category is set for this provider
         try:
             prov = Provider.objects.get(email=parsed_email.provider)
-            parsed_email.category = prov.defaultCategory_id if prov.defaultCategory_id else parsed_email.category
+            parsed_email.category = prov.defaultCategory_id or parsed_email.category
         except (KeyError, ObjectDoesNotExist):
             pass
 
         # If no category, checking if provider email match a generic provider
         if parsed_email.category not in CATEGORIES:
-            for reg, val in regexp.PROVIDERS_GENERIC.iteritems():  # For 123854689@spamcop for example
+            for reg, val in regexp.PROVIDERS_GENERIC.iteritems():  # E.g: 123854689@spamcop
                 if reg.match(parsed_email.provider):
                     try:
                         prov = Provider.objects.get(email=val)
-                        parsed_email.category = prov.defaultCategory_id if prov.defaultCategory_id else DEFAULT_CATEGORY
+                        parsed_email.category = prov.defaultCategory_id or DEFAULT_CATEGORY
                         break
                     except (KeyError, ObjectDoesNotExist):
                         parsed_email.category = DEFAULT_CATEGORY
@@ -171,7 +174,7 @@ class EmailParser(object):
 
             :param str raw: The raw email
             :rtype: tuple
-            :returns: The decoded body and a list of attachments
+            :return: The decoded body and a list of attachments
         """
         messages = self._parser.parsestr(raw)
         attachments = []
@@ -201,7 +204,10 @@ class EmailParser(object):
                 content = message.as_string()
 
             if content:
-                body += utils.decode_every_charset_in_the_world(content, message.get_content_charset())
+                body += utils.decode_every_charset_in_the_world(
+                    content,
+                    message.get_content_charset()
+                )
 
         return body, attachments
 
@@ -214,7 +220,7 @@ class EmailParser(object):
 
             :param str provider: The email of the provider
             :rtype: dict:
-            :returns: The corresponding parsing template if exists
+            :return: The corresponding parsing template if exists
         """
         template = None
         try:
@@ -242,19 +248,19 @@ class EmailParser(object):
                         res = re.findall(val['pattern'], content, re.IGNORECASE)
                     if res:
                         if 'transform' in val:
-                            res = self.__transform(res[0])
+                            res = self._transform(res[0])
                         setattr(parsed_email, key, res)
                 elif 'value' in val:
                     setattr(parsed_email, key, val['value'])
         except AttributeError:
             pass
 
-    def __load_templates(self):
+    def _load_templates(self):
         """
             Loads provider template from TEMPLATE_DIR
 
             :rtype: dict:
-            :returns: All templates available in TEMPLATE_DIR
+            :return: All templates available in TEMPLATE_DIR
         """
         template_base = os.path.dirname(os.path.realpath(__file__)) + TEMPLATE_DIR
         modules = glob.glob(os.path.join(template_base, '*.py'))
@@ -268,13 +274,13 @@ class EmailParser(object):
 
         return templates
 
-    def __transform(self, content):
+    def _transform(self, content):
         """
             Try to get parsed_email category with defined keywords
 
             :param str content: The content to parse
             :rtype: str
-            :returns: The category (or None if not identified)
+            :return: The category (or None if not identified)
 
         """
         if isinstance(content, tuple):
@@ -299,7 +305,7 @@ def get_sender_from_headers(headers):
 
         :param `Message` headers: The SMTP headers of the email
         :rtype: str
-        :returns: The email of the sender
+        :return: The email of the sender
     """
     provider = 'unknown@provider.com'
     from_part = []
@@ -307,7 +313,7 @@ def get_sender_from_headers(headers):
         decodefrag = decode_header(headers['From'])
         for line, encoding in decodefrag:
             enc = 'iso-8859-11' if encoding == 'windows-874' else encoding
-            enc = 'utf-8' if enc is None else enc
+            enc = enc or 'utf-8'
             from_part.append(line.decode(enc, 'replace'))
         sender = ''.join(from_part)
         line = regexp.EMAIL.search(sender)
@@ -325,7 +331,7 @@ def get_recipients_from_headers(headers):
 
         :param `Message` headers: The SMTP headers of the email
         :rtype: list
-        :returns: The list of recipients
+        :return: The list of recipients
     """
     recipients = []
 
@@ -333,7 +339,7 @@ def get_recipients_from_headers(headers):
         if headers.get(key):
             decodefrag = decode_header(headers[key])
             for line, encoding in decodefrag:
-                enc = 'utf-8' if encoding is None else encoding
+                enc = encoding or 'utf-8'
                 recps = line.decode(enc, 'replace').split(',')
                 for recp in recps:
                     line = regexp.EMAIL.search(recp)
@@ -348,7 +354,7 @@ def get_date_from_headers(headers):
 
         :param `Message` headers: The SMTP headers of the email
         :rtype: datetime
-        :returns: The datetime
+        :return: The datetime
     """
     try:
         date = headers.get('Received')
@@ -365,7 +371,7 @@ def get_subject_from_headers(headers):
 
         :param `Message` headers: The SMTP headers of the email
         :rtype: str
-        :returns: The subject of the email
+        :return: The subject of the email
     """
     subject = ''
     subject_part = []
@@ -389,7 +395,7 @@ def get_received_from_headers(headers):
 
         :param `Message` headers: The SMTP headers of the email
         :rtype: list
-        :returns: The list of received emails
+        :return: The list of received emails
     """
     result = []
     if headers.get('Received'):
@@ -397,7 +403,8 @@ def get_received_from_headers(headers):
             if re.search('^from', current):
                 # Only keep dns and ip once
                 current = utils.decode_every_charset_in_the_world(current)
-                final = current.splitlines()[0].split(";")[0].replace("from ", "").replace("localhost", "").replace("by", "")
+                final = current.splitlines()[0].split(";")[0].replace("from ", "")
+                final = final.replace("localhost", "").replace("by", "")
                 result.append(final)
 
     return result
@@ -409,7 +416,7 @@ def is_provider_trusted(headers):
 
         :param `Message` headers: The SMTP headers of the email
         :rtype: bool
-        :returns: If the header is present or not
+        :return: If the header is present or not
     """
     if not settings.GENERAL_CONFIG.get('magic_smtp_header'):
         return False
@@ -423,7 +430,7 @@ def parse_attachment(part):
 
         :param `Message` part: A `Message`
         :rtype: list
-        :returns: The list of attachments
+        :return: The list of attachments
     """
     attachment = {}
     attachment['content_type'] = part.get_content_type()
@@ -442,7 +449,7 @@ def parse_attachment(part):
             if extension:
                 filename += extension
 
-    attachment['filename'] = utils.decode_every_charset_in_the_world(filename)
+    attachment['filename'] = get_valid_filename(utils.decode_every_charset_in_the_world(filename))
     return attachment
 
 
@@ -453,7 +460,10 @@ def clean_parsed_email_items(parsed_email):
         :param `worker.parsing.parser.ParsedEmail` parsed_email: The parsed email
     """
     for attrib in [a for a in ['urls', 'ips', 'fqdn'] if getattr(parsed_email, a)]:
-        setattr(parsed_email, attrib, [__clean_item(item, attrib) for item in getattr(parsed_email, attrib)])
+        items = []
+        for item in getattr(parsed_email, attrib):
+            items.append(_clean_item(item, attrib))
+        setattr(parsed_email, attrib, items)
 
     # Clean duplicates
     for att in parsed_email.keys():
@@ -462,24 +472,35 @@ def clean_parsed_email_items(parsed_email):
 
     # Remove unwanted ip_addr
     if getattr(parsed_email, 'ips') and len(parsed_email.ips):
-        parsed_email.ips = [ip_addr for ip_addr in parsed_email.ips if utils.is_valid_ipaddr(ip_addr)]
-        parsed_email.ips = [ip_addr for ip_addr in parsed_email.ips if not utils.is_ipaddr_ignored(ip_addr)]
+        valid = []
+        for ip_addr in parsed_email.ips:
+            if utils.is_valid_ipaddr(ip_addr) and not utils.is_ipaddr_ignored(ip_addr):
+                valid.append(ip_addr)
+        parsed_email.ips = valid
 
     # If parsed ip/fqdn are present in url, only keeping url
     if getattr(parsed_email, 'urls') and len(parsed_email.urls):
         urls = ' '.join(parsed_email.urls)
         if getattr(parsed_email, 'ips'):
-            parsed_email.ips = [ip_addr for ip_addr in parsed_email.ips if not re.search(regexp.PROTO_RE + re.escape(ip_addr), urls, re.I)]
+            valid = []
+            for ip_addr in parsed_email.ips:
+                if not re.search(regexp.PROTO_RE + re.escape(ip_addr), urls, re.I):
+                    valid.append(ip_addr)
+            parsed_email.ips = valid
         if getattr(parsed_email, 'fqdn'):
-            parsed_email.fqdn = [fqdn for fqdn in parsed_email.fqdn if not re.search(regexp.PROTO_RE + re.escape(fqdn), urls, re.I)]
+            valid = []
+            for fqdn in parsed_email.fqdn:
+                if not re.search(regexp.PROTO_RE + re.escape(fqdn), urls, re.I):
+                    valid.append(fqdn)
+            parsed_email.fqdn = valid
 
 
-def __clean_item(item, attrib):
+def _clean_item(item, attrib):
     """ Remove extra stuff from item
 
         :param str item: A `worker.parsing.parser.ParsedEmail` item
         :rtype: str
-        :returns: The cleaned item
+        :return: The cleaned item
     """
     item = item.strip()
     item = item.replace(' ', '')
@@ -504,7 +525,7 @@ def get_online_logs(logs):
 
         :param `worker.parsing.parser.ParsedEmail` parsed_email: The parsed email
         :rtype: dict
-        :returns: The attachment of None if failed to retreive
+        :return: The attachment of None if failed to retreive
     """
     attachment = {'content_type': 'text/plain', 'filename': 'online_logs.txt'}
     try:
@@ -521,26 +542,6 @@ def get_online_logs(logs):
         return None
 
 
-def is_email_ack(provider, subject, body):
-    """
-        Checking if email is not an automatic answer
-
-        :param str provider: The email of the provider
-        :param str subject: The subject of the email
-        :param str body: The body of the email
-        :rtype: bool
-        :returns: If it's a automatic answer
-    """
-    resp = False
-    if provider in regexp.ACK_RE:
-        subject_re = regexp.ACK_RE[provider]['SUBJECT']
-        body_re = regexp.ACK_RE[provider]['BODY']
-        if re.search(body_re, body, re.IGNORECASE) and re.search(subject_re, subject, re.IGNORECASE):
-            resp = True
-
-    return resp
-
-
 def get_ordered_template_names_list(parsed_email, content_to_parse):
     """
         Try to identify items/category with templates based on provider/recipients/keyword infos
@@ -549,8 +550,10 @@ def get_ordered_template_names_list(parsed_email, content_to_parse):
     if parsed_email.recipients:
         template_names = parsed_email.recipients + template_names
 
-    for keyword in ['acns', 'x-arf']:
+    for keyword in ('acns', 'x-arf', 'fail2ban'):
         if keyword in content_to_parse.lower():
             template_names.append(keyword)
+
     template_names.append('default')
+
     return template_names
