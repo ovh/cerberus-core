@@ -22,17 +22,13 @@
     Phishing functions for worker
 """
 
-from datetime import datetime
-
 from django.conf import settings
-from django.core.exceptions import ValidationError
-from django.core.validators import validate_email
 from django.db.models import ObjectDoesNotExist
 
 import common
 import database
 
-from abuse.models import Proof, Report, Tag, Ticket
+from abuse.models import Report, Tag
 from adapters.services.phishing.abstract import PhishingServiceException
 from factory.implementation import ImplementationFactory as implementations
 from worker import Logger
@@ -40,9 +36,9 @@ from worker import Logger
 DOWN_THRESHOLD = settings.GENERAL_CONFIG['phishing']['down_threshold']
 
 
-# XXX: rewrite
 def check_if_all_down(report=None, last=5, try_screenshot=True):
-    """ Check if all urls items for a report (phishing for example) are 'down'.
+    """
+        Check if all urls items for a report (phishing for example) are 'down'.
 
         :param `abuse.models.Report` report: A Cerberus `abuse.models.Report` instance to ping
         :param int last: Look for the n last record in db
@@ -54,13 +50,26 @@ def check_if_all_down(report=None, last=5, try_screenshot=True):
         try:
             report = Report.objects.get(id=report)
         except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-            Logger.error(unicode('Report %d cannot be found in DB. Skipping...' % (report)))
-            return
+            raise AssertionError('Report %d cannot be found in DB')
 
+    # Check if report has URL items
     items = report.reportItemRelatedReport.all()
     items = list(set([item for item in items if item.itemType == 'URL']))
-    if not items:
+    if not items:  # No urls items found
         return False
+
+    # Get current items score
+    items_score = _get_items_score(report, items, last, try_screenshot)
+
+    if all(v >= DOWN_THRESHOLD for v in items_score.itervalues()):
+        Logger.error(unicode('All urls are down for report %d' % (report.id)))
+        return True
+
+    Logger.error(unicode('Some url are still up for report %d' % (report.id)))
+    return False
+
+
+def _get_items_score(report, items, last=5, try_screenshot=True):
 
     country = report.defendant.details.country if report.defendant else 'FR'
 
@@ -76,12 +85,7 @@ def check_if_all_down(report=None, last=5, try_screenshot=True):
         for score in status_score:
             scoring[item.id] += score
 
-    if all(v >= DOWN_THRESHOLD for v in scoring.itervalues()):
-        Logger.error(unicode('All urls are down for report %d' % (report.id)))
-        return True
-
-    Logger.error(unicode('Some url are still up for report %d' % (report.id)))
-    return False
+    return scoring
 
 
 def _update_item_status(item, country='FR', try_screenshot=True):
@@ -110,10 +114,9 @@ def _update_item_status(item, country='FR', try_screenshot=True):
         pass
 
 
-# XXX: rewrite
 def close_because_all_down(report=None, denied_by=None):
     """
-        Create and close a ticket when all report's items are down
+        Get or create a ticket and close it because all report's items are down
 
         :param `abuse.models.Report` report: A Cerberus `abuse.models.Report` instance
         :param int denied_by: The id of the `abuse.models.User`
@@ -123,101 +126,33 @@ def close_because_all_down(report=None, denied_by=None):
         try:
             report = Report.objects.get(id=report)
         except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-            Logger.error(unicode('Report %d cannot be found in DB. Skipping...' % (report)))
-            return
+            raise AssertionError('Report %d cannot be found in DB' % (report))
 
     if not report.ticket:
         report.ticket = common.create_ticket(report, denied_by)
         report.save()
 
-    # Add temp proof(s) for mail content
-    temp_proofs = []
-    if not report.ticket.proof.count():
-        temp_proofs = common.get_temp_proofs(report.ticket)
+    inject_proof = not bool(report.ticket.proof.count())
 
-    # Send email to Provider
-    try:
-        validate_email(report.provider.email.strip())
-        Logger.info(unicode('Sending email to provider'))
-        _send_email(report.ticket, report.provider.email, settings.CODENAMES['no_more_content'])
-        report.ticket.save()
-        Logger.info(unicode('Mail sent to provider'))
-        implementations.instance.get_singleton_of('MailerServiceBase').close_thread(report.ticket)
-
-        # Delete temp proof(s)
-        for proof in temp_proofs:
-            Proof.objects.filter(id=proof.id).delete()
-    except (AttributeError, TypeError, ValueError, ValidationError):
-        pass
-
-    # Closing ticket and add tags
-    common.close_ticket(report.ticket, resolution_codename=settings.CODENAMES['no_more_content'])
-    report.ticket.tags.remove(Tag.objects.get(name=settings.TAGS['phishing_autoreopen']))
-    report.ticket.tags.add(Tag.objects.get(name=settings.TAGS['phishing_autoclosed']))
-    Logger.info(unicode('Ticket %d and report %d closed' % (report.ticket.id, report.id)))
-
-
-def _send_email(ticket, email, codename, lang='EN'):
-    """
-        Wrapper to send email
-    """
+    # Send email to provider
     common.send_email(
-        ticket,
-        [email],
-        codename,
-        lang=lang,
+        report.ticket,
+        [report.provider.email],
+        settings.CODENAMES['no_more_content'],
+        inject_proof=inject_proof
     )
 
-
-# XXX: rewrite
-def block_url_and_mail(ticket_id=None, report_id=None):
-    """
-        Block url with PhishingService and send mail to defendant
-
-        :param int ticket_id: The id of the Cerberus `abuse.models.Ticket`
-        :param int report_id: The id of the Cerberus `abuse.models.Report`
-    """
-    if not isinstance(ticket_id, Ticket):
-        try:
-            ticket = Ticket.objects.get(id=ticket_id)
-            if not ticket.defendant or not ticket.service:
-                Logger.error(unicode('Ticket %d has no defendant/service' % (ticket_id)))
-                return
-        except (ObjectDoesNotExist, ValueError):
-            Logger.error(unicode('Ticket %d cannot be found in DB. Skipping...' % (ticket_id)))
-            return
-    else:
-        ticket = ticket_id
-
-    if not isinstance(report_id, Report):
-        try:
-            report = Report.objects.get(id=report_id)
-        except (ObjectDoesNotExist, ValueError):
-            Logger.error(unicode('Report %d cannot be found in DB. Skipping...' % (report_id)))
-            return
-    else:
-        report = report_id
-
-    for item in report.reportItemRelatedReport.filter(itemType='URL'):
-        implementations.instance.get_singleton_of('PhishingServiceBase').block_url(item.rawItem, item.report)
-
-    database.add_phishing_blocked_tag(report)
-    _send_email(
-        ticket,
-        report.defendant.details.email,
-        settings.CODENAMES['phishing_blocked'],
-        report.defendant.details.lang
+    # Close ticket
+    common.close_ticket(
+        report.ticket,
+        resolution_codename=settings.CODENAMES['no_more_content']
     )
-    ticket = Ticket.objects.get(id=ticket.id)
 
-    ticket_snooze = settings.GENERAL_CONFIG['phishing']['wait']
-    if not any((ticket.status == 'WaitingAnswer', ticket.snoozeDuration, ticket.snoozeStart)):
-        ticket.previousStatus = ticket.status
-        ticket.status = 'WaitingAnswer'
-        ticket.snoozeDuration = ticket_snooze
-        ticket.snoozeStart = datetime.now()
-
-    ticket.save()
+    # Add tag
+    report.ticket.tags.add(Tag.objects.get(
+        name=settings.TAGS['phishing_autoclosed'],
+        tagType='Ticket'
+    ))
 
 
 def unblock_url(url=None):
@@ -261,5 +196,9 @@ def feedback_to_phishing_service(screenshot_id=None, feedback=None):
         :param str screenshot_id: The uuid of the screenshot_id
         :param bool feedback: Yes or not it's a phishing url
     """
-    implementations.instance.get_singleton_of('PhishingServiceBase').post_feedback(screenshot_id, feedback)
-    Logger.debug(unicode('Feedback %s sent for %s' % (feedback, screenshot_id)))
+    implementations.instance.get_singleton_of(
+        'PhishingServiceBase'
+    ).post_feedback(
+        screenshot_id,
+        feedback
+    )

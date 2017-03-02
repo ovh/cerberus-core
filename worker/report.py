@@ -26,14 +26,12 @@ import hashlib
 from datetime import datetime
 
 from django.conf import settings
-from django.core.exceptions import ValidationError
-from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import ObjectDoesNotExist
 
 import common
 import database
-from abuse.models import (AttachedDocument, Proof, Report,
+from abuse.models import (AttachedDocument, Report,
                           ReportItem, User, BusinessRules,
                           BusinessRulesHistory)
 from adapters.services.search.abstract import SearchServiceException
@@ -82,7 +80,7 @@ def create_from_email(email_content=None, filename=None, ack_lang='EN'):
 
     if not filename:  # Worker have to push email to Storage Service
         filename = hashlib.sha256(email_content).hexdigest()
-        _save_email(filename, email_content)
+        common.save_email(filename, email_content)
 
     # Parse email content
     abuse_report = Parser.parse(email_content)
@@ -392,18 +390,6 @@ def _save_attachments(filename, attachments, reports=None, tickets=None):
                 ticket.attachments.add(attachment_obj)
 
 
-def _save_email(filename, email):
-    """
-        Push email storage service
-
-        :param str filename: The filename of the email
-        :param str email: The content of the email
-    """
-    with implementations.instance.get_instance_of('StorageServiceBase', common.STORAGE_DIR) as cnx:
-        cnx.write(filename, email)
-        Logger.info(unicode('Email %s pushed to Storage Service' % (filename)))
-
-
 def _add_report_tags(report, recipients):
     """
         Add tags to report based on provider, subject etc ...
@@ -536,30 +522,14 @@ def validate_without_defendant(report_id=None, user_id=None):
 
 def _send_emails_invalid_report(report):
 
-    temp_proofs = []
-    if not report.ticket.proof.count():
-        temp_proofs = common.get_temp_proofs(report.ticket)
+    inject_proof = not bool(report.ticket.proof.count())
 
-    # Send email to Provider
-    try:
-        validate_email(report.provider.email.strip())
-        Logger.info(unicode('Sending email to provider'))
-        common.send_email(
-            report.ticket,
-            [report.provider.email],
-            settings.CODENAMES['not_managed_ip']
-        )
-        report.ticket.save()
-        Logger.info(unicode('Mail sent to provider'))
-        implementations.instance.get_singleton_of(
-            'MailerServiceBase'
-        ).close_thread(report.ticket)
-
-        # Delete temp proof(s)
-        for proof in temp_proofs:
-            Proof.objects.filter(id=proof.id).delete()
-    except (AttributeError, TypeError, ValueError, ValidationError):
-        pass
+    common.send_email(
+        report.ticket,
+        [report.provider.email],
+        settings.CODENAMES['not_managed_ip'],
+        inject_proof=inject_proof
+    )
 
 
 @transaction.atomic

@@ -33,6 +33,7 @@ COPY requirements /requirements
 COPY requirements.txt /requirements.txt
 COPY utils /utils
 COPY worker /worker
+COPY docker/settings.py /config/settings.py
 
 COPY docker/cerberus-ux.tar.gz /cerberus-ux.tar.gz
 

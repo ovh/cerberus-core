@@ -7,7 +7,7 @@
 import re
 from datetime import datetime, timedelta
 
-from abuse.models import Proof
+from abuse.models import Proof, Tag
 from django.conf import settings
 from factory.implementation import ImplementationFactory as implementations
 from utils import utils
@@ -80,9 +80,6 @@ class ReportActions(BaseActions):
     def close_ticket(self, resolution=None, keep_update=False):
         """
         """
-        from worker import Logger
-        Logger.debug(resolution)
-        Logger.debug(settings.CODENAMES[resolution])
         common.close_ticket(
             self.ticket,
             resolution_codename=settings.CODENAMES[resolution]
@@ -313,19 +310,30 @@ class ReportActions(BaseActions):
             )
 
     @rule_action()
-    def phishing_block_url_and_mail(self):
+    def block_report_url(self):
         """
         """
-        phishing.block_url_and_mail(
-            ticket_id=self.ticket,
-            report_id=self.report
-        )
+        items = self.report.reportItemRelatedReport.filter(itemType='URL')
+
+        for item in items:
+            implementations.instance.get_singleton_of(
+                'PhishingServiceBase'
+            ).block_url(
+                item.rawItem,
+                item.report
+            )
 
     @rule_action()
     def phishing_close_because_all_down(self):
         """
         """
         phishing.close_because_all_down(report=self.report)
+
+    @rule_action(params=[{'fieldType': FIELD_TEXT, 'name': 'tag_name'}])
+    def add_report_tag(self, tag_name):
+
+        tag = Tag.objects.get(tagType='Report', name=settings.TAGS[tag_name])
+        self.report.tags.add(tag)
 
     @rule_action()
     def do_nothing(self):

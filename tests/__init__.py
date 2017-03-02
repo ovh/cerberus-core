@@ -63,6 +63,7 @@ class GlobalTestCase(TestCase):
 
         for tag in ['copyright:autoclosed', 'phishing:autoblocked', 'phishing:autoclosed', 'phishing:autoreopened']:
             Tag.objects.create(codename=tag, name=tag, tagType='Ticket')
+            Tag.objects.create(codename=tag, name=tag, tagType='Report')
 
         Resolution.objects.create(codename='no_more_content')
         Resolution.objects.create(codename='invalid')

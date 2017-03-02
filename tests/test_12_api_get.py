@@ -88,10 +88,12 @@ class ApiTestCase(GlobalTestCase):
             '/api/users/me',
         )
 
+    @patch('utils.utils.get_user_notifications')
     @patch('rq_scheduler.scheduler.Scheduler.enqueue_in')
-    def test_static_get(self, mock_rq):
+    def test_static_get(self, mock_rq, mock_notifications):
 
         mock_rq.return_value = None
+        mock_notifications.return_value = []
 
         response = self.tester.post(
             '/api/auth',

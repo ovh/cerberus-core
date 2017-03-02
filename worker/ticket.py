@@ -34,9 +34,9 @@ import common
 import database
 import phishing
 
-from abuse.models import (Comment, ContactedProvider, Report,
-                          Tag, Ticket, TicketComment,
-                          BusinessRules, ServiceActionJob, User)
+from abuse.models import (ContactedProvider, Report,
+                          Tag, Ticket, User,
+                          BusinessRules, ServiceActionJob)
 from factory.implementation import ImplementationFactory as implementations
 from utils import utils
 from workflows.actions import ReportActions
@@ -67,8 +67,7 @@ def delay_jobs(ticket=None, delay=None, back=True):
         :param bool back: In case of unpause, reschedule jobs with effectively elapsed time
     """
     if not delay:
-        Logger.error(unicode('Missing delay. Skipping...'))
-        return
+        raise AssertionError('Missing delay')
 
     if not isinstance(ticket, Ticket):
         try:
@@ -91,64 +90,36 @@ def delay_jobs(ticket=None, delay=None, back=True):
             )
 
 
-# XXX: rewrite
 def timeout(ticket_id=None):
     """
-        If ticket timeout , apply action on service (if defendant not internal/VIP)
-        and ticket is not assigned
+        If ticket timeout, apply action on service
 
         :param int ticket_id: The id of the Cerberus `abuse.models.Ticket`
     """
-    try:
-        ticket = Ticket.objects.get(id=ticket_id)
-    except (AttributeError, ObjectDoesNotExist, ValueError):
-        Logger.error(unicode('Ticket %d cannot be found in DB. Skipping...' % (ticket_id)))
-        return
+    ticket = Ticket.objects.get(id=ticket_id)
 
-    if not _check_timeout_ticket_conformance(ticket):
+    if not _check_timeout_conformance(ticket):
         return
 
     action = implementations.instance.get_singleton_of(
         'ActionServiceBase'
     ).get_action_for_timeout(ticket)
-    if not action:
-        Logger.error(unicode('Ticket {} service {}: action not found, exiting ...'.format(
-            ticket_id,
-            ticket.service.componentType
-        )))
-        return
 
-    # Maybe customer fixed, closing ticket
-    if ticket.category.name.lower() == 'phishing' and phishing.is_all_down_for_ticket(ticket):
-        Logger.info(unicode('All items are down for ticket %d, closing ticket' % (ticket_id)))
-        _close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False)
-        return
+    if not action:
+        raise AssertionError('No actions found for ticket {}'.format(ticket_id))
 
     # Getting ip for action
     ip_addr = get_ip_for_action(ticket)
     if not ip_addr:
         Logger.error(unicode('Error while getting IP for action, exiting'))
         common.set_ticket_status(ticket, 'ActionError', reset_snooze=True)
-        comment = Comment.objects.create(
-            user=common.BOT_USER,
-            comment='None or multiple ip addresses for this ticket'
-        )
-        TicketComment.objects.create(ticket=ticket, comment=comment)
-        database.log_action_on_ticket(
-            ticket=ticket,
-            action='add_comment'
-        )
-        ticket.save()
+        database.add_ticket_comment(ticket, 'None or multiple ip addresses for this ticket')
         return
 
     # Apply action
     service_action_job = _apply_timeout_action(ticket, ip_addr, action)
     if not service_action_job.result:
-        Logger.debug(unicode('Error while executing service action, exiting'))
-        return
-
-    Logger.info(unicode('All done, sending close notification to provider(s)'))
-    ticket = Ticket.objects.get(id=ticket.id)
+        raise AssertionError('Error while executing service action')
 
     # Closing ticket
     _close_ticket(ticket, reason=settings.CODENAMES['fixed'], service_blocked=True)
@@ -156,7 +127,7 @@ def timeout(ticket_id=None):
 
 def get_ip_for_action(ticket):
     """
-        Return the IP address attached to given ̀`abuse.models.Ticket`.
+        Return the IP address attached to given `abuse.models.Ticket`.
         If multiple are detected, return None
 
         :param `abuse.models.Ticket` ticket: The `abuse.models.Ticket` instance
@@ -189,7 +160,7 @@ def get_ip_for_action(ticket):
     return ips[0]
 
 
-def _check_timeout_ticket_conformance(ticket):
+def _check_timeout_conformance(ticket):
 
     if not ticket.defendant or not ticket.service:
         Logger.error(unicode(
@@ -197,15 +168,14 @@ def _check_timeout_ticket_conformance(ticket):
         )
         return False
 
-    if ticket.status.lower() in ['closed', 'answered']:
-        Logger.error(unicode(
-            'Ticket %d is invalid (no defendant/service or not Alarm), Skipping...' % (ticket.id))
-        )
+    if ticket.category.name.lower() == 'phishing' and phishing.is_all_down_for_ticket(ticket):
+        Logger.info(unicode('All items are down for ticket %d, closing ticket' % (ticket.id)))
+        _close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False)
         return False
 
-    if ticket.category.name.lower() not in ['phishing', 'copyright', 'illegal']:
+    if ticket.status.lower() in ('closed', 'answered'):
         Logger.error(unicode(
-            'Ticket %d is in wrong category (%s, Skipping...' % (ticket.id, ticket.category.name))
+            'Ticket %d is invalid (no defendant/service or not Alarm), Skipping...' % (ticket.id))
         )
         return False
 
@@ -222,7 +192,7 @@ def _check_timeout_ticket_conformance(ticket):
 
 def _apply_timeout_action(ticket, ip_addr, action):
 
-    Logger.info(unicode('Executing action %s for ticket %d' % (action.name, ticket.id)))
+    Logger.info(unicode('Processing action %s for ticket %d' % (action.name, ticket.id)))
     ticket.action = action
     database.log_action_on_ticket(
         ticket=ticket,
@@ -261,9 +231,7 @@ def _apply_timeout_action(ticket, ip_addr, action):
 
 
 def _close_ticket(ticket, reason=settings.CODENAMES['fixed_customer'], service_blocked=False):
-    """
-        Close ticket and add autoclosed Tag
-    """
+
     # Send "case closed" email to already contacted Provider(s)
     providers_emails = ContactedProvider.objects.filter(
         ticket_id=ticket.id
@@ -305,7 +273,7 @@ def _add_timeout_tag(ticket):
         tag_name = settings.TAGS['copyright_autoclosed']
 
     if tag_name:
-        ticket.tags.add(Tag.objects.get(name=tag_name))
+        ticket.tags.add(Tag.objects.get(name=tag_name, tagType='Ticket'))
         ticket.save()
 
         database.log_action_on_ticket(
@@ -325,21 +293,12 @@ def create_ticket_from_phishtocheck(report=None, user=None):
     report = Report.objects.get(id=report)
     user = User.objects.get(id=user)
 
-    rule = BusinessRules.objects.get(name='phishing_up')
-    config = rule.config
-
-    conditions = []
-    for cond in config['conditions']['all']:
-        if cond['name'] not in ('all_items_phishing', 'urls_down'):
-            conditions.append(cond)
-
-    config['conditions']['all'] = conditions
-
+    rule_config = _get_phishtocheck_rule_config()
     variables = ReportVariables(None, report, None, is_trusted=True)
     actions = ReportActions(report, None, 'EN')
 
     rule_applied = run(
-        config,
+        rule_config,
         defined_variables=variables,
         defined_actions=actions,
     )
@@ -353,6 +312,20 @@ def create_ticket_from_phishtocheck(report=None, user=None):
         user=user,
         report=report
     )
+
+
+def _get_phishtocheck_rule_config():
+
+    rule = BusinessRules.objects.get(name='phishing_up')
+    config = rule.config
+
+    conditions = []
+    for cond in config['conditions']['all']:
+        if cond['name'] not in ('all_items_phishing', 'urls_down'):
+            conditions.append(cond)
+
+    config['conditions']['all'] = conditions
+    return config
 
 
 def cancel_rq_scheduler_jobs(ticket_id=None, status='answered'):
@@ -381,12 +354,14 @@ def cancel_rq_scheduler_jobs(ticket_id=None, status='answered'):
 
 def close_emails_thread(ticket_id=None):
     """
+        Close emails thread for given `abuse.models.Ticket`
+
+        :param int ticket_id: The id of the `abuse.models.Ticket`
     """
     try:
         ticket = Ticket.objects.get(id=ticket_id)
     except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-        Logger.error(unicode('Ticket %d cannot be found in DB. Skipping...' % (ticket)))
-        return
+        raise AssertionError('Ticket %d cannot be found in DB. Skipping...' % (ticket))
 
     implementations.instance.get_singleton_of(
         'MailerServiceBase'
@@ -426,19 +401,15 @@ def update_waiting():
     """
     now = int(time())
     for ticket in Ticket.objects.filter(status=WAITING):
-        try:
-            if now > int(mktime(ticket.snoozeStart.timetuple()) + ticket.snoozeDuration):
-                Logger.debug(
-                    unicode('Updating status for ticket %s ' % (ticket.id)),
-                    extra={
-                        'ticket': ticket.id,
-                    }
-                )
-                _check_auto_unassignation(ticket)
-                common.set_ticket_status(ticket, ALARM, reset_snooze=True)
-
-        except (AttributeError, ValueError) as ex:
-            Logger.debug(unicode('Error while updating ticket %d : %s' % (ticket.id, ex)))
+        if now > int(mktime(ticket.snoozeStart.timetuple()) + ticket.snoozeDuration):
+            Logger.debug(
+                unicode('Updating status for ticket %s ' % (ticket.id)),
+                extra={
+                    'ticket': ticket.id,
+                }
+            )
+            _check_auto_unassignation(ticket)
+            common.set_ticket_status(ticket, ALARM, reset_snooze=True)
 
 
 def _check_auto_unassignation(ticket):
@@ -451,8 +422,10 @@ def _check_auto_unassignation(ticket):
     )[:3]
 
     try:
-        unassigned_on_multiple_alarm = ticket.treatedBy.operator.role.modelsAuthorizations['ticket']['unassignedOnMultipleAlarm']
-        if unassigned_on_multiple_alarm and len(history) == 3 and all([STATUS_SEQUENCE[i] == history[i] for i in xrange(3)]):
+        models_config = ticket.treatedBy.operator.role.modelsAuthorizations
+        unassigned_on_multiple_alarm = models_config['ticket']['unassignedOnMultipleAlarm']
+        if (unassigned_on_multiple_alarm and len(history) == 3 and
+                all([STATUS_SEQUENCE[i] == history[i] for i in xrange(3)])):
             database.log_action_on_ticket(
                 ticket=ticket,
                 action='change_treatedby',
@@ -467,9 +440,7 @@ def _check_auto_unassignation(ticket):
             )
             ticket.treatedBy = None
             ticket.escalated = True
-            Logger.debug(unicode(
-                'Unassigning ticket %d because of operator role configuration' % (ticket.id)
-            ))
+            ticket.save()
     except (AttributeError, KeyError, ObjectDoesNotExist, ValueError):
         pass
 
@@ -480,21 +451,12 @@ def update_paused():
     """
     now = int(time())
     for ticket in Ticket.objects.filter(status=PAUSED):
-        try:
-            if now > int(mktime(ticket.pauseStart.timetuple()) + ticket.pauseDuration):
-                Logger.debug(
-                    str('Updating status for ticket %s ' % (ticket.id)),
-                    extra={
-                        'ticket': ticket.id,
-                    }
-                )
-                if ticket.previousStatus == WAITING and ticket.snoozeDuration and ticket.snoozeStart:
-                    ticket.snoozeDuration = ticket.snoozeDuration + (datetime.now() - ticket.pauseStart).seconds
+        if now > int(mktime(ticket.pauseStart.timetuple()) + ticket.pauseDuration):
+            if (ticket.previousStatus == WAITING and ticket.snoozeDuration and
+                    ticket.snoozeStart):
+                ticket.snoozeDuration += (datetime.now() - ticket.pauseStart).seconds
 
-                common.set_ticket_status(ticket, ticket.previousStatus)
-                ticket.pauseStart = None
-                ticket.pauseDuration = None
-                ticket.save()
-
-        except (AttributeError, ValueError) as ex:
-            Logger.debug(unicode('Error while updating ticket %d : %s' % (ticket.id, ex)))
+            common.set_ticket_status(ticket, ticket.previousStatus)
+            ticket.pauseStart = None
+            ticket.pauseDuration = None
+            ticket.save()

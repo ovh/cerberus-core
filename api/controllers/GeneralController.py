@@ -681,11 +681,11 @@ def post_mass_contact(body, user):
                       'required in %s' % (str(GENERAL_MASS_CONTACT_REQUIRED), key)
             raise BadRequest(message)
 
-    __create_jobs(campaign_name, ips, category, body, user)
+    _create_jobs(campaign_name, ips, category, body, user)
     return {'message': 'Campaign successfully created'}
 
 
-def __create_jobs(campaign_name, ips, category, body, user):
+def _create_jobs(campaign_name, ips, category, body, user):
     """
         Creates RQ jobs for each IP
     """

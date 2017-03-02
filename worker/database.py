@@ -35,7 +35,7 @@ from django.db.models import Q, ObjectDoesNotExist
 
 from abuse.models import (Category, DefendantRevision, Defendant, EmailFilterTag, History,
                           DefendantHistory, Provider, Report, Service, Tag, Ticket, UrlStatus,
-                          User)
+                          User, Comment, TicketComment)
 
 from adapters.dao.customer.abstract import CustomerDaoException
 from adapters.services.kpi.abstract import KPIServiceException
@@ -423,7 +423,11 @@ def set_ticket_higher_priority(ticket):
 
 def get_category(name):
     """
-        Create category or get it if exists
+        Get `abuse.models.Category` instance
+
+        :param str name: the name of the category
+        :rtype: `abuse.models.Category`
+        :return: a `abuse.models.Category` instance
     """
     return Category.objects.get(name=name)
 
@@ -458,16 +462,24 @@ def get_tags(provider, recipients, subject, body):
     return tags
 
 
-def add_phishing_blocked_tag(report):
+def add_ticket_comment(ticket, comment):
     """
-        Add Phishing blocked tag to report
+        Add a `abuse.models.Comment` to given `abuse.models.Ticket`
+
+        :param `abuse.models.Ticket` ticket: a `abuse.models.Ticket` instance
+        :param str comment: the comment to add
     """
-    try:
-        tag = Tag.objects.get(tagType='Report', name=settings.TAGS['phishing_autoblocked'])
-        report.tags.add(tag)
-        report.save()
-    except ObjectDoesNotExist:
-        pass
+    user = User.objects.get(username=settings.GENERAL_CONFIG['bot_user'])
+
+    comment = Comment.objects.create(
+        user=user,
+        comment=comment
+    )
+    TicketComment.objects.create(ticket=ticket, comment=comment)
+    log_action_on_ticket(
+        ticket=ticket,
+        action='add_comment'
+    )
 
 
 def refresh_defendant_infos(defendant_id=None):

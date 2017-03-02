@@ -4,7 +4,6 @@
     Engine for Business Rules
 """
 
-from worker.worker import Logger
 from .fields import FIELD_NO_INPUT
 
 
@@ -28,7 +27,6 @@ def run(rule, defined_variables, defined_actions):
     rule_triggered = check_conditions_recursively(conditions, defined_variables)
 
     if rule.get('debug_only') and rule_triggered:
-        Logger.debug(unicode("rule {} will be triggered".format(rule['debug_only'])))
         return False
 
     if rule_triggered:

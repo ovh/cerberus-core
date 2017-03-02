@@ -23,14 +23,12 @@
 """
 
 import hashlib
-import inspect
 
 from collections import Counter
 from datetime import datetime
 from time import sleep
 
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.core.validators import validate_ipv46_address
 from django.db import transaction
 from django.db.models import ObjectDoesNotExist
@@ -40,14 +38,12 @@ import common
 import database
 
 from abuse.models import (Category, MassContactResult, Report,
-                          ReportItem, Resolution, Tag, User)
-from adapters.dao.customer.abstract import CustomerDaoException
+                          ReportItem, Tag, User)
 from factory.implementation import ImplementationFactory as implementations
 from utils import pglocks, schema, utils
 from worker import Logger
 
 
-# XXX: rewrite, use workflows engine
 def mass_contact(ip_address=None, category=None, campaign_name=None,
                  email_subject=None, email_body=None, user_id=None):
     """
@@ -66,37 +62,21 @@ def mass_contact(ip_address=None, category=None, campaign_name=None,
         :param str email_body: The body of the email to send to defendant
         :param int user_id: The id of the Cerberus `abuse.models.User` who created the campaign
     """
-    # Check params
-    _, _, _, values = inspect.getargvalues(inspect.currentframe())
-    if not all(values.values()):
-        Logger.error(unicode('invalid parameters submitted %s' % str(values)))
-        return
+    validate_ipv46_address(ip_address)
 
-    try:
-        validate_ipv46_address(ip_address)
-    except (TypeError, ValidationError):
-        Logger.error(unicode('invalid ip addresses submitted'))
-        return
-
-    # Get Django model objects
-    try:
-        category = Category.objects.get(name=category)
-        user = User.objects.get(id=user_id)
-    except (AttributeError, ObjectDoesNotExist, TypeError):
-        Logger.error(unicode('invalid user or category'))
-        return
+    category = Category.objects.get(name=category)
+    user = User.objects.get(id=user_id)
 
     # Identify service for ip_address
-    try:
-        services = implementations.instance.get_singleton_of(
-            'CustomerDaoBase'
-        ).get_services_from_items(ips=[ip_address])
-        schema.valid_adapter_response('CustomerDaoBase', 'get_services_from_items', services)
-    except CustomerDaoException as ex:
-        Logger.error(unicode(
-            'Exception while identifying defendants for ip %s -> %s ' % (ip_address, str(ex))
-        ))
-        raise CustomerDaoException(ex)
+    services = implementations.instance.get_singleton_of(
+        'CustomerDaoBase'
+    ).get_services_from_items(ips=[ip_address])
+
+    schema.valid_adapter_response(
+        'CustomerDaoBase',
+        'get_services_from_items',
+        services
+    )
 
     # Create report/ticket
     if services:
@@ -117,7 +97,6 @@ def mass_contact(ip_address=None, category=None, campaign_name=None,
         return False
 
 
-# XXX: rewrite
 @transaction.atomic
 def _create_contact_tickets(services, campaign_name, ip_address, category,
                             email_subject, email_body, user):
@@ -126,11 +105,9 @@ def _create_contact_tickets(services, campaign_name, ip_address, category,
     report_subject = 'Campaign %s for ip %s' % (campaign_name, ip_address)
     report_body = 'Campaign: %s\nIP Address: %s\n' % (campaign_name, ip_address)
     filename = hashlib.sha256(report_body.encode('utf-8')).hexdigest()
-    _save_email(filename, report_body)
+    common.save_email(filename, report_body)
 
     for data in services:  # For identified (service, defendant, items) tuple
-
-        actions = []
 
         # Create report
         report = Report.objects.create(**{
@@ -152,41 +129,14 @@ def _create_contact_tickets(services, campaign_name, ip_address, category,
         ReportItem.objects.create(**item_dict)
 
         # Create ticket
-        ticket = database.create_ticket(
-            report.defendant,
-            report.category,
-            report.service,
-            priority=report.provider.priority,
-            attach_new=False,
-        )
-        database.add_mass_contact_tag(ticket, campaign_name)
-        actions.append({'ticket': ticket, 'action': 'create_masscontact', 'campaign_name': campaign_name})
-        actions.append({'ticket': ticket, 'action': 'change_treatedby', 'new_value': user.username})
-        report.ticket = ticket
-        report.save()
-        Logger.debug(unicode(
-            'ticket %d successfully created for (%s, %s)' % (ticket.id, report.defendant.customerId, report.service.name)
-        ))
+        ticket = common.create_ticket(report, attach_new=False)
+        _add_mass_contact_tag(ticket, campaign_name)
 
         # Send email to defendant
         _send_mass_contact_email(ticket, email_subject, email_body)
-        actions.append({'ticket': ticket, 'action': 'send_email', 'email': report.defendant.details.email})
 
         # Close ticket/report
-        ticket.resolution = Resolution.objects.get(codename=settings.CODENAMES['fixed_customer'])
-        ticket.previousStatus = ticket.status
-        ticket.status = 'Closed'
-        ticket.save()
-        actions.append({
-            'ticket': ticket,
-            'action': 'change_status',
-            'previous_value': ticket.previousStatus,
-            'new_value': ticket.status,
-            'close_reason': ticket.resolution.codename
-        })
-
-        for action in actions:
-            database.log_action_on_ticket(**action)
+        common.close_ticket(ticket, settings.CODENAMES['fixed_customer'])
 
 
 def _send_mass_contact_email(ticket, email_subject, email_body):
@@ -223,20 +173,7 @@ def check_mass_contact_result(result_campaign_id=None, jobs=None):
         :param int result_campaign_id: The id of the `abuse.models.MassContactResult`
         :param list jobs: The list of associated Python-Rq jobs id
     """
-    # Check params
-    _, _, _, values = inspect.getargvalues(inspect.currentframe())
-    if not all(values.values()) or not isinstance(jobs, list):
-        Logger.error(unicode('invalid parameters submitted %s' % str(values)))
-        return
-
-    if not isinstance(result_campaign_id, MassContactResult):
-        try:
-            campaign_result = MassContactResult.objects.get(id=result_campaign_id)
-        except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-            Logger.error(unicode('MassContactResult {} cannot be found in DB. Skipping...'.format(
-                result_campaign_id
-            )))
-            return
+    campaign_result = MassContactResult.objects.get(id=result_campaign_id)
 
     result = []
     for job_id in jobs:
@@ -254,18 +191,6 @@ def check_mass_contact_result(result_campaign_id=None, jobs=None):
     campaign_result.failedCount = count[None]
     campaign_result.save()
     Logger.info(unicode('MassContact campaign %d finished' % (campaign_result.campaign.id)))
-
-
-def _save_email(filename, email):
-    """
-        Push email storage service
-
-        :param str filename: The filename of the email
-        :param str email: The content of the email
-    """
-    with implementations.instance.get_instance_of('StorageServiceBase', common.STORAGE_DIR) as cnx:
-        cnx.write(filename, email.encode('utf-8'))
-        Logger.info(unicode('Email %s pushed to Storage Service' % (filename)))
 
 
 def _add_mass_contact_tag(ticket, campaign_name):

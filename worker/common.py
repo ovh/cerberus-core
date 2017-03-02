@@ -41,17 +41,20 @@ CDN_REQUEST_LOCK = 'cdnrequest:lock'
 STORAGE_DIR = settings.GENERAL_CONFIG['email_storage_dir']
 
 
-def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report_id=None):
+def send_email(ticket, emails, template_codename, lang='EN',
+               acknowledged_report_id=None, inject_proof=False):
     """
         Wrapper to send email
     """
-    prefetched_email = implementations.instance.get_singleton_of(
-        'MailerServiceBase'
-    ).prefetch_email_from_template(
+    temp_proofs = []
+    if inject_proof:
+        temp_proofs = _get_temp_proofs(ticket)
+
+    prefetched_email = _get_prefetched_email(
         ticket,
         template_codename,
-        lang=lang,
-        acknowledged_report=acknowledged_report_id,
+        lang,
+        acknowledged_report_id
     )
 
     for email in emails:
@@ -74,6 +77,23 @@ def send_email(ticket, emails, template_codename, lang='EN', acknowledged_report
             email=_email
         )
 
+    if inject_proof and temp_proofs:
+        for proof in temp_proofs:
+            Proof.objects.filter(id=proof.id).delete()
+
+
+def _get_prefetched_email(ticket, template_codename, lang,
+                          acknowledged_report_id=None):
+
+    return implementations.instance.get_singleton_of(
+        'MailerServiceBase'
+    ).prefetch_email_from_template(
+        ticket,
+        template_codename,
+        lang=lang,
+        acknowledged_report=acknowledged_report_id,
+    )
+
 
 def create_ticket(report, denied_by=None, attach_new=False):
     """
@@ -92,6 +112,12 @@ def create_ticket(report, denied_by=None, attach_new=False):
         new_ticket=True,
         report=report
     )
+
+    report.ticket = ticket
+    report.status = 'Attached'
+    report.save()
+
+    database.set_ticket_higher_priority(ticket)
 
     if denied_by:
         user = User.objects.get(id=denied_by)
@@ -126,12 +152,14 @@ def close_ticket(ticket, resolution_codename=None, user=None):
     )
 
     if ticket.mailerId:
-        implementations.instance.get_singleton_of('MailerServiceBase').close_thread(ticket)
+        implementations.instance.get_singleton_of(
+            'MailerServiceBase'
+        ).close_thread(ticket)
 
     ticket.save()
 
 
-def get_temp_proofs(ticket, only_urls=False):
+def _get_temp_proofs(ticket, only_urls=False):
     """
         Get report's ticket content
     """
@@ -181,3 +209,14 @@ def set_ticket_status(ticket, status, resolution_codename=None,
         new_value=ticket.status,
         close_reason=resolution_codename
     )
+
+
+def save_email(filename, email):
+    """
+        Push email storage service
+
+        :param str filename: The filename of the email
+        :param str email: The content of the email
+    """
+    with implementations.instance.get_instance_of('StorageServiceBase', STORAGE_DIR) as cnx:
+        cnx.write(filename, email)
