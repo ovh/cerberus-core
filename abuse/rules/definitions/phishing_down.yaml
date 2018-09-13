@@ -1,0 +1,20 @@
+config:
+    actions:
+    -   name: phishing_close_because_all_down
+    conditions:
+        all:
+        -   name: report_category
+            operator: equal_to
+            value: phishing
+        -   name: has_defendant
+            operator: is_true
+            value: true
+        -   name: urls_down
+            operator: is_true
+            value: true
+        -   name: has_urls
+            operator: is_true
+            value: true
+name: phishing_down
+orderId: 20
+rulesType: Report

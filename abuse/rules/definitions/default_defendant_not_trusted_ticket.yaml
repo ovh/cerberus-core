@@ -1,0 +1,17 @@
+config:
+    actions:
+    -   name: attach_report_to_ticket
+    conditions:
+        all:
+        -   name: has_defendant
+            operator: is_true
+            value: true
+        -   name: is_report_trusted
+            operator: is_false
+            value: true
+        -   name: has_ticket
+            operator: is_true
+            value: true
+name: default_defendant_not_trusted_ticket
+orderId: 101
+rulesType: Report

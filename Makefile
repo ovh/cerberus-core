@@ -12,10 +12,10 @@ SPHINX=sphinx-build
 DOC_DIR=doc/build
 
 clean: clean-doc
-	if [[ `$(FIND) . -name *.pyc` ]] ; \
-	then \
-		$(FIND) . -name *.pyc | xargs -r $(DEL) ; \
-	fi;
+	$(FIND) . -name __pycache__ ! -path "./venv/*" | xargs -r $(DEL)
+	$(FIND) . -name "*.pyc" ! -path "./venv/*" | xargs -r $(DEL)
+	$(FIND) . -name "*.swp" ! -path "./venv/*" | xargs -r $(DEL)
+	$(DEL) -rf /dev/shm/cerberus_storage_test/
 
 clean-doc:
 	$(DEL) -rf $(DOC_DIR)
@@ -27,11 +27,7 @@ install-dev-deps:
 	$(PIP) install -r requirements/dev.txt
 
 test: 
-	$(COVERAGE) > /dev/null 2>&1 && \
-	$(COVERAGE) run --source='.' manage.py test && \
-	$(COVERAGE) report --omit="virtualenv/*,*ovh*,tests/*,tests_ovh/*,docker/*,doc/*,manage.py" \
-		|| \
-	$(PYTHON) manage.py test
+	$(PYTHON) main.py test
 
 coveralls:
 	$(COVERAGE) erase && \

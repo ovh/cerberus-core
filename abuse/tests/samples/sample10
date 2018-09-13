@@ -1,0 +1,15 @@
+Return-Path: <me@provider.com>
+Delivered-To: <abuse@isp.com>
+Received: from mx.isp.com
+	by mx.isp.com (Dovecot) with LMTP id 07fcIPoyxFa4UQAArOwUew
+	for <abuse@isp.com>; Wed, 17 Feb 2016 09:57:55 +0100
+Date: Wed, 17 Feb 2016 09:57:41 +0100
+From: Simon Vasseur <me@provider.com>
+MIME-Version: 1.0
+To: <abuse@isp.com>, <me@provider.com>
+CC: Vincent Malguy <me2@provider.com>
+Subject: test
+Content-Type: text/plain; charset="ISO-8859-1"; format=flowed
+Content-Transfer-Encoding: 7bit
+
+test

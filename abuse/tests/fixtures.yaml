@@ -1,0 +1,2771 @@
+- model: contenttypes.contenttype
+  pk: 1
+  fields: {app_label: auth, model: group}
+- model: contenttypes.contenttype
+  pk: 2
+  fields: {app_label: auth, model: permission}
+- model: contenttypes.contenttype
+  pk: 3
+  fields: {app_label: auth, model: user}
+- model: contenttypes.contenttype
+  pk: 4
+  fields: {app_label: contenttypes, model: contenttype}
+- model: contenttypes.contenttype
+  pk: 5
+  fields: {app_label: sessions, model: session}
+- model: contenttypes.contenttype
+  pk: 6
+  fields: {app_label: abuse, model: defendantrevision}
+- model: contenttypes.contenttype
+  pk: 7
+  fields: {app_label: abuse, model: defendant}
+- model: contenttypes.contenttype
+  pk: 8
+  fields: {app_label: abuse, model: defendanthistory}
+- model: contenttypes.contenttype
+  pk: 9
+  fields: {app_label: abuse, model: defendantcomment}
+- model: contenttypes.contenttype
+  pk: 10
+  fields: {app_label: abuse, model: history}
+- model: contenttypes.contenttype
+  pk: 11
+  fields: {app_label: abuse, model: serviceaction}
+- model: contenttypes.contenttype
+  pk: 12
+  fields: {app_label: abuse, model: serviceactionjob}
+- model: contenttypes.contenttype
+  pk: 13
+  fields: {app_label: abuse, model: category}
+- model: contenttypes.contenttype
+  pk: 14
+  fields: {app_label: abuse, model: apiroute}
+- model: contenttypes.contenttype
+  pk: 15
+  fields: {app_label: abuse, model: role}
+- model: contenttypes.contenttype
+  pk: 16
+  fields: {app_label: abuse, model: operator}
+- model: contenttypes.contenttype
+  pk: 17
+  fields: {app_label: abuse, model: emailfilter}
+- model: contenttypes.contenttype
+  pk: 18
+  fields: {app_label: abuse, model: emailfiltertag}
+- model: contenttypes.contenttype
+  pk: 19
+  fields: {app_label: abuse, model: resolution}
+- model: contenttypes.contenttype
+  pk: 20
+  fields: {app_label: abuse, model: attacheddocument}
+- model: contenttypes.contenttype
+  pk: 21
+  fields: {app_label: abuse, model: comment}
+- model: contenttypes.contenttype
+  pk: 22
+  fields: {app_label: abuse, model: profile}
+- model: contenttypes.contenttype
+  pk: 23
+  fields: {app_label: abuse, model: abusepermission}
+- model: contenttypes.contenttype
+  pk: 24
+  fields: {app_label: abuse, model: news}
+- model: contenttypes.contenttype
+  pk: 25
+  fields: {app_label: abuse, model: mailtemplate}
+- model: contenttypes.contenttype
+  pk: 26
+  fields: {app_label: abuse, model: proof}
+- model: contenttypes.contenttype
+  pk: 27
+  fields: {app_label: abuse, model: ticketactionparams}
+- model: contenttypes.contenttype
+  pk: 28
+  fields: {app_label: abuse, model: ticketaction}
+- model: contenttypes.contenttype
+  pk: 29
+  fields: {app_label: abuse, model: ticketworkflowpresetconfig}
+- model: contenttypes.contenttype
+  pk: 30
+  fields: {app_label: abuse, model: ticketworkflowpreset}
+- model: contenttypes.contenttype
+  pk: 31
+  fields: {app_label: abuse, model: itemscreenshotfeedback}
+- model: contenttypes.contenttype
+  pk: 32
+  fields: {app_label: abuse, model: reportthreshold}
+- model: contenttypes.contenttype
+  pk: 33
+  fields: {app_label: abuse, model: masscontact}
+- model: contenttypes.contenttype
+  pk: 34
+  fields: {app_label: abuse, model: masscontactresult}
+- model: contenttypes.contenttype
+  pk: 35
+  fields: {app_label: abuse, model: starredticket}
+- model: contenttypes.contenttype
+  pk: 36
+  fields: {app_label: abuse, model: businessrules}
+- model: contenttypes.contenttype
+  pk: 37
+  fields: {app_label: abuse, model: businessruleshistory}
+- model: contenttypes.contenttype
+  pk: 38
+  fields: {app_label: abuse, model: provider}
+- model: contenttypes.contenttype
+  pk: 39
+  fields: {app_label: abuse, model: report}
+- model: contenttypes.contenttype
+  pk: 40
+  fields: {app_label: abuse, model: reportitem}
+- model: contenttypes.contenttype
+  pk: 41
+  fields: {app_label: abuse, model: urlstatus}
+- model: contenttypes.contenttype
+  pk: 42
+  fields: {app_label: abuse, model: service}
+- model: contenttypes.contenttype
+  pk: 43
+  fields: {app_label: abuse, model: tag}
+- model: contenttypes.contenttype
+  pk: 44
+  fields: {app_label: abuse, model: ticket}
+- model: contenttypes.contenttype
+  pk: 45
+  fields: {app_label: abuse, model: ticketcomment}
+- model: abuse.serviceaction
+  pk: 1
+  fields: {name: default_action, module: VPS, level: '1'}
+- model: abuse.category
+  pk: Copyright
+  fields: {label: Copyright, description: Copyright}
+- model: abuse.category
+  pk: Illegal
+  fields: {label: Illegal, description: Illegal}
+- model: abuse.category
+  pk: Intrusion
+  fields: {label: Intrusion, description: Intrusion}
+- model: abuse.category
+  pk: Malware
+  fields: {label: Malware, description: Malware}
+- model: abuse.category
+  pk: Network Attack
+  fields: {label: Network Attack, description: Network Attack}
+- model: abuse.category
+  pk: Other
+  fields: {label: Other, description: Other}
+- model: abuse.category
+  pk: Phishing
+  fields: {label: Phishing, description: Phishing}
+- model: abuse.category
+  pk: Spam
+  fields: {label: Spam, description: Spam}
+- model: abuse.apiroute
+  pk: 1
+  fields: {method: GET, endpoint: category_views.create_category}
+- model: abuse.apiroute
+  pk: 2
+  fields: {method: GET, endpoint: category_views.delete_category}
+- model: abuse.apiroute
+  pk: 3
+  fields: {method: GET, endpoint: category_views.get_all_categories}
+- model: abuse.apiroute
+  pk: 4
+  fields: {method: GET, endpoint: category_views.get_category}
+- model: abuse.apiroute
+  pk: 5
+  fields: {method: GET, endpoint: category_views.get_user_categories}
+- model: abuse.apiroute
+  pk: 6
+  fields: {method: GET, endpoint: category_views.update_category}
+- model: abuse.apiroute
+  pk: 7
+  fields: {method: GET, endpoint: defendant_views.add_comment}
+- model: abuse.apiroute
+  pk: 8
+  fields: {method: GET, endpoint: defendant_views.add_defendant_tag}
+- model: abuse.apiroute
+  pk: 9
+  fields: {method: GET, endpoint: defendant_views.delete_defendant_tag}
+- model: abuse.apiroute
+  pk: 10
+  fields: {method: GET, endpoint: defendant_views.get_defendant}
+- model: abuse.apiroute
+  pk: 11
+  fields: {method: GET, endpoint: defendant_views.get_defendant_services}
+- model: abuse.apiroute
+  pk: 12
+  fields: {method: GET, endpoint: defendant_views.get_defendant_top20}
+- model: abuse.apiroute
+  pk: 13
+  fields: {method: GET, endpoint: defendant_views.update_or_delete_comment}
+- model: abuse.apiroute
+  pk: 14
+  fields: {method: GET, endpoint: email_templates_views.create_templates}
+- model: abuse.apiroute
+  pk: 15
+  fields: {method: GET, endpoint: email_templates_views.get_all_templates}
+- model: abuse.apiroute
+  pk: 16
+  fields: {method: GET, endpoint: email_templates_views.get_recipients_type}
+- model: abuse.apiroute
+  pk: 17
+  fields: {method: GET, endpoint: email_templates_views.get_supported_languages}
+- model: abuse.apiroute
+  pk: 18
+  fields: {method: GET, endpoint: email_templates_views.get_template}
+- model: abuse.apiroute
+  pk: 19
+  fields: {method: GET, endpoint: email_templates_views.update_template}
+- model: abuse.apiroute
+  pk: 20
+  fields: {method: GET, endpoint: misc_views.add_ticket_resolution}
+- model: abuse.apiroute
+  pk: 21
+  fields: {method: GET, endpoint: misc_views.auth}
+- model: abuse.apiroute
+  pk: 22
+  fields: {method: GET, endpoint: misc_views.delete_ticket_resolution}
+- model: abuse.apiroute
+  pk: 23
+  fields: {method: GET, endpoint: misc_views.get_all_status}
+- model: abuse.apiroute
+  pk: 24
+  fields: {method: GET, endpoint: misc_views.get_all_ticket_resolutions}
+- model: abuse.apiroute
+  pk: 25
+  fields: {method: GET, endpoint: misc_views.get_cerberus_roles}
+- model: abuse.apiroute
+  pk: 26
+  fields: {method: GET, endpoint: misc_views.get_dashboard}
+- model: abuse.apiroute
+  pk: 27
+  fields: {method: GET, endpoint: misc_views.get_logged_user}
+- model: abuse.apiroute
+  pk: 28
+  fields: {method: GET, endpoint: misc_views.get_mass_contact}
+- model: abuse.apiroute
+  pk: 29
+  fields: {method: GET, endpoint: misc_views.get_profiles}
+- model: abuse.apiroute
+  pk: 30
+  fields: {method: GET, endpoint: misc_views.get_providers_priorities}
+- model: abuse.apiroute
+  pk: 31
+  fields: {method: GET, endpoint: misc_views.get_status}
+- model: abuse.apiroute
+  pk: 32
+  fields: {method: GET, endpoint: misc_views.get_ticket_priorities}
+- model: abuse.apiroute
+  pk: 33
+  fields: {method: GET, endpoint: misc_views.get_toolbar}
+- model: abuse.apiroute
+  pk: 34
+  fields: {method: GET, endpoint: misc_views.get_url_http_headers}
+- model: abuse.apiroute
+  pk: 35
+  fields: {method: GET, endpoint: misc_views.get_user}
+- model: abuse.apiroute
+  pk: 36
+  fields: {method: GET, endpoint: misc_views.get_user_notifications}
+- model: abuse.apiroute
+  pk: 37
+  fields: {method: GET, endpoint: misc_views.get_user_tickets}
+- model: abuse.apiroute
+  pk: 38
+  fields: {method: GET, endpoint: misc_views.get_users_infos}
+- model: abuse.apiroute
+  pk: 39
+  fields: {method: GET, endpoint: misc_views.get_whois}
+- model: abuse.apiroute
+  pk: 40
+  fields: {method: GET, endpoint: misc_views.logout}
+- model: abuse.apiroute
+  pk: 41
+  fields: {method: GET, endpoint: misc_views.monitor}
+- model: abuse.apiroute
+  pk: 42
+  fields: {method: GET, endpoint: misc_views.ping}
+- model: abuse.apiroute
+  pk: 43
+  fields: {method: GET, endpoint: misc_views.post_mass_contact}
+- model: abuse.apiroute
+  pk: 44
+  fields: {method: GET, endpoint: misc_views.search}
+- model: abuse.apiroute
+  pk: 45
+  fields: {method: GET, endpoint: misc_views.update_ticket_resolution}
+- model: abuse.apiroute
+  pk: 46
+  fields: {method: GET, endpoint: misc_views.update_user}
+- model: abuse.apiroute
+  pk: 47
+  fields: {method: GET, endpoint: news_views.create_news}
+- model: abuse.apiroute
+  pk: 48
+  fields: {method: GET, endpoint: news_views.delete_news}
+- model: abuse.apiroute
+  pk: 49
+  fields: {method: GET, endpoint: news_views.get_all_news}
+- model: abuse.apiroute
+  pk: 50
+  fields: {method: GET, endpoint: news_views.get_news}
+- model: abuse.apiroute
+  pk: 51
+  fields: {method: GET, endpoint: news_views.update_news}
+- model: abuse.apiroute
+  pk: 52
+  fields: {method: GET, endpoint: preset_views.create_preset}
+- model: abuse.apiroute
+  pk: 53
+  fields: {method: GET, endpoint: preset_views.delete_preset}
+- model: abuse.apiroute
+  pk: 54
+  fields: {method: GET, endpoint: preset_views.get_all_presets}
+- model: abuse.apiroute
+  pk: 55
+  fields: {method: GET, endpoint: preset_views.get_preset}
+- model: abuse.apiroute
+  pk: 56
+  fields: {method: GET, endpoint: preset_views.order_presets}
+- model: abuse.apiroute
+  pk: 57
+  fields: {method: GET, endpoint: preset_views.update_preset}
+- model: abuse.apiroute
+  pk: 58
+  fields: {method: GET, endpoint: provider_views.add_provider_tag}
+- model: abuse.apiroute
+  pk: 59
+  fields: {method: GET, endpoint: provider_views.create_provider}
+- model: abuse.apiroute
+  pk: 60
+  fields: {method: GET, endpoint: provider_views.delete_provider_tag}
+- model: abuse.apiroute
+  pk: 61
+  fields: {method: GET, endpoint: provider_views.get_providers}
+- model: abuse.apiroute
+  pk: 62
+  fields: {method: GET, endpoint: provider_views.update_provider}
+- model: abuse.apiroute
+  pk: 63
+  fields: {method: GET, endpoint: report_views.add_report_tag}
+- model: abuse.apiroute
+  pk: 64
+  fields: {method: GET, endpoint: report_views.bulk_add_reports}
+- model: abuse.apiroute
+  pk: 65
+  fields: {method: GET, endpoint: report_views.create_report_item}
+- model: abuse.apiroute
+  pk: 66
+  fields: {method: GET, endpoint: report_views.delete_report_tag}
+- model: abuse.apiroute
+  pk: 67
+  fields: {method: GET, endpoint: report_views.get_all_items_screenshot}
+- model: abuse.apiroute
+  pk: 68
+  fields: {method: GET, endpoint: report_views.get_all_report_attachments}
+- model: abuse.apiroute
+  pk: 69
+  fields: {method: GET, endpoint: report_views.get_all_reports}
+- model: abuse.apiroute
+  pk: 70
+  fields: {method: GET, endpoint: report_views.get_dehtmlified_report}
+- model: abuse.apiroute
+  pk: 71
+  fields: {method: GET, endpoint: report_views.get_item_screenshot}
+- model: abuse.apiroute
+  pk: 72
+  fields: {method: GET, endpoint: report_views.get_raw_report}
+- model: abuse.apiroute
+  pk: 73
+  fields: {method: GET, endpoint: report_views.get_report}
+- model: abuse.apiroute
+  pk: 74
+  fields: {method: GET, endpoint: report_views.get_report_attachment}
+- model: abuse.apiroute
+  pk: 75
+  fields: {method: GET, endpoint: report_views.get_report_items}
+- model: abuse.apiroute
+  pk: 76
+  fields: {method: GET, endpoint: report_views.post_feedback}
+- model: abuse.apiroute
+  pk: 77
+  fields: {method: GET, endpoint: report_views.unblock_report_item}
+- model: abuse.apiroute
+  pk: 78
+  fields: {method: GET, endpoint: report_views.update_report}
+- model: abuse.apiroute
+  pk: 79
+  fields: {method: GET, endpoint: report_views.update_report_item}
+- model: abuse.apiroute
+  pk: 80
+  fields: {method: GET, endpoint: report_views.validate_report}
+- model: abuse.apiroute
+  pk: 81
+  fields: {method: GET, endpoint: reputation_views.get_ip_external_detail}
+- model: abuse.apiroute
+  pk: 82
+  fields: {method: GET, endpoint: reputation_views.get_ip_external_reputation}
+- model: abuse.apiroute
+  pk: 83
+  fields: {method: GET, endpoint: reputation_views.get_ip_internal_reputation}
+- model: abuse.apiroute
+  pk: 84
+  fields: {method: GET, endpoint: reputation_views.get_ip_rbl_reputation}
+- model: abuse.apiroute
+  pk: 85
+  fields: {method: GET, endpoint: reputation_views.get_ip_tool}
+- model: abuse.apiroute
+  pk: 86
+  fields: {method: GET, endpoint: reputation_views.get_url_external_reputation}
+- model: abuse.apiroute
+  pk: 87
+  fields: {method: GET, endpoint: tag_views.create_tag}
+- model: abuse.apiroute
+  pk: 88
+  fields: {method: GET, endpoint: tag_views.delete_tag}
+- model: abuse.apiroute
+  pk: 89
+  fields: {method: GET, endpoint: tag_views.get_all_tags}
+- model: abuse.apiroute
+  pk: 90
+  fields: {method: GET, endpoint: tag_views.get_tag}
+- model: abuse.apiroute
+  pk: 91
+  fields: {method: GET, endpoint: tag_views.get_tag_type}
+- model: abuse.apiroute
+  pk: 92
+  fields: {method: GET, endpoint: tag_views.update_tag}
+- model: abuse.apiroute
+  pk: 93
+  fields: {method: GET, endpoint: threshold_views.create_threshold}
+- model: abuse.apiroute
+  pk: 94
+  fields: {method: GET, endpoint: threshold_views.delete_threshold}
+- model: abuse.apiroute
+  pk: 95
+  fields: {method: GET, endpoint: threshold_views.get_all_threshold}
+- model: abuse.apiroute
+  pk: 96
+  fields: {method: GET, endpoint: threshold_views.get_threshold}
+- model: abuse.apiroute
+  pk: 97
+  fields: {method: GET, endpoint: threshold_views.update_threshold}
+- model: abuse.apiroute
+  pk: 98
+  fields: {method: GET, endpoint: ticket_views.add_comment}
+- model: abuse.apiroute
+  pk: 99
+  fields: {method: GET, endpoint: ticket_views.add_items_to_proof}
+- model: abuse.apiroute
+  pk: 100
+  fields: {method: GET, endpoint: ticket_views.add_ticket_tag}
+- model: abuse.apiroute
+  pk: 101
+  fields: {method: GET, endpoint: ticket_views.bulk_add_tickets}
+- model: abuse.apiroute
+  pk: 102
+  fields: {method: GET, endpoint: ticket_views.cancel_job}
+- model: abuse.apiroute
+  pk: 103
+  fields: {method: GET, endpoint: ticket_views.delete_ticket_tag}
+- model: abuse.apiroute
+  pk: 104
+  fields: {method: GET, endpoint: ticket_views.get_actions}
+- model: abuse.apiroute
+  pk: 105
+  fields: {method: GET, endpoint: ticket_views.get_mails}
+- model: abuse.apiroute
+  pk: 106
+  fields: {method: GET, endpoint: ticket_views.get_providers}
+- model: abuse.apiroute
+  pk: 107
+  fields: {method: GET, endpoint: ticket_views.get_ticket}
+- model: abuse.apiroute
+  pk: 108
+  fields: {method: GET, endpoint: ticket_views.get_ticket_attachment}
+- model: abuse.apiroute
+  pk: 109
+  fields: {method: GET, endpoint: ticket_views.get_ticket_attachments}
+- model: abuse.apiroute
+  pk: 110
+  fields: {method: GET, endpoint: ticket_views.get_ticket_items}
+- model: abuse.apiroute
+  pk: 111
+  fields: {method: GET, endpoint: ticket_views.get_ticket_prefetched_preset}
+- model: abuse.apiroute
+  pk: 112
+  fields: {method: GET, endpoint: ticket_views.get_ticket_prefetched_template}
+- model: abuse.apiroute
+  pk: 113
+  fields: {method: GET, endpoint: ticket_views.get_ticket_proof}
+- model: abuse.apiroute
+  pk: 114
+  fields: {method: GET, endpoint: ticket_views.get_tickets}
+- model: abuse.apiroute
+  pk: 115
+  fields: {method: GET, endpoint: ticket_views.get_timeline}
+- model: abuse.apiroute
+  pk: 116
+  fields: {method: GET, endpoint: ticket_views.get_todo_tickets}
+- model: abuse.apiroute
+  pk: 117
+  fields: {method: GET, endpoint: ticket_views.interact}
+- model: abuse.apiroute
+  pk: 118
+  fields: {method: GET, endpoint: ticket_views.ticket_star_management}
+- model: abuse.apiroute
+  pk: 119
+  fields: {method: GET, endpoint: ticket_views.unblock_ticket_item}
+- model: abuse.apiroute
+  pk: 120
+  fields: {method: GET, endpoint: ticket_views.update_or_delete_comment}
+- model: abuse.apiroute
+  pk: 121
+  fields: {method: GET, endpoint: ticket_views.update_status}
+- model: abuse.apiroute
+  pk: 122
+  fields: {method: GET, endpoint: ticket_views.update_ticket}
+- model: abuse.apiroute
+  pk: 123
+  fields: {method: GET, endpoint: ticket_views.update_ticket_defendant}
+- model: abuse.apiroute
+  pk: 124
+  fields: {method: GET, endpoint: ticket_views.update_ticket_item}
+- model: abuse.apiroute
+  pk: 125
+  fields: {method: GET, endpoint: ticket_views.update_ticket_pause}
+- model: abuse.apiroute
+  pk: 126
+  fields: {method: GET, endpoint: ticket_views.update_ticket_proof}
+- model: abuse.apiroute
+  pk: 127
+  fields: {method: GET, endpoint: ticket_views.update_ticket_snooze}
+- model: abuse.apiroute
+  pk: 128
+  fields: {method: POST, endpoint: category_views.create_category}
+- model: abuse.apiroute
+  pk: 129
+  fields: {method: POST, endpoint: category_views.delete_category}
+- model: abuse.apiroute
+  pk: 130
+  fields: {method: POST, endpoint: category_views.get_all_categories}
+- model: abuse.apiroute
+  pk: 131
+  fields: {method: POST, endpoint: category_views.get_category}
+- model: abuse.apiroute
+  pk: 132
+  fields: {method: POST, endpoint: category_views.get_user_categories}
+- model: abuse.apiroute
+  pk: 133
+  fields: {method: POST, endpoint: category_views.update_category}
+- model: abuse.apiroute
+  pk: 134
+  fields: {method: POST, endpoint: defendant_views.add_comment}
+- model: abuse.apiroute
+  pk: 135
+  fields: {method: POST, endpoint: defendant_views.add_defendant_tag}
+- model: abuse.apiroute
+  pk: 136
+  fields: {method: POST, endpoint: defendant_views.delete_defendant_tag}
+- model: abuse.apiroute
+  pk: 137
+  fields: {method: POST, endpoint: defendant_views.get_defendant}
+- model: abuse.apiroute
+  pk: 138
+  fields: {method: POST, endpoint: defendant_views.get_defendant_services}
+- model: abuse.apiroute
+  pk: 139
+  fields: {method: POST, endpoint: defendant_views.get_defendant_top20}
+- model: abuse.apiroute
+  pk: 140
+  fields: {method: POST, endpoint: defendant_views.update_or_delete_comment}
+- model: abuse.apiroute
+  pk: 141
+  fields: {method: POST, endpoint: email_templates_views.create_templates}
+- model: abuse.apiroute
+  pk: 142
+  fields: {method: POST, endpoint: email_templates_views.get_all_templates}
+- model: abuse.apiroute
+  pk: 143
+  fields: {method: POST, endpoint: email_templates_views.get_recipients_type}
+- model: abuse.apiroute
+  pk: 144
+  fields: {method: POST, endpoint: email_templates_views.get_supported_languages}
+- model: abuse.apiroute
+  pk: 145
+  fields: {method: POST, endpoint: email_templates_views.get_template}
+- model: abuse.apiroute
+  pk: 146
+  fields: {method: POST, endpoint: email_templates_views.update_template}
+- model: abuse.apiroute
+  pk: 147
+  fields: {method: POST, endpoint: misc_views.add_ticket_resolution}
+- model: abuse.apiroute
+  pk: 148
+  fields: {method: POST, endpoint: misc_views.auth}
+- model: abuse.apiroute
+  pk: 149
+  fields: {method: POST, endpoint: misc_views.delete_ticket_resolution}
+- model: abuse.apiroute
+  pk: 150
+  fields: {method: POST, endpoint: misc_views.get_all_status}
+- model: abuse.apiroute
+  pk: 151
+  fields: {method: POST, endpoint: misc_views.get_all_ticket_resolutions}
+- model: abuse.apiroute
+  pk: 152
+  fields: {method: POST, endpoint: misc_views.get_cerberus_roles}
+- model: abuse.apiroute
+  pk: 153
+  fields: {method: POST, endpoint: misc_views.get_dashboard}
+- model: abuse.apiroute
+  pk: 154
+  fields: {method: POST, endpoint: misc_views.get_logged_user}
+- model: abuse.apiroute
+  pk: 155
+  fields: {method: POST, endpoint: misc_views.get_mass_contact}
+- model: abuse.apiroute
+  pk: 156
+  fields: {method: POST, endpoint: misc_views.get_profiles}
+- model: abuse.apiroute
+  pk: 157
+  fields: {method: POST, endpoint: misc_views.get_providers_priorities}
+- model: abuse.apiroute
+  pk: 158
+  fields: {method: POST, endpoint: misc_views.get_status}
+- model: abuse.apiroute
+  pk: 159
+  fields: {method: POST, endpoint: misc_views.get_ticket_priorities}
+- model: abuse.apiroute
+  pk: 160
+  fields: {method: POST, endpoint: misc_views.get_toolbar}
+- model: abuse.apiroute
+  pk: 161
+  fields: {method: POST, endpoint: misc_views.get_url_http_headers}
+- model: abuse.apiroute
+  pk: 162
+  fields: {method: POST, endpoint: misc_views.get_user}
+- model: abuse.apiroute
+  pk: 163
+  fields: {method: POST, endpoint: misc_views.get_user_notifications}
+- model: abuse.apiroute
+  pk: 164
+  fields: {method: POST, endpoint: misc_views.get_user_tickets}
+- model: abuse.apiroute
+  pk: 165
+  fields: {method: POST, endpoint: misc_views.get_users_infos}
+- model: abuse.apiroute
+  pk: 166
+  fields: {method: POST, endpoint: misc_views.get_whois}
+- model: abuse.apiroute
+  pk: 167
+  fields: {method: POST, endpoint: misc_views.logout}
+- model: abuse.apiroute
+  pk: 168
+  fields: {method: POST, endpoint: misc_views.monitor}
+- model: abuse.apiroute
+  pk: 169
+  fields: {method: POST, endpoint: misc_views.ping}
+- model: abuse.apiroute
+  pk: 170
+  fields: {method: POST, endpoint: misc_views.post_mass_contact}
+- model: abuse.apiroute
+  pk: 171
+  fields: {method: POST, endpoint: misc_views.search}
+- model: abuse.apiroute
+  pk: 172
+  fields: {method: POST, endpoint: misc_views.update_ticket_resolution}
+- model: abuse.apiroute
+  pk: 173
+  fields: {method: POST, endpoint: misc_views.update_user}
+- model: abuse.apiroute
+  pk: 174
+  fields: {method: POST, endpoint: news_views.create_news}
+- model: abuse.apiroute
+  pk: 175
+  fields: {method: POST, endpoint: news_views.delete_news}
+- model: abuse.apiroute
+  pk: 176
+  fields: {method: POST, endpoint: news_views.get_all_news}
+- model: abuse.apiroute
+  pk: 177
+  fields: {method: POST, endpoint: news_views.get_news}
+- model: abuse.apiroute
+  pk: 178
+  fields: {method: POST, endpoint: news_views.update_news}
+- model: abuse.apiroute
+  pk: 179
+  fields: {method: POST, endpoint: preset_views.create_preset}
+- model: abuse.apiroute
+  pk: 180
+  fields: {method: POST, endpoint: preset_views.delete_preset}
+- model: abuse.apiroute
+  pk: 181
+  fields: {method: POST, endpoint: preset_views.get_all_presets}
+- model: abuse.apiroute
+  pk: 182
+  fields: {method: POST, endpoint: preset_views.get_preset}
+- model: abuse.apiroute
+  pk: 183
+  fields: {method: POST, endpoint: preset_views.order_presets}
+- model: abuse.apiroute
+  pk: 184
+  fields: {method: POST, endpoint: preset_views.update_preset}
+- model: abuse.apiroute
+  pk: 185
+  fields: {method: POST, endpoint: provider_views.add_provider_tag}
+- model: abuse.apiroute
+  pk: 186
+  fields: {method: POST, endpoint: provider_views.create_provider}
+- model: abuse.apiroute
+  pk: 187
+  fields: {method: POST, endpoint: provider_views.delete_provider_tag}
+- model: abuse.apiroute
+  pk: 188
+  fields: {method: POST, endpoint: provider_views.get_providers}
+- model: abuse.apiroute
+  pk: 189
+  fields: {method: POST, endpoint: provider_views.update_provider}
+- model: abuse.apiroute
+  pk: 190
+  fields: {method: POST, endpoint: report_views.add_report_tag}
+- model: abuse.apiroute
+  pk: 191
+  fields: {method: POST, endpoint: report_views.bulk_add_reports}
+- model: abuse.apiroute
+  pk: 192
+  fields: {method: POST, endpoint: report_views.create_report_item}
+- model: abuse.apiroute
+  pk: 193
+  fields: {method: POST, endpoint: report_views.delete_report_tag}
+- model: abuse.apiroute
+  pk: 194
+  fields: {method: POST, endpoint: report_views.get_all_items_screenshot}
+- model: abuse.apiroute
+  pk: 195
+  fields: {method: POST, endpoint: report_views.get_all_report_attachments}
+- model: abuse.apiroute
+  pk: 196
+  fields: {method: POST, endpoint: report_views.get_all_reports}
+- model: abuse.apiroute
+  pk: 197
+  fields: {method: POST, endpoint: report_views.get_dehtmlified_report}
+- model: abuse.apiroute
+  pk: 198
+  fields: {method: POST, endpoint: report_views.get_item_screenshot}
+- model: abuse.apiroute
+  pk: 199
+  fields: {method: POST, endpoint: report_views.get_raw_report}
+- model: abuse.apiroute
+  pk: 200
+  fields: {method: POST, endpoint: report_views.get_report}
+- model: abuse.apiroute
+  pk: 201
+  fields: {method: POST, endpoint: report_views.get_report_attachment}
+- model: abuse.apiroute
+  pk: 202
+  fields: {method: POST, endpoint: report_views.get_report_items}
+- model: abuse.apiroute
+  pk: 203
+  fields: {method: POST, endpoint: report_views.post_feedback}
+- model: abuse.apiroute
+  pk: 204
+  fields: {method: POST, endpoint: report_views.unblock_report_item}
+- model: abuse.apiroute
+  pk: 205
+  fields: {method: POST, endpoint: report_views.update_report}
+- model: abuse.apiroute
+  pk: 206
+  fields: {method: POST, endpoint: report_views.update_report_item}
+- model: abuse.apiroute
+  pk: 207
+  fields: {method: POST, endpoint: report_views.validate_report}
+- model: abuse.apiroute
+  pk: 208
+  fields: {method: POST, endpoint: reputation_views.get_ip_external_detail}
+- model: abuse.apiroute
+  pk: 209
+  fields: {method: POST, endpoint: reputation_views.get_ip_external_reputation}
+- model: abuse.apiroute
+  pk: 210
+  fields: {method: POST, endpoint: reputation_views.get_ip_internal_reputation}
+- model: abuse.apiroute
+  pk: 211
+  fields: {method: POST, endpoint: reputation_views.get_ip_rbl_reputation}
+- model: abuse.apiroute
+  pk: 212
+  fields: {method: POST, endpoint: reputation_views.get_ip_tool}
+- model: abuse.apiroute
+  pk: 213
+  fields: {method: POST, endpoint: reputation_views.get_url_external_reputation}
+- model: abuse.apiroute
+  pk: 214
+  fields: {method: POST, endpoint: tag_views.create_tag}
+- model: abuse.apiroute
+  pk: 215
+  fields: {method: POST, endpoint: tag_views.delete_tag}
+- model: abuse.apiroute
+  pk: 216
+  fields: {method: POST, endpoint: tag_views.get_all_tags}
+- model: abuse.apiroute
+  pk: 217
+  fields: {method: POST, endpoint: tag_views.get_tag}
+- model: abuse.apiroute
+  pk: 218
+  fields: {method: POST, endpoint: tag_views.get_tag_type}
+- model: abuse.apiroute
+  pk: 219
+  fields: {method: POST, endpoint: tag_views.update_tag}
+- model: abuse.apiroute
+  pk: 220
+  fields: {method: POST, endpoint: threshold_views.create_threshold}
+- model: abuse.apiroute
+  pk: 221
+  fields: {method: POST, endpoint: threshold_views.delete_threshold}
+- model: abuse.apiroute
+  pk: 222
+  fields: {method: POST, endpoint: threshold_views.get_all_threshold}
+- model: abuse.apiroute
+  pk: 223
+  fields: {method: POST, endpoint: threshold_views.get_threshold}
+- model: abuse.apiroute
+  pk: 224
+  fields: {method: POST, endpoint: threshold_views.update_threshold}
+- model: abuse.apiroute
+  pk: 225
+  fields: {method: POST, endpoint: ticket_views.add_comment}
+- model: abuse.apiroute
+  pk: 226
+  fields: {method: POST, endpoint: ticket_views.add_items_to_proof}
+- model: abuse.apiroute
+  pk: 227
+  fields: {method: POST, endpoint: ticket_views.add_ticket_tag}
+- model: abuse.apiroute
+  pk: 228
+  fields: {method: POST, endpoint: ticket_views.bulk_add_tickets}
+- model: abuse.apiroute
+  pk: 229
+  fields: {method: POST, endpoint: ticket_views.cancel_job}
+- model: abuse.apiroute
+  pk: 230
+  fields: {method: POST, endpoint: ticket_views.delete_ticket_tag}
+- model: abuse.apiroute
+  pk: 231
+  fields: {method: POST, endpoint: ticket_views.get_actions}
+- model: abuse.apiroute
+  pk: 232
+  fields: {method: POST, endpoint: ticket_views.get_mails}
+- model: abuse.apiroute
+  pk: 233
+  fields: {method: POST, endpoint: ticket_views.get_providers}
+- model: abuse.apiroute
+  pk: 234
+  fields: {method: POST, endpoint: ticket_views.get_ticket}
+- model: abuse.apiroute
+  pk: 235
+  fields: {method: POST, endpoint: ticket_views.get_ticket_attachment}
+- model: abuse.apiroute
+  pk: 236
+  fields: {method: POST, endpoint: ticket_views.get_ticket_attachments}
+- model: abuse.apiroute
+  pk: 237
+  fields: {method: POST, endpoint: ticket_views.get_ticket_items}
+- model: abuse.apiroute
+  pk: 238
+  fields: {method: POST, endpoint: ticket_views.get_ticket_prefetched_preset}
+- model: abuse.apiroute
+  pk: 239
+  fields: {method: POST, endpoint: ticket_views.get_ticket_prefetched_template}
+- model: abuse.apiroute
+  pk: 240
+  fields: {method: POST, endpoint: ticket_views.get_ticket_proof}
+- model: abuse.apiroute
+  pk: 241
+  fields: {method: POST, endpoint: ticket_views.get_tickets}
+- model: abuse.apiroute
+  pk: 242
+  fields: {method: POST, endpoint: ticket_views.get_timeline}
+- model: abuse.apiroute
+  pk: 243
+  fields: {method: POST, endpoint: ticket_views.get_todo_tickets}
+- model: abuse.apiroute
+  pk: 244
+  fields: {method: POST, endpoint: ticket_views.interact}
+- model: abuse.apiroute
+  pk: 245
+  fields: {method: POST, endpoint: ticket_views.ticket_star_management}
+- model: abuse.apiroute
+  pk: 246
+  fields: {method: POST, endpoint: ticket_views.unblock_ticket_item}
+- model: abuse.apiroute
+  pk: 247
+  fields: {method: POST, endpoint: ticket_views.update_or_delete_comment}
+- model: abuse.apiroute
+  pk: 248
+  fields: {method: POST, endpoint: ticket_views.update_status}
+- model: abuse.apiroute
+  pk: 249
+  fields: {method: POST, endpoint: ticket_views.update_ticket}
+- model: abuse.apiroute
+  pk: 250
+  fields: {method: POST, endpoint: ticket_views.update_ticket_defendant}
+- model: abuse.apiroute
+  pk: 251
+  fields: {method: POST, endpoint: ticket_views.update_ticket_item}
+- model: abuse.apiroute
+  pk: 252
+  fields: {method: POST, endpoint: ticket_views.update_ticket_pause}
+- model: abuse.apiroute
+  pk: 253
+  fields: {method: POST, endpoint: ticket_views.update_ticket_proof}
+- model: abuse.apiroute
+  pk: 254
+  fields: {method: POST, endpoint: ticket_views.update_ticket_snooze}
+- model: abuse.apiroute
+  pk: 255
+  fields: {method: PUT, endpoint: category_views.create_category}
+- model: abuse.apiroute
+  pk: 256
+  fields: {method: PUT, endpoint: category_views.delete_category}
+- model: abuse.apiroute
+  pk: 257
+  fields: {method: PUT, endpoint: category_views.get_all_categories}
+- model: abuse.apiroute
+  pk: 258
+  fields: {method: PUT, endpoint: category_views.get_category}
+- model: abuse.apiroute
+  pk: 259
+  fields: {method: PUT, endpoint: category_views.get_user_categories}
+- model: abuse.apiroute
+  pk: 260
+  fields: {method: PUT, endpoint: category_views.update_category}
+- model: abuse.apiroute
+  pk: 261
+  fields: {method: PUT, endpoint: defendant_views.add_comment}
+- model: abuse.apiroute
+  pk: 262
+  fields: {method: PUT, endpoint: defendant_views.add_defendant_tag}
+- model: abuse.apiroute
+  pk: 263
+  fields: {method: PUT, endpoint: defendant_views.delete_defendant_tag}
+- model: abuse.apiroute
+  pk: 264
+  fields: {method: PUT, endpoint: defendant_views.get_defendant}
+- model: abuse.apiroute
+  pk: 265
+  fields: {method: PUT, endpoint: defendant_views.get_defendant_services}
+- model: abuse.apiroute
+  pk: 266
+  fields: {method: PUT, endpoint: defendant_views.get_defendant_top20}
+- model: abuse.apiroute
+  pk: 267
+  fields: {method: PUT, endpoint: defendant_views.update_or_delete_comment}
+- model: abuse.apiroute
+  pk: 268
+  fields: {method: PUT, endpoint: email_templates_views.create_templates}
+- model: abuse.apiroute
+  pk: 269
+  fields: {method: PUT, endpoint: email_templates_views.get_all_templates}
+- model: abuse.apiroute
+  pk: 270
+  fields: {method: PUT, endpoint: email_templates_views.get_recipients_type}
+- model: abuse.apiroute
+  pk: 271
+  fields: {method: PUT, endpoint: email_templates_views.get_supported_languages}
+- model: abuse.apiroute
+  pk: 272
+  fields: {method: PUT, endpoint: email_templates_views.get_template}
+- model: abuse.apiroute
+  pk: 273
+  fields: {method: PUT, endpoint: email_templates_views.update_template}
+- model: abuse.apiroute
+  pk: 274
+  fields: {method: PUT, endpoint: misc_views.add_ticket_resolution}
+- model: abuse.apiroute
+  pk: 275
+  fields: {method: PUT, endpoint: misc_views.auth}
+- model: abuse.apiroute
+  pk: 276
+  fields: {method: PUT, endpoint: misc_views.delete_ticket_resolution}
+- model: abuse.apiroute
+  pk: 277
+  fields: {method: PUT, endpoint: misc_views.get_all_status}
+- model: abuse.apiroute
+  pk: 278
+  fields: {method: PUT, endpoint: misc_views.get_all_ticket_resolutions}
+- model: abuse.apiroute
+  pk: 279
+  fields: {method: PUT, endpoint: misc_views.get_cerberus_roles}
+- model: abuse.apiroute
+  pk: 280
+  fields: {method: PUT, endpoint: misc_views.get_dashboard}
+- model: abuse.apiroute
+  pk: 281
+  fields: {method: PUT, endpoint: misc_views.get_logged_user}
+- model: abuse.apiroute
+  pk: 282
+  fields: {method: PUT, endpoint: misc_views.get_mass_contact}
+- model: abuse.apiroute
+  pk: 283
+  fields: {method: PUT, endpoint: misc_views.get_profiles}
+- model: abuse.apiroute
+  pk: 284
+  fields: {method: PUT, endpoint: misc_views.get_providers_priorities}
+- model: abuse.apiroute
+  pk: 285
+  fields: {method: PUT, endpoint: misc_views.get_status}
+- model: abuse.apiroute
+  pk: 286
+  fields: {method: PUT, endpoint: misc_views.get_ticket_priorities}
+- model: abuse.apiroute
+  pk: 287
+  fields: {method: PUT, endpoint: misc_views.get_toolbar}
+- model: abuse.apiroute
+  pk: 288
+  fields: {method: PUT, endpoint: misc_views.get_url_http_headers}
+- model: abuse.apiroute
+  pk: 289
+  fields: {method: PUT, endpoint: misc_views.get_user}
+- model: abuse.apiroute
+  pk: 290
+  fields: {method: PUT, endpoint: misc_views.get_user_notifications}
+- model: abuse.apiroute
+  pk: 291
+  fields: {method: PUT, endpoint: misc_views.get_user_tickets}
+- model: abuse.apiroute
+  pk: 292
+  fields: {method: PUT, endpoint: misc_views.get_users_infos}
+- model: abuse.apiroute
+  pk: 293
+  fields: {method: PUT, endpoint: misc_views.get_whois}
+- model: abuse.apiroute
+  pk: 294
+  fields: {method: PUT, endpoint: misc_views.logout}
+- model: abuse.apiroute
+  pk: 295
+  fields: {method: PUT, endpoint: misc_views.monitor}
+- model: abuse.apiroute
+  pk: 296
+  fields: {method: PUT, endpoint: misc_views.ping}
+- model: abuse.apiroute
+  pk: 297
+  fields: {method: PUT, endpoint: misc_views.post_mass_contact}
+- model: abuse.apiroute
+  pk: 298
+  fields: {method: PUT, endpoint: misc_views.search}
+- model: abuse.apiroute
+  pk: 299
+  fields: {method: PUT, endpoint: misc_views.update_ticket_resolution}
+- model: abuse.apiroute
+  pk: 300
+  fields: {method: PUT, endpoint: misc_views.update_user}
+- model: abuse.apiroute
+  pk: 301
+  fields: {method: PUT, endpoint: news_views.create_news}
+- model: abuse.apiroute
+  pk: 302
+  fields: {method: PUT, endpoint: news_views.delete_news}
+- model: abuse.apiroute
+  pk: 303
+  fields: {method: PUT, endpoint: news_views.get_all_news}
+- model: abuse.apiroute
+  pk: 304
+  fields: {method: PUT, endpoint: news_views.get_news}
+- model: abuse.apiroute
+  pk: 305
+  fields: {method: PUT, endpoint: news_views.update_news}
+- model: abuse.apiroute
+  pk: 306
+  fields: {method: PUT, endpoint: preset_views.create_preset}
+- model: abuse.apiroute
+  pk: 307
+  fields: {method: PUT, endpoint: preset_views.delete_preset}
+- model: abuse.apiroute
+  pk: 308
+  fields: {method: PUT, endpoint: preset_views.get_all_presets}
+- model: abuse.apiroute
+  pk: 309
+  fields: {method: PUT, endpoint: preset_views.get_preset}
+- model: abuse.apiroute
+  pk: 310
+  fields: {method: PUT, endpoint: preset_views.order_presets}
+- model: abuse.apiroute
+  pk: 311
+  fields: {method: PUT, endpoint: preset_views.update_preset}
+- model: abuse.apiroute
+  pk: 312
+  fields: {method: PUT, endpoint: provider_views.add_provider_tag}
+- model: abuse.apiroute
+  pk: 313
+  fields: {method: PUT, endpoint: provider_views.create_provider}
+- model: abuse.apiroute
+  pk: 314
+  fields: {method: PUT, endpoint: provider_views.delete_provider_tag}
+- model: abuse.apiroute
+  pk: 315
+  fields: {method: PUT, endpoint: provider_views.get_providers}
+- model: abuse.apiroute
+  pk: 316
+  fields: {method: PUT, endpoint: provider_views.update_provider}
+- model: abuse.apiroute
+  pk: 317
+  fields: {method: PUT, endpoint: report_views.add_report_tag}
+- model: abuse.apiroute
+  pk: 318
+  fields: {method: PUT, endpoint: report_views.bulk_add_reports}
+- model: abuse.apiroute
+  pk: 319
+  fields: {method: PUT, endpoint: report_views.create_report_item}
+- model: abuse.apiroute
+  pk: 320
+  fields: {method: PUT, endpoint: report_views.delete_report_tag}
+- model: abuse.apiroute
+  pk: 321
+  fields: {method: PUT, endpoint: report_views.get_all_items_screenshot}
+- model: abuse.apiroute
+  pk: 322
+  fields: {method: PUT, endpoint: report_views.get_all_report_attachments}
+- model: abuse.apiroute
+  pk: 323
+  fields: {method: PUT, endpoint: report_views.get_all_reports}
+- model: abuse.apiroute
+  pk: 324
+  fields: {method: PUT, endpoint: report_views.get_dehtmlified_report}
+- model: abuse.apiroute
+  pk: 325
+  fields: {method: PUT, endpoint: report_views.get_item_screenshot}
+- model: abuse.apiroute
+  pk: 326
+  fields: {method: PUT, endpoint: report_views.get_raw_report}
+- model: abuse.apiroute
+  pk: 327
+  fields: {method: PUT, endpoint: report_views.get_report}
+- model: abuse.apiroute
+  pk: 328
+  fields: {method: PUT, endpoint: report_views.get_report_attachment}
+- model: abuse.apiroute
+  pk: 329
+  fields: {method: PUT, endpoint: report_views.get_report_items}
+- model: abuse.apiroute
+  pk: 330
+  fields: {method: PUT, endpoint: report_views.post_feedback}
+- model: abuse.apiroute
+  pk: 331
+  fields: {method: PUT, endpoint: report_views.unblock_report_item}
+- model: abuse.apiroute
+  pk: 332
+  fields: {method: PUT, endpoint: report_views.update_report}
+- model: abuse.apiroute
+  pk: 333
+  fields: {method: PUT, endpoint: report_views.update_report_item}
+- model: abuse.apiroute
+  pk: 334
+  fields: {method: PUT, endpoint: report_views.validate_report}
+- model: abuse.apiroute
+  pk: 335
+  fields: {method: PUT, endpoint: reputation_views.get_ip_external_detail}
+- model: abuse.apiroute
+  pk: 336
+  fields: {method: PUT, endpoint: reputation_views.get_ip_external_reputation}
+- model: abuse.apiroute
+  pk: 337
+  fields: {method: PUT, endpoint: reputation_views.get_ip_internal_reputation}
+- model: abuse.apiroute
+  pk: 338
+  fields: {method: PUT, endpoint: reputation_views.get_ip_rbl_reputation}
+- model: abuse.apiroute
+  pk: 339
+  fields: {method: PUT, endpoint: reputation_views.get_ip_tool}
+- model: abuse.apiroute
+  pk: 340
+  fields: {method: PUT, endpoint: reputation_views.get_url_external_reputation}
+- model: abuse.apiroute
+  pk: 341
+  fields: {method: PUT, endpoint: tag_views.create_tag}
+- model: abuse.apiroute
+  pk: 342
+  fields: {method: PUT, endpoint: tag_views.delete_tag}
+- model: abuse.apiroute
+  pk: 343
+  fields: {method: PUT, endpoint: tag_views.get_all_tags}
+- model: abuse.apiroute
+  pk: 344
+  fields: {method: PUT, endpoint: tag_views.get_tag}
+- model: abuse.apiroute
+  pk: 345
+  fields: {method: PUT, endpoint: tag_views.get_tag_type}
+- model: abuse.apiroute
+  pk: 346
+  fields: {method: PUT, endpoint: tag_views.update_tag}
+- model: abuse.apiroute
+  pk: 347
+  fields: {method: PUT, endpoint: threshold_views.create_threshold}
+- model: abuse.apiroute
+  pk: 348
+  fields: {method: PUT, endpoint: threshold_views.delete_threshold}
+- model: abuse.apiroute
+  pk: 349
+  fields: {method: PUT, endpoint: threshold_views.get_all_threshold}
+- model: abuse.apiroute
+  pk: 350
+  fields: {method: PUT, endpoint: threshold_views.get_threshold}
+- model: abuse.apiroute
+  pk: 351
+  fields: {method: PUT, endpoint: threshold_views.update_threshold}
+- model: abuse.apiroute
+  pk: 352
+  fields: {method: PUT, endpoint: ticket_views.add_comment}
+- model: abuse.apiroute
+  pk: 353
+  fields: {method: PUT, endpoint: ticket_views.add_items_to_proof}
+- model: abuse.apiroute
+  pk: 354
+  fields: {method: PUT, endpoint: ticket_views.add_ticket_tag}
+- model: abuse.apiroute
+  pk: 355
+  fields: {method: PUT, endpoint: ticket_views.bulk_add_tickets}
+- model: abuse.apiroute
+  pk: 356
+  fields: {method: PUT, endpoint: ticket_views.cancel_job}
+- model: abuse.apiroute
+  pk: 357
+  fields: {method: PUT, endpoint: ticket_views.delete_ticket_tag}
+- model: abuse.apiroute
+  pk: 358
+  fields: {method: PUT, endpoint: ticket_views.get_actions}
+- model: abuse.apiroute
+  pk: 359
+  fields: {method: PUT, endpoint: ticket_views.get_mails}
+- model: abuse.apiroute
+  pk: 360
+  fields: {method: PUT, endpoint: ticket_views.get_providers}
+- model: abuse.apiroute
+  pk: 361
+  fields: {method: PUT, endpoint: ticket_views.get_ticket}
+- model: abuse.apiroute
+  pk: 362
+  fields: {method: PUT, endpoint: ticket_views.get_ticket_attachment}
+- model: abuse.apiroute
+  pk: 363
+  fields: {method: PUT, endpoint: ticket_views.get_ticket_attachments}
+- model: abuse.apiroute
+  pk: 364
+  fields: {method: PUT, endpoint: ticket_views.get_ticket_items}
+- model: abuse.apiroute
+  pk: 365
+  fields: {method: PUT, endpoint: ticket_views.get_ticket_prefetched_preset}
+- model: abuse.apiroute
+  pk: 366
+  fields: {method: PUT, endpoint: ticket_views.get_ticket_prefetched_template}
+- model: abuse.apiroute
+  pk: 367
+  fields: {method: PUT, endpoint: ticket_views.get_ticket_proof}
+- model: abuse.apiroute
+  pk: 368
+  fields: {method: PUT, endpoint: ticket_views.get_tickets}
+- model: abuse.apiroute
+  pk: 369
+  fields: {method: PUT, endpoint: ticket_views.get_timeline}
+- model: abuse.apiroute
+  pk: 370
+  fields: {method: PUT, endpoint: ticket_views.get_todo_tickets}
+- model: abuse.apiroute
+  pk: 371
+  fields: {method: PUT, endpoint: ticket_views.interact}
+- model: abuse.apiroute
+  pk: 372
+  fields: {method: PUT, endpoint: ticket_views.ticket_star_management}
+- model: abuse.apiroute
+  pk: 373
+  fields: {method: PUT, endpoint: ticket_views.unblock_ticket_item}
+- model: abuse.apiroute
+  pk: 374
+  fields: {method: PUT, endpoint: ticket_views.update_or_delete_comment}
+- model: abuse.apiroute
+  pk: 375
+  fields: {method: PUT, endpoint: ticket_views.update_status}
+- model: abuse.apiroute
+  pk: 376
+  fields: {method: PUT, endpoint: ticket_views.update_ticket}
+- model: abuse.apiroute
+  pk: 377
+  fields: {method: PUT, endpoint: ticket_views.update_ticket_defendant}
+- model: abuse.apiroute
+  pk: 378
+  fields: {method: PUT, endpoint: ticket_views.update_ticket_item}
+- model: abuse.apiroute
+  pk: 379
+  fields: {method: PUT, endpoint: ticket_views.update_ticket_pause}
+- model: abuse.apiroute
+  pk: 380
+  fields: {method: PUT, endpoint: ticket_views.update_ticket_proof}
+- model: abuse.apiroute
+  pk: 381
+  fields: {method: PUT, endpoint: ticket_views.update_ticket_snooze}
+- model: abuse.apiroute
+  pk: 382
+  fields: {method: PATCH, endpoint: category_views.create_category}
+- model: abuse.apiroute
+  pk: 383
+  fields: {method: PATCH, endpoint: category_views.delete_category}
+- model: abuse.apiroute
+  pk: 384
+  fields: {method: PATCH, endpoint: category_views.get_all_categories}
+- model: abuse.apiroute
+  pk: 385
+  fields: {method: PATCH, endpoint: category_views.get_category}
+- model: abuse.apiroute
+  pk: 386
+  fields: {method: PATCH, endpoint: category_views.get_user_categories}
+- model: abuse.apiroute
+  pk: 387
+  fields: {method: PATCH, endpoint: category_views.update_category}
+- model: abuse.apiroute
+  pk: 388
+  fields: {method: PATCH, endpoint: defendant_views.add_comment}
+- model: abuse.apiroute
+  pk: 389
+  fields: {method: PATCH, endpoint: defendant_views.add_defendant_tag}
+- model: abuse.apiroute
+  pk: 390
+  fields: {method: PATCH, endpoint: defendant_views.delete_defendant_tag}
+- model: abuse.apiroute
+  pk: 391
+  fields: {method: PATCH, endpoint: defendant_views.get_defendant}
+- model: abuse.apiroute
+  pk: 392
+  fields: {method: PATCH, endpoint: defendant_views.get_defendant_services}
+- model: abuse.apiroute
+  pk: 393
+  fields: {method: PATCH, endpoint: defendant_views.get_defendant_top20}
+- model: abuse.apiroute
+  pk: 394
+  fields: {method: PATCH, endpoint: defendant_views.update_or_delete_comment}
+- model: abuse.apiroute
+  pk: 395
+  fields: {method: PATCH, endpoint: email_templates_views.create_templates}
+- model: abuse.apiroute
+  pk: 396
+  fields: {method: PATCH, endpoint: email_templates_views.get_all_templates}
+- model: abuse.apiroute
+  pk: 397
+  fields: {method: PATCH, endpoint: email_templates_views.get_recipients_type}
+- model: abuse.apiroute
+  pk: 398
+  fields: {method: PATCH, endpoint: email_templates_views.get_supported_languages}
+- model: abuse.apiroute
+  pk: 399
+  fields: {method: PATCH, endpoint: email_templates_views.get_template}
+- model: abuse.apiroute
+  pk: 400
+  fields: {method: PATCH, endpoint: email_templates_views.update_template}
+- model: abuse.apiroute
+  pk: 401
+  fields: {method: PATCH, endpoint: misc_views.add_ticket_resolution}
+- model: abuse.apiroute
+  pk: 402
+  fields: {method: PATCH, endpoint: misc_views.auth}
+- model: abuse.apiroute
+  pk: 403
+  fields: {method: PATCH, endpoint: misc_views.delete_ticket_resolution}
+- model: abuse.apiroute
+  pk: 404
+  fields: {method: PATCH, endpoint: misc_views.get_all_status}
+- model: abuse.apiroute
+  pk: 405
+  fields: {method: PATCH, endpoint: misc_views.get_all_ticket_resolutions}
+- model: abuse.apiroute
+  pk: 406
+  fields: {method: PATCH, endpoint: misc_views.get_cerberus_roles}
+- model: abuse.apiroute
+  pk: 407
+  fields: {method: PATCH, endpoint: misc_views.get_dashboard}
+- model: abuse.apiroute
+  pk: 408
+  fields: {method: PATCH, endpoint: misc_views.get_logged_user}
+- model: abuse.apiroute
+  pk: 409
+  fields: {method: PATCH, endpoint: misc_views.get_mass_contact}
+- model: abuse.apiroute
+  pk: 410
+  fields: {method: PATCH, endpoint: misc_views.get_profiles}
+- model: abuse.apiroute
+  pk: 411
+  fields: {method: PATCH, endpoint: misc_views.get_providers_priorities}
+- model: abuse.apiroute
+  pk: 412
+  fields: {method: PATCH, endpoint: misc_views.get_status}
+- model: abuse.apiroute
+  pk: 413
+  fields: {method: PATCH, endpoint: misc_views.get_ticket_priorities}
+- model: abuse.apiroute
+  pk: 414
+  fields: {method: PATCH, endpoint: misc_views.get_toolbar}
+- model: abuse.apiroute
+  pk: 415
+  fields: {method: PATCH, endpoint: misc_views.get_url_http_headers}
+- model: abuse.apiroute
+  pk: 416
+  fields: {method: PATCH, endpoint: misc_views.get_user}
+- model: abuse.apiroute
+  pk: 417
+  fields: {method: PATCH, endpoint: misc_views.get_user_notifications}
+- model: abuse.apiroute
+  pk: 418
+  fields: {method: PATCH, endpoint: misc_views.get_user_tickets}
+- model: abuse.apiroute
+  pk: 419
+  fields: {method: PATCH, endpoint: misc_views.get_users_infos}
+- model: abuse.apiroute
+  pk: 420
+  fields: {method: PATCH, endpoint: misc_views.get_whois}
+- model: abuse.apiroute
+  pk: 421
+  fields: {method: PATCH, endpoint: misc_views.logout}
+- model: abuse.apiroute
+  pk: 422
+  fields: {method: PATCH, endpoint: misc_views.monitor}
+- model: abuse.apiroute
+  pk: 423
+  fields: {method: PATCH, endpoint: misc_views.ping}
+- model: abuse.apiroute
+  pk: 424
+  fields: {method: PATCH, endpoint: misc_views.post_mass_contact}
+- model: abuse.apiroute
+  pk: 425
+  fields: {method: PATCH, endpoint: misc_views.search}
+- model: abuse.apiroute
+  pk: 426
+  fields: {method: PATCH, endpoint: misc_views.update_ticket_resolution}
+- model: abuse.apiroute
+  pk: 427
+  fields: {method: PATCH, endpoint: misc_views.update_user}
+- model: abuse.apiroute
+  pk: 428
+  fields: {method: PATCH, endpoint: news_views.create_news}
+- model: abuse.apiroute
+  pk: 429
+  fields: {method: PATCH, endpoint: news_views.delete_news}
+- model: abuse.apiroute
+  pk: 430
+  fields: {method: PATCH, endpoint: news_views.get_all_news}
+- model: abuse.apiroute
+  pk: 431
+  fields: {method: PATCH, endpoint: news_views.get_news}
+- model: abuse.apiroute
+  pk: 432
+  fields: {method: PATCH, endpoint: news_views.update_news}
+- model: abuse.apiroute
+  pk: 433
+  fields: {method: PATCH, endpoint: preset_views.create_preset}
+- model: abuse.apiroute
+  pk: 434
+  fields: {method: PATCH, endpoint: preset_views.delete_preset}
+- model: abuse.apiroute
+  pk: 435
+  fields: {method: PATCH, endpoint: preset_views.get_all_presets}
+- model: abuse.apiroute
+  pk: 436
+  fields: {method: PATCH, endpoint: preset_views.get_preset}
+- model: abuse.apiroute
+  pk: 437
+  fields: {method: PATCH, endpoint: preset_views.order_presets}
+- model: abuse.apiroute
+  pk: 438
+  fields: {method: PATCH, endpoint: preset_views.update_preset}
+- model: abuse.apiroute
+  pk: 439
+  fields: {method: PATCH, endpoint: provider_views.add_provider_tag}
+- model: abuse.apiroute
+  pk: 440
+  fields: {method: PATCH, endpoint: provider_views.create_provider}
+- model: abuse.apiroute
+  pk: 441
+  fields: {method: PATCH, endpoint: provider_views.delete_provider_tag}
+- model: abuse.apiroute
+  pk: 442
+  fields: {method: PATCH, endpoint: provider_views.get_providers}
+- model: abuse.apiroute
+  pk: 443
+  fields: {method: PATCH, endpoint: provider_views.update_provider}
+- model: abuse.apiroute
+  pk: 444
+  fields: {method: PATCH, endpoint: report_views.add_report_tag}
+- model: abuse.apiroute
+  pk: 445
+  fields: {method: PATCH, endpoint: report_views.bulk_add_reports}
+- model: abuse.apiroute
+  pk: 446
+  fields: {method: PATCH, endpoint: report_views.create_report_item}
+- model: abuse.apiroute
+  pk: 447
+  fields: {method: PATCH, endpoint: report_views.delete_report_tag}
+- model: abuse.apiroute
+  pk: 448
+  fields: {method: PATCH, endpoint: report_views.get_all_items_screenshot}
+- model: abuse.apiroute
+  pk: 449
+  fields: {method: PATCH, endpoint: report_views.get_all_report_attachments}
+- model: abuse.apiroute
+  pk: 450
+  fields: {method: PATCH, endpoint: report_views.get_all_reports}
+- model: abuse.apiroute
+  pk: 451
+  fields: {method: PATCH, endpoint: report_views.get_dehtmlified_report}
+- model: abuse.apiroute
+  pk: 452
+  fields: {method: PATCH, endpoint: report_views.get_item_screenshot}
+- model: abuse.apiroute
+  pk: 453
+  fields: {method: PATCH, endpoint: report_views.get_raw_report}
+- model: abuse.apiroute
+  pk: 454
+  fields: {method: PATCH, endpoint: report_views.get_report}
+- model: abuse.apiroute
+  pk: 455
+  fields: {method: PATCH, endpoint: report_views.get_report_attachment}
+- model: abuse.apiroute
+  pk: 456
+  fields: {method: PATCH, endpoint: report_views.get_report_items}
+- model: abuse.apiroute
+  pk: 457
+  fields: {method: PATCH, endpoint: report_views.post_feedback}
+- model: abuse.apiroute
+  pk: 458
+  fields: {method: PATCH, endpoint: report_views.unblock_report_item}
+- model: abuse.apiroute
+  pk: 459
+  fields: {method: PATCH, endpoint: report_views.update_report}
+- model: abuse.apiroute
+  pk: 460
+  fields: {method: PATCH, endpoint: report_views.update_report_item}
+- model: abuse.apiroute
+  pk: 461
+  fields: {method: PATCH, endpoint: report_views.validate_report}
+- model: abuse.apiroute
+  pk: 462
+  fields: {method: PATCH, endpoint: reputation_views.get_ip_external_detail}
+- model: abuse.apiroute
+  pk: 463
+  fields: {method: PATCH, endpoint: reputation_views.get_ip_external_reputation}
+- model: abuse.apiroute
+  pk: 464
+  fields: {method: PATCH, endpoint: reputation_views.get_ip_internal_reputation}
+- model: abuse.apiroute
+  pk: 465
+  fields: {method: PATCH, endpoint: reputation_views.get_ip_rbl_reputation}
+- model: abuse.apiroute
+  pk: 466
+  fields: {method: PATCH, endpoint: reputation_views.get_ip_tool}
+- model: abuse.apiroute
+  pk: 467
+  fields: {method: PATCH, endpoint: reputation_views.get_url_external_reputation}
+- model: abuse.apiroute
+  pk: 468
+  fields: {method: PATCH, endpoint: tag_views.create_tag}
+- model: abuse.apiroute
+  pk: 469
+  fields: {method: PATCH, endpoint: tag_views.delete_tag}
+- model: abuse.apiroute
+  pk: 470
+  fields: {method: PATCH, endpoint: tag_views.get_all_tags}
+- model: abuse.apiroute
+  pk: 471
+  fields: {method: PATCH, endpoint: tag_views.get_tag}
+- model: abuse.apiroute
+  pk: 472
+  fields: {method: PATCH, endpoint: tag_views.get_tag_type}
+- model: abuse.apiroute
+  pk: 473
+  fields: {method: PATCH, endpoint: tag_views.update_tag}
+- model: abuse.apiroute
+  pk: 474
+  fields: {method: PATCH, endpoint: threshold_views.create_threshold}
+- model: abuse.apiroute
+  pk: 475
+  fields: {method: PATCH, endpoint: threshold_views.delete_threshold}
+- model: abuse.apiroute
+  pk: 476
+  fields: {method: PATCH, endpoint: threshold_views.get_all_threshold}
+- model: abuse.apiroute
+  pk: 477
+  fields: {method: PATCH, endpoint: threshold_views.get_threshold}
+- model: abuse.apiroute
+  pk: 478
+  fields: {method: PATCH, endpoint: threshold_views.update_threshold}
+- model: abuse.apiroute
+  pk: 479
+  fields: {method: PATCH, endpoint: ticket_views.add_comment}
+- model: abuse.apiroute
+  pk: 480
+  fields: {method: PATCH, endpoint: ticket_views.add_items_to_proof}
+- model: abuse.apiroute
+  pk: 481
+  fields: {method: PATCH, endpoint: ticket_views.add_ticket_tag}
+- model: abuse.apiroute
+  pk: 482
+  fields: {method: PATCH, endpoint: ticket_views.bulk_add_tickets}
+- model: abuse.apiroute
+  pk: 483
+  fields: {method: PATCH, endpoint: ticket_views.cancel_job}
+- model: abuse.apiroute
+  pk: 484
+  fields: {method: PATCH, endpoint: ticket_views.delete_ticket_tag}
+- model: abuse.apiroute
+  pk: 485
+  fields: {method: PATCH, endpoint: ticket_views.get_actions}
+- model: abuse.apiroute
+  pk: 486
+  fields: {method: PATCH, endpoint: ticket_views.get_mails}
+- model: abuse.apiroute
+  pk: 487
+  fields: {method: PATCH, endpoint: ticket_views.get_providers}
+- model: abuse.apiroute
+  pk: 488
+  fields: {method: PATCH, endpoint: ticket_views.get_ticket}
+- model: abuse.apiroute
+  pk: 489
+  fields: {method: PATCH, endpoint: ticket_views.get_ticket_attachment}
+- model: abuse.apiroute
+  pk: 490
+  fields: {method: PATCH, endpoint: ticket_views.get_ticket_attachments}
+- model: abuse.apiroute
+  pk: 491
+  fields: {method: PATCH, endpoint: ticket_views.get_ticket_items}
+- model: abuse.apiroute
+  pk: 492
+  fields: {method: PATCH, endpoint: ticket_views.get_ticket_prefetched_preset}
+- model: abuse.apiroute
+  pk: 493
+  fields: {method: PATCH, endpoint: ticket_views.get_ticket_prefetched_template}
+- model: abuse.apiroute
+  pk: 494
+  fields: {method: PATCH, endpoint: ticket_views.get_ticket_proof}
+- model: abuse.apiroute
+  pk: 495
+  fields: {method: PATCH, endpoint: ticket_views.get_tickets}
+- model: abuse.apiroute
+  pk: 496
+  fields: {method: PATCH, endpoint: ticket_views.get_timeline}
+- model: abuse.apiroute
+  pk: 497
+  fields: {method: PATCH, endpoint: ticket_views.get_todo_tickets}
+- model: abuse.apiroute
+  pk: 498
+  fields: {method: PATCH, endpoint: ticket_views.interact}
+- model: abuse.apiroute
+  pk: 499
+  fields: {method: PATCH, endpoint: ticket_views.ticket_star_management}
+- model: abuse.apiroute
+  pk: 500
+  fields: {method: PATCH, endpoint: ticket_views.unblock_ticket_item}
+- model: abuse.apiroute
+  pk: 501
+  fields: {method: PATCH, endpoint: ticket_views.update_or_delete_comment}
+- model: abuse.apiroute
+  pk: 502
+  fields: {method: PATCH, endpoint: ticket_views.update_status}
+- model: abuse.apiroute
+  pk: 503
+  fields: {method: PATCH, endpoint: ticket_views.update_ticket}
+- model: abuse.apiroute
+  pk: 504
+  fields: {method: PATCH, endpoint: ticket_views.update_ticket_defendant}
+- model: abuse.apiroute
+  pk: 505
+  fields: {method: PATCH, endpoint: ticket_views.update_ticket_item}
+- model: abuse.apiroute
+  pk: 506
+  fields: {method: PATCH, endpoint: ticket_views.update_ticket_pause}
+- model: abuse.apiroute
+  pk: 507
+  fields: {method: PATCH, endpoint: ticket_views.update_ticket_proof}
+- model: abuse.apiroute
+  pk: 508
+  fields: {method: PATCH, endpoint: ticket_views.update_ticket_snooze}
+- model: abuse.apiroute
+  pk: 509
+  fields: {method: DELETE, endpoint: category_views.create_category}
+- model: abuse.apiroute
+  pk: 510
+  fields: {method: DELETE, endpoint: category_views.delete_category}
+- model: abuse.apiroute
+  pk: 511
+  fields: {method: DELETE, endpoint: category_views.get_all_categories}
+- model: abuse.apiroute
+  pk: 512
+  fields: {method: DELETE, endpoint: category_views.get_category}
+- model: abuse.apiroute
+  pk: 513
+  fields: {method: DELETE, endpoint: category_views.get_user_categories}
+- model: abuse.apiroute
+  pk: 514
+  fields: {method: DELETE, endpoint: category_views.update_category}
+- model: abuse.apiroute
+  pk: 515
+  fields: {method: DELETE, endpoint: defendant_views.add_comment}
+- model: abuse.apiroute
+  pk: 516
+  fields: {method: DELETE, endpoint: defendant_views.add_defendant_tag}
+- model: abuse.apiroute
+  pk: 517
+  fields: {method: DELETE, endpoint: defendant_views.delete_defendant_tag}
+- model: abuse.apiroute
+  pk: 518
+  fields: {method: DELETE, endpoint: defendant_views.get_defendant}
+- model: abuse.apiroute
+  pk: 519
+  fields: {method: DELETE, endpoint: defendant_views.get_defendant_services}
+- model: abuse.apiroute
+  pk: 520
+  fields: {method: DELETE, endpoint: defendant_views.get_defendant_top20}
+- model: abuse.apiroute
+  pk: 521
+  fields: {method: DELETE, endpoint: defendant_views.update_or_delete_comment}
+- model: abuse.apiroute
+  pk: 522
+  fields: {method: DELETE, endpoint: email_templates_views.create_templates}
+- model: abuse.apiroute
+  pk: 523
+  fields: {method: DELETE, endpoint: email_templates_views.get_all_templates}
+- model: abuse.apiroute
+  pk: 524
+  fields: {method: DELETE, endpoint: email_templates_views.get_recipients_type}
+- model: abuse.apiroute
+  pk: 525
+  fields: {method: DELETE, endpoint: email_templates_views.get_supported_languages}
+- model: abuse.apiroute
+  pk: 526
+  fields: {method: DELETE, endpoint: email_templates_views.get_template}
+- model: abuse.apiroute
+  pk: 527
+  fields: {method: DELETE, endpoint: email_templates_views.update_template}
+- model: abuse.apiroute
+  pk: 528
+  fields: {method: DELETE, endpoint: misc_views.add_ticket_resolution}
+- model: abuse.apiroute
+  pk: 529
+  fields: {method: DELETE, endpoint: misc_views.auth}
+- model: abuse.apiroute
+  pk: 530
+  fields: {method: DELETE, endpoint: misc_views.delete_ticket_resolution}
+- model: abuse.apiroute
+  pk: 531
+  fields: {method: DELETE, endpoint: misc_views.get_all_status}
+- model: abuse.apiroute
+  pk: 532
+  fields: {method: DELETE, endpoint: misc_views.get_all_ticket_resolutions}
+- model: abuse.apiroute
+  pk: 533
+  fields: {method: DELETE, endpoint: misc_views.get_cerberus_roles}
+- model: abuse.apiroute
+  pk: 534
+  fields: {method: DELETE, endpoint: misc_views.get_dashboard}
+- model: abuse.apiroute
+  pk: 535
+  fields: {method: DELETE, endpoint: misc_views.get_logged_user}
+- model: abuse.apiroute
+  pk: 536
+  fields: {method: DELETE, endpoint: misc_views.get_mass_contact}
+- model: abuse.apiroute
+  pk: 537
+  fields: {method: DELETE, endpoint: misc_views.get_profiles}
+- model: abuse.apiroute
+  pk: 538
+  fields: {method: DELETE, endpoint: misc_views.get_providers_priorities}
+- model: abuse.apiroute
+  pk: 539
+  fields: {method: DELETE, endpoint: misc_views.get_status}
+- model: abuse.apiroute
+  pk: 540
+  fields: {method: DELETE, endpoint: misc_views.get_ticket_priorities}
+- model: abuse.apiroute
+  pk: 541
+  fields: {method: DELETE, endpoint: misc_views.get_toolbar}
+- model: abuse.apiroute
+  pk: 542
+  fields: {method: DELETE, endpoint: misc_views.get_url_http_headers}
+- model: abuse.apiroute
+  pk: 543
+  fields: {method: DELETE, endpoint: misc_views.get_user}
+- model: abuse.apiroute
+  pk: 544
+  fields: {method: DELETE, endpoint: misc_views.get_user_notifications}
+- model: abuse.apiroute
+  pk: 545
+  fields: {method: DELETE, endpoint: misc_views.get_user_tickets}
+- model: abuse.apiroute
+  pk: 546
+  fields: {method: DELETE, endpoint: misc_views.get_users_infos}
+- model: abuse.apiroute
+  pk: 547
+  fields: {method: DELETE, endpoint: misc_views.get_whois}
+- model: abuse.apiroute
+  pk: 548
+  fields: {method: DELETE, endpoint: misc_views.logout}
+- model: abuse.apiroute
+  pk: 549
+  fields: {method: DELETE, endpoint: misc_views.monitor}
+- model: abuse.apiroute
+  pk: 550
+  fields: {method: DELETE, endpoint: misc_views.ping}
+- model: abuse.apiroute
+  pk: 551
+  fields: {method: DELETE, endpoint: misc_views.post_mass_contact}
+- model: abuse.apiroute
+  pk: 552
+  fields: {method: DELETE, endpoint: misc_views.search}
+- model: abuse.apiroute
+  pk: 553
+  fields: {method: DELETE, endpoint: misc_views.update_ticket_resolution}
+- model: abuse.apiroute
+  pk: 554
+  fields: {method: DELETE, endpoint: misc_views.update_user}
+- model: abuse.apiroute
+  pk: 555
+  fields: {method: DELETE, endpoint: news_views.create_news}
+- model: abuse.apiroute
+  pk: 556
+  fields: {method: DELETE, endpoint: news_views.delete_news}
+- model: abuse.apiroute
+  pk: 557
+  fields: {method: DELETE, endpoint: news_views.get_all_news}
+- model: abuse.apiroute
+  pk: 558
+  fields: {method: DELETE, endpoint: news_views.get_news}
+- model: abuse.apiroute
+  pk: 559
+  fields: {method: DELETE, endpoint: news_views.update_news}
+- model: abuse.apiroute
+  pk: 560
+  fields: {method: DELETE, endpoint: preset_views.create_preset}
+- model: abuse.apiroute
+  pk: 561
+  fields: {method: DELETE, endpoint: preset_views.delete_preset}
+- model: abuse.apiroute
+  pk: 562
+  fields: {method: DELETE, endpoint: preset_views.get_all_presets}
+- model: abuse.apiroute
+  pk: 563
+  fields: {method: DELETE, endpoint: preset_views.get_preset}
+- model: abuse.apiroute
+  pk: 564
+  fields: {method: DELETE, endpoint: preset_views.order_presets}
+- model: abuse.apiroute
+  pk: 565
+  fields: {method: DELETE, endpoint: preset_views.update_preset}
+- model: abuse.apiroute
+  pk: 566
+  fields: {method: DELETE, endpoint: provider_views.add_provider_tag}
+- model: abuse.apiroute
+  pk: 567
+  fields: {method: DELETE, endpoint: provider_views.create_provider}
+- model: abuse.apiroute
+  pk: 568
+  fields: {method: DELETE, endpoint: provider_views.delete_provider_tag}
+- model: abuse.apiroute
+  pk: 569
+  fields: {method: DELETE, endpoint: provider_views.get_providers}
+- model: abuse.apiroute
+  pk: 570
+  fields: {method: DELETE, endpoint: provider_views.update_provider}
+- model: abuse.apiroute
+  pk: 571
+  fields: {method: DELETE, endpoint: report_views.add_report_tag}
+- model: abuse.apiroute
+  pk: 572
+  fields: {method: DELETE, endpoint: report_views.bulk_add_reports}
+- model: abuse.apiroute
+  pk: 573
+  fields: {method: DELETE, endpoint: report_views.create_report_item}
+- model: abuse.apiroute
+  pk: 574
+  fields: {method: DELETE, endpoint: report_views.delete_report_tag}
+- model: abuse.apiroute
+  pk: 575
+  fields: {method: DELETE, endpoint: report_views.get_all_items_screenshot}
+- model: abuse.apiroute
+  pk: 576
+  fields: {method: DELETE, endpoint: report_views.get_all_report_attachments}
+- model: abuse.apiroute
+  pk: 577
+  fields: {method: DELETE, endpoint: report_views.get_all_reports}
+- model: abuse.apiroute
+  pk: 578
+  fields: {method: DELETE, endpoint: report_views.get_dehtmlified_report}
+- model: abuse.apiroute
+  pk: 579
+  fields: {method: DELETE, endpoint: report_views.get_item_screenshot}
+- model: abuse.apiroute
+  pk: 580
+  fields: {method: DELETE, endpoint: report_views.get_raw_report}
+- model: abuse.apiroute
+  pk: 581
+  fields: {method: DELETE, endpoint: report_views.get_report}
+- model: abuse.apiroute
+  pk: 582
+  fields: {method: DELETE, endpoint: report_views.get_report_attachment}
+- model: abuse.apiroute
+  pk: 583
+  fields: {method: DELETE, endpoint: report_views.get_report_items}
+- model: abuse.apiroute
+  pk: 584
+  fields: {method: DELETE, endpoint: report_views.post_feedback}
+- model: abuse.apiroute
+  pk: 585
+  fields: {method: DELETE, endpoint: report_views.unblock_report_item}
+- model: abuse.apiroute
+  pk: 586
+  fields: {method: DELETE, endpoint: report_views.update_report}
+- model: abuse.apiroute
+  pk: 587
+  fields: {method: DELETE, endpoint: report_views.update_report_item}
+- model: abuse.apiroute
+  pk: 588
+  fields: {method: DELETE, endpoint: report_views.validate_report}
+- model: abuse.apiroute
+  pk: 589
+  fields: {method: DELETE, endpoint: reputation_views.get_ip_external_detail}
+- model: abuse.apiroute
+  pk: 590
+  fields: {method: DELETE, endpoint: reputation_views.get_ip_external_reputation}
+- model: abuse.apiroute
+  pk: 591
+  fields: {method: DELETE, endpoint: reputation_views.get_ip_internal_reputation}
+- model: abuse.apiroute
+  pk: 592
+  fields: {method: DELETE, endpoint: reputation_views.get_ip_rbl_reputation}
+- model: abuse.apiroute
+  pk: 593
+  fields: {method: DELETE, endpoint: reputation_views.get_ip_tool}
+- model: abuse.apiroute
+  pk: 594
+  fields: {method: DELETE, endpoint: reputation_views.get_url_external_reputation}
+- model: abuse.apiroute
+  pk: 595
+  fields: {method: DELETE, endpoint: tag_views.create_tag}
+- model: abuse.apiroute
+  pk: 596
+  fields: {method: DELETE, endpoint: tag_views.delete_tag}
+- model: abuse.apiroute
+  pk: 597
+  fields: {method: DELETE, endpoint: tag_views.get_all_tags}
+- model: abuse.apiroute
+  pk: 598
+  fields: {method: DELETE, endpoint: tag_views.get_tag}
+- model: abuse.apiroute
+  pk: 599
+  fields: {method: DELETE, endpoint: tag_views.get_tag_type}
+- model: abuse.apiroute
+  pk: 600
+  fields: {method: DELETE, endpoint: tag_views.update_tag}
+- model: abuse.apiroute
+  pk: 601
+  fields: {method: DELETE, endpoint: threshold_views.create_threshold}
+- model: abuse.apiroute
+  pk: 602
+  fields: {method: DELETE, endpoint: threshold_views.delete_threshold}
+- model: abuse.apiroute
+  pk: 603
+  fields: {method: DELETE, endpoint: threshold_views.get_all_threshold}
+- model: abuse.apiroute
+  pk: 604
+  fields: {method: DELETE, endpoint: threshold_views.get_threshold}
+- model: abuse.apiroute
+  pk: 605
+  fields: {method: DELETE, endpoint: threshold_views.update_threshold}
+- model: abuse.apiroute
+  pk: 606
+  fields: {method: DELETE, endpoint: ticket_views.add_comment}
+- model: abuse.apiroute
+  pk: 607
+  fields: {method: DELETE, endpoint: ticket_views.add_items_to_proof}
+- model: abuse.apiroute
+  pk: 608
+  fields: {method: DELETE, endpoint: ticket_views.add_ticket_tag}
+- model: abuse.apiroute
+  pk: 609
+  fields: {method: DELETE, endpoint: ticket_views.bulk_add_tickets}
+- model: abuse.apiroute
+  pk: 610
+  fields: {method: DELETE, endpoint: ticket_views.cancel_job}
+- model: abuse.apiroute
+  pk: 611
+  fields: {method: DELETE, endpoint: ticket_views.delete_ticket_tag}
+- model: abuse.apiroute
+  pk: 612
+  fields: {method: DELETE, endpoint: ticket_views.get_actions}
+- model: abuse.apiroute
+  pk: 613
+  fields: {method: DELETE, endpoint: ticket_views.get_mails}
+- model: abuse.apiroute
+  pk: 614
+  fields: {method: DELETE, endpoint: ticket_views.get_providers}
+- model: abuse.apiroute
+  pk: 615
+  fields: {method: DELETE, endpoint: ticket_views.get_ticket}
+- model: abuse.apiroute
+  pk: 616
+  fields: {method: DELETE, endpoint: ticket_views.get_ticket_attachment}
+- model: abuse.apiroute
+  pk: 617
+  fields: {method: DELETE, endpoint: ticket_views.get_ticket_attachments}
+- model: abuse.apiroute
+  pk: 618
+  fields: {method: DELETE, endpoint: ticket_views.get_ticket_items}
+- model: abuse.apiroute
+  pk: 619
+  fields: {method: DELETE, endpoint: ticket_views.get_ticket_prefetched_preset}
+- model: abuse.apiroute
+  pk: 620
+  fields: {method: DELETE, endpoint: ticket_views.get_ticket_prefetched_template}
+- model: abuse.apiroute
+  pk: 621
+  fields: {method: DELETE, endpoint: ticket_views.get_ticket_proof}
+- model: abuse.apiroute
+  pk: 622
+  fields: {method: DELETE, endpoint: ticket_views.get_tickets}
+- model: abuse.apiroute
+  pk: 623
+  fields: {method: DELETE, endpoint: ticket_views.get_timeline}
+- model: abuse.apiroute
+  pk: 624
+  fields: {method: DELETE, endpoint: ticket_views.get_todo_tickets}
+- model: abuse.apiroute
+  pk: 625
+  fields: {method: DELETE, endpoint: ticket_views.interact}
+- model: abuse.apiroute
+  pk: 626
+  fields: {method: DELETE, endpoint: ticket_views.ticket_star_management}
+- model: abuse.apiroute
+  pk: 627
+  fields: {method: DELETE, endpoint: ticket_views.unblock_ticket_item}
+- model: abuse.apiroute
+  pk: 628
+  fields: {method: DELETE, endpoint: ticket_views.update_or_delete_comment}
+- model: abuse.apiroute
+  pk: 629
+  fields: {method: DELETE, endpoint: ticket_views.update_status}
+- model: abuse.apiroute
+  pk: 630
+  fields: {method: DELETE, endpoint: ticket_views.update_ticket}
+- model: abuse.apiroute
+  pk: 631
+  fields: {method: DELETE, endpoint: ticket_views.update_ticket_defendant}
+- model: abuse.apiroute
+  pk: 632
+  fields: {method: DELETE, endpoint: ticket_views.update_ticket_item}
+- model: abuse.apiroute
+  pk: 633
+  fields: {method: DELETE, endpoint: ticket_views.update_ticket_pause}
+- model: abuse.apiroute
+  pk: 634
+  fields: {method: DELETE, endpoint: ticket_views.update_ticket_proof}
+- model: abuse.apiroute
+  pk: 635
+  fields: {method: DELETE, endpoint: ticket_views.update_ticket_snooze}
+- model: abuse.role
+  pk: 1
+  fields:
+    codename: admin
+    name: Admin
+    modelsAuthorizations: '{"ticket":{"schedulingAlgorithm":"GlobalSchedulingAlgorithm"}}'
+    allowedRoutes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+      19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37,
+      38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+      57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75,
+      76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94,
+      95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111,
+      112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127,
+      128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143,
+      144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159,
+      160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175,
+      176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191,
+      192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207,
+      208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223,
+      224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239,
+      240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255,
+      256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271,
+      272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 282, 283, 284, 285, 286, 287,
+      288, 289, 290, 291, 292, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302, 303,
+      304, 305, 306, 307, 308, 309, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319,
+      320, 321, 322, 323, 324, 325, 326, 327, 328, 329, 330, 331, 332, 333, 334, 335,
+      336, 337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348, 349, 350, 351,
+      352, 353, 354, 355, 356, 357, 358, 359, 360, 361, 362, 363, 364, 365, 366, 367,
+      368, 369, 370, 371, 372, 373, 374, 375, 376, 377, 378, 379, 380, 381, 382, 383,
+      384, 385, 386, 387, 388, 389, 390, 391, 392, 393, 394, 395, 396, 397, 398, 399,
+      400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415,
+      416, 417, 418, 419, 420, 421, 422, 423, 424, 425, 426, 427, 428, 429, 430, 431,
+      432, 433, 434, 435, 436, 437, 438, 439, 440, 441, 442, 443, 444, 445, 446, 447,
+      448, 449, 450, 451, 452, 453, 454, 455, 456, 457, 458, 459, 460, 461, 462, 463,
+      464, 465, 466, 467, 468, 469, 470, 471, 472, 473, 474, 475, 476, 477, 478, 479,
+      480, 481, 482, 483, 484, 485, 486, 487, 488, 489, 490, 491, 492, 493, 494, 495,
+      496, 497, 498, 499, 500, 501, 502, 503, 504, 505, 506, 507, 508, 509, 510, 511,
+      512, 513, 514, 515, 516, 517, 518, 519, 520, 521, 522, 523, 524, 525, 526, 527,
+      528, 529, 530, 531, 532, 533, 534, 535, 536, 537, 538, 539, 540, 541, 542, 543,
+      544, 545, 546, 547, 548, 549, 550, 551, 552, 553, 554, 555, 556, 557, 558, 559,
+      560, 561, 562, 563, 564, 565, 566, 567, 568, 569, 570, 571, 572, 573, 574, 575,
+      576, 577, 578, 579, 580, 581, 582, 583, 584, 585, 586, 587, 588, 589, 590, 591,
+      592, 593, 594, 595, 596, 597, 598, 599, 600, 601, 602, 603, 604, 605, 606, 607,
+      608, 609, 610, 611, 612, 613, 614, 615, 616, 617, 618, 619, 620, 621, 622, 623,
+      624, 625, 626, 627, 628, 629, 630, 631, 632, 633, 634, 635]
+- model: abuse.resolution
+  pk: 1
+  fields: {codename: no_more_content}
+- model: abuse.resolution
+  pk: 2
+  fields: {codename: invalid}
+- model: abuse.resolution
+  pk: 3
+  fields: {codename: fixed}
+- model: abuse.resolution
+  pk: 4
+  fields: {codename: forward_acns}
+- model: abuse.resolution
+  pk: 5
+  fields: {codename: fixed_by_customer}
+- model: abuse.profile
+  pk: 1
+  fields:
+    name: Expert
+    actions: [1]
+- model: abuse.mailtemplate
+  pk: 1
+  fields: {codename: ack_report_received, name: Test template, lang: EN, subject: 'Abuse
+      received, Ticket #{{ publicId }}', body: 'Abuse received, Ticket #{{ publicId
+      }}', recipientType: Plaintiff}
+- model: abuse.mailtemplate
+  pk: 2
+  fields: {codename: no_more_content, name: No more content, lang: EN, subject: No
+      more content, body: No more content, recipientType: Plaintiff}
+- model: abuse.mailtemplate
+  pk: 3
+  fields: {codename: fixed, name: Fixed, lang: EN, subject: Fixed, body: Fixed, recipientType: Defendant}
+- model: abuse.mailtemplate
+  pk: 4
+  fields: {codename: customer_notification, name: Abuse detected, lang: EN, subject: Abuse
+      detected, body: "-- start of the technical details --\n            {% if proof|length
+      == 1 %}{% for p in proof %}{{ p }}{% endfor %}{% else %}{% for p in proof %}\n
+      \           {{ p }}\n            ----------{% endfor %}{% endif %}", recipientType: Defendant}
+- model: abuse.mailtemplate
+  pk: 5
+  fields: {codename: case_closed, name: Case closed, lang: EN, subject: Case closed,
+    body: Case closed, recipientType: Plaintiff}
+- model: abuse.mailtemplate
+  pk: 6
+  fields: {codename: service_blocked, name: Service blocked, lang: EN, subject: Service
+      blocked, body: Service blocked, recipientType: Defendant}
+- model: abuse.mailtemplate
+  pk: 7
+  fields: {codename: not_managed_ip, name: not_managed_ip, lang: EN, subject: not_managed_ip,
+    body: not_managed_ip, recipientType: Plaintiff}
+- model: abuse.mailtemplate
+  pk: 8
+  fields: {codename: ticket_closed, name: ticket closed, lang: EN, subject: ticket
+      closed, body: ticket closed, recipientType: Defendant}
+- model: abuse.mailtemplate
+  pk: 9
+  fields: {codename: cloudflare_ip_request, name: Cloudflare ip request, lang: EN,
+    subject: Cloudflare ip request, body: Cloudflare ip request, recipientType: Other}
+- model: abuse.mailtemplate
+  pk: 10
+  fields: {codename: phishing_blocked, name: phishing blocked, lang: EN, subject: phishing
+      blocked, body: "{% if phishingUrls|length > 0 %}\n              Below is the
+      list of URLs pointing to the phishing webpage you're hosting :\n\n              {%
+      for url in phishingUrls %}\n              \n* {{ url }}\n              {% endfor
+      %}\n              {% endif %}", recipientType: Defendant}
+- model: abuse.reportthreshold
+  pk: 1
+  fields: {category: Spam, threshold: 100, interval: 3600}
+- model: abuse.businessrules
+  pk: 1
+  fields: {name: cdn_request_cloudflare, orderId: 1, rulesType: CDNRequest, config: '{"conditions":{"all":[{"operator":"is_true","params":{"provider":"cloudflare"},"name":"provider_ips_owner","value":true}]},"actions":[{"params":{"provider":"cloudflare"},"name":"do_cdn_request"}]}'}
+- model: abuse.businessrules
+  pk: 2
+  fields: {name: default_defendant_trusted, orderId: 100, rulesType: Report, config: '{"conditions":{"all":[{"operator":"is_true","name":"has_defendant","value":true},{"operator":"is_true","name":"is_report_trusted","value":true}]},"actions":[{"params":{"attach_new":true,"create_new":false},"name":"create_ticket"},{"name":"send_provider_ack"}]}'}
+- model: abuse.businessrules
+  pk: 3
+  fields: {name: default_defendant_threshold, orderId: 102, rulesType: Report, config: '{"conditions":{"all":[{"operator":"is_true","name":"has_defendant","value":true},{"operator":"is_false","name":"is_report_trusted","value":true},{"operator":"is_false","name":"has_ticket","value":true},{"operator":"is_true","name":"report_ticket_threshold","value":true}]},"actions":[{"params":{"attach_new":true,"create_new":true},"name":"create_ticket"}]}'}
+- model: abuse.businessrules
+  pk: 4
+  fields: {name: default_defendant_not_trusted_no_ticket, orderId: 200, rulesType: Report,
+    config: '{"conditions":{"all":[{"operator":"is_true","name":"has_defendant","value":true},{"operator":"is_false","name":"is_report_trusted","value":true},{"operator":"is_false","name":"has_ticket","value":true}]},"actions":[{"name":"do_nothing"},{"params":{"days":30},"name":"set_report_timeout"}]}'}
+- model: abuse.businessrules
+  pk: 5
+  fields: {name: default_no_defendant, orderId: 1, rulesType: Report, config: '{"conditions":{"all":[{"operator":"is_false","name":"has_defendant","value":true},{"operator":"is_false","name":"is_report_trusted","value":true},{"operator":"is_false","name":"autoarchive","value":true}]},"actions":[{"name":"do_nothing"},{"params":{"days":30},"name":"set_report_timeout"}]}'}
+- model: abuse.businessrules
+  pk: 6
+  fields: {name: autoarchive_no_defendant, orderId: 2, rulesType: Report, config: '{"conditions":{"all":[{"operator":"is_false","name":"has_defendant","value":true},{"operator":"is_true","name":"autoarchive","value":true}]},"actions":[{"params":{"status":"Archived"},"name":"set_report_status"}]}'}
+- model: abuse.businessrules
+  pk: 7
+  fields: {name: autoarchive_defendant, orderId: 3, rulesType: Report, config: '{"conditions":{"all":[{"operator":"is_true","name":"has_defendant","value":true},{"operator":"is_true","name":"autoarchive","value":true}]},"actions":[{"params":{"status":"Archived"},"name":"set_report_status"}]}'}
+- model: abuse.businessrules
+  pk: 8
+  fields: {name: phishing_phishtocheck, orderId: 22, rulesType: Report, config: '{"conditions":{"all":[{"operator":"is_true","name":"has_defendant","value":true},{"operator":"equal_to","name":"report_category","value":"phishing"},{"operator":"is_false","name":"urls_down","value":true},{"operator":"is_true","name":"has_urls","value":true}]},"actions":[{"name":"set_ticket_phishtocheck"}]}'}
+- model: abuse.businessrules
+  pk: 9
+  fields: {name: phishing_down, orderId: 20, rulesType: Report, config: '{"conditions":{"all":[{"operator":"equal_to","name":"report_category","value":"phishing"},{"operator":"is_true","name":"has_defendant","value":true},{"operator":"is_true","name":"urls_down","value":true},{"operator":"is_true","name":"has_urls","value":true}]},"actions":[{"name":"phishing_close_because_all_down"}]}'}
+- model: abuse.businessrules
+  pk: 10
+  fields: {name: cdn_response_cloudflare, orderId: 10, rulesType: EmailReply, config: '{"conditions":{"all":[{"operator":"is_true","params":{"provider":"cloudflare"},"name":"ticket_in_cdn_cache","value":true},{"operator":"equal_to","name":"email_sender","value":"abusereply@cloudflare.com"}]},"actions":[{"params":{"provider":"cloudflare"},"name":"cdn_response_update"},{"name":"attach_external_answer"}]}'}
+- model: abuse.businessrules
+  pk: 11
+  fields: {name: phishing_ignore, orderId: 23, rulesType: Report, config: '{"conditions":{"all":[{"operator":"is_true","name":"has_defendant","value":true},{"operator":"equal_to","name":"report_category","value":"phishing"},{"operator":"is_true","name":"avoid_phishtocheck","value":true}]},"actions":[{"name":"do_nothing"}]}'}
+- model: abuse.businessrules
+  pk: 12
+  fields: {name: default_answer, orderId: 100, rulesType: EmailReply, config: '{"conditions":{"all":[{"operator":"non_empty","name":"category","value":"true"}]},"actions":[{"params":{"status":"Answered"},"name":"set_ticket_status"},{"name":"attach_external_answer"}]}'}
+- model: abuse.businessrules
+  pk: 13
+  fields: {name: default_defendant_not_trusted_ticket, orderId: 101, rulesType: Report,
+    config: '{"conditions":{"all":[{"operator":"is_true","name":"has_defendant","value":true},{"operator":"is_false","name":"is_report_trusted","value":true},{"operator":"is_true","name":"has_ticket","value":true}]},"actions":[{"name":"attach_report_to_ticket"}]}'}
+- model: abuse.businessrules
+  pk: 14
+  fields: {name: to_validate, orderId: 4, rulesType: Report, config: '{"conditions":{"all":[{"operator":"is_false","name":"has_defendant","value":true},{"operator":"is_true","name":"is_report_trusted","value":true},{"operator":"is_false","name":"autoarchive","value":true}]},"actions":[{"params":{"status":"ToValidate"},"name":"set_report_status"}]}'}
+- model: abuse.businessrules
+  pk: 15
+  fields: {name: customer_answer, orderId: 45, rulesType: EmailReply, config: '{"conditions":{"all":[{"operator":"equal_to","name":"category","value":"defendant"}]},"actions":[{"params":{"status":"Answered"},"name":"set_ticket_status"},{"name":"cancel_pending_jobs"},{"name":"attach_external_answer"}]}'}
+- model: abuse.provider
+  pk: critical@provider.com
+  fields:
+    name: null
+    trusted: false
+    parseable: false
+    defaultCategory: null
+    apiKey: null
+    priority: Critical
+    tags: []
+- model: abuse.provider
+  pk: low@provider.com
+  fields:
+    name: null
+    trusted: false
+    parseable: false
+    defaultCategory: null
+    apiKey: null
+    priority: Low
+    tags: []
+- model: abuse.provider
+  pk: normal@provider.com
+  fields:
+    name: null
+    trusted: false
+    parseable: false
+    defaultCategory: null
+    apiKey: null
+    priority: Normal
+    tags: []
+- model: abuse.provider
+  pk: supertrusted@copyrightprovider.com
+  fields:
+    name: null
+    trusted: true
+    parseable: false
+    defaultCategory: null
+    apiKey: null
+    priority: High
+    tags: []
+- model: abuse.provider
+  pk: trusted.phishing@provider.com
+  fields:
+    name: null
+    trusted: false
+    parseable: false
+    defaultCategory: null
+    apiKey: token
+    priority: Critical
+    tags: []
+- model: abuse.tag
+  pk: 1
+  fields: {codename: 'distrust:0:autoarchive', name: 'distrust:0:autoarchive', tagType: Provider,
+    level: 0}
+- model: abuse.tag
+  pk: 2
+  fields: {codename: 'distrust:1:attach_if_exists', name: 'distrust:1:attach_if_exists',
+    tagType: Provider, level: 0}
+- model: abuse.tag
+  pk: 3
+  fields: {codename: 'distrust:2:no_phishtocheck', name: 'distrust:2:no_phishtocheck',
+    tagType: Provider, level: 0}
+- model: abuse.tag
+  pk: 4
+  fields: {codename: never_auto_ack, name: never_auto_ack, tagType: Provider, level: 0}
+- model: abuse.tag
+  pk: 5
+  fields: {codename: 'copyright:autoclosed', name: 'copyright:autoclosed', tagType: Ticket,
+    level: 0}
+- model: abuse.tag
+  pk: 6
+  fields: {codename: 'copyright:autoclosed', name: 'copyright:autoclosed', tagType: Report,
+    level: 0}
+- model: abuse.tag
+  pk: 7
+  fields: {codename: 'phishing:autoblocked', name: 'phishing:autoblocked', tagType: Ticket,
+    level: 0}
+- model: abuse.tag
+  pk: 8
+  fields: {codename: 'phishing:autoblocked', name: 'phishing:autoblocked', tagType: Report,
+    level: 0}
+- model: abuse.tag
+  pk: 9
+  fields: {codename: 'phishing:autoclosed', name: 'phishing:autoclosed', tagType: Ticket,
+    level: 0}
+- model: abuse.tag
+  pk: 10
+  fields: {codename: 'phishing:autoclosed', name: 'phishing:autoclosed', tagType: Report,
+    level: 0}
+- model: abuse.tag
+  pk: 11
+  fields: {codename: 'phishing:autoreopened', name: 'phishing:autoreopened', tagType: Ticket,
+    level: 0}
+- model: abuse.tag
+  pk: 12
+  fields: {codename: 'phishing:autoreopened', name: 'phishing:autoreopened', tagType: Report,
+    level: 0}
+- model: auth.permission
+  pk: 1
+  fields: {name: Can add group, content_type: 1, codename: add_group}
+- model: auth.permission
+  pk: 2
+  fields: {name: Can change group, content_type: 1, codename: change_group}
+- model: auth.permission
+  pk: 3
+  fields: {name: Can delete group, content_type: 1, codename: delete_group}
+- model: auth.permission
+  pk: 4
+  fields: {name: Can add permission, content_type: 2, codename: add_permission}
+- model: auth.permission
+  pk: 5
+  fields: {name: Can change permission, content_type: 2, codename: change_permission}
+- model: auth.permission
+  pk: 6
+  fields: {name: Can delete permission, content_type: 2, codename: delete_permission}
+- model: auth.permission
+  pk: 7
+  fields: {name: Can add user, content_type: 3, codename: add_user}
+- model: auth.permission
+  pk: 8
+  fields: {name: Can change user, content_type: 3, codename: change_user}
+- model: auth.permission
+  pk: 9
+  fields: {name: Can delete user, content_type: 3, codename: delete_user}
+- model: auth.permission
+  pk: 10
+  fields: {name: Can add content type, content_type: 4, codename: add_contenttype}
+- model: auth.permission
+  pk: 11
+  fields: {name: Can change content type, content_type: 4, codename: change_contenttype}
+- model: auth.permission
+  pk: 12
+  fields: {name: Can delete content type, content_type: 4, codename: delete_contenttype}
+- model: auth.permission
+  pk: 13
+  fields: {name: Can add session, content_type: 5, codename: add_session}
+- model: auth.permission
+  pk: 14
+  fields: {name: Can change session, content_type: 5, codename: change_session}
+- model: auth.permission
+  pk: 15
+  fields: {name: Can delete session, content_type: 5, codename: delete_session}
+- model: auth.permission
+  pk: 16
+  fields: {name: Can add defendant revision, content_type: 6, codename: add_defendantrevision}
+- model: auth.permission
+  pk: 17
+  fields: {name: Can change defendant revision, content_type: 6, codename: change_defendantrevision}
+- model: auth.permission
+  pk: 18
+  fields: {name: Can delete defendant revision, content_type: 6, codename: delete_defendantrevision}
+- model: auth.permission
+  pk: 19
+  fields: {name: Can add defendant, content_type: 7, codename: add_defendant}
+- model: auth.permission
+  pk: 20
+  fields: {name: Can change defendant, content_type: 7, codename: change_defendant}
+- model: auth.permission
+  pk: 21
+  fields: {name: Can delete defendant, content_type: 7, codename: delete_defendant}
+- model: auth.permission
+  pk: 22
+  fields: {name: Can add defendant history, content_type: 8, codename: add_defendanthistory}
+- model: auth.permission
+  pk: 23
+  fields: {name: Can change defendant history, content_type: 8, codename: change_defendanthistory}
+- model: auth.permission
+  pk: 24
+  fields: {name: Can delete defendant history, content_type: 8, codename: delete_defendanthistory}
+- model: auth.permission
+  pk: 25
+  fields: {name: Can add defendant comment, content_type: 9, codename: add_defendantcomment}
+- model: auth.permission
+  pk: 26
+  fields: {name: Can change defendant comment, content_type: 9, codename: change_defendantcomment}
+- model: auth.permission
+  pk: 27
+  fields: {name: Can delete defendant comment, content_type: 9, codename: delete_defendantcomment}
+- model: auth.permission
+  pk: 28
+  fields: {name: Can add history, content_type: 10, codename: add_history}
+- model: auth.permission
+  pk: 29
+  fields: {name: Can change history, content_type: 10, codename: change_history}
+- model: auth.permission
+  pk: 30
+  fields: {name: Can delete history, content_type: 10, codename: delete_history}
+- model: auth.permission
+  pk: 31
+  fields: {name: Can add service action, content_type: 11, codename: add_serviceaction}
+- model: auth.permission
+  pk: 32
+  fields: {name: Can change service action, content_type: 11, codename: change_serviceaction}
+- model: auth.permission
+  pk: 33
+  fields: {name: Can delete service action, content_type: 11, codename: delete_serviceaction}
+- model: auth.permission
+  pk: 34
+  fields: {name: Can add service action job, content_type: 12, codename: add_serviceactionjob}
+- model: auth.permission
+  pk: 35
+  fields: {name: Can change service action job, content_type: 12, codename: change_serviceactionjob}
+- model: auth.permission
+  pk: 36
+  fields: {name: Can delete service action job, content_type: 12, codename: delete_serviceactionjob}
+- model: auth.permission
+  pk: 37
+  fields: {name: Can add category, content_type: 13, codename: add_category}
+- model: auth.permission
+  pk: 38
+  fields: {name: Can change category, content_type: 13, codename: change_category}
+- model: auth.permission
+  pk: 39
+  fields: {name: Can delete category, content_type: 13, codename: delete_category}
+- model: auth.permission
+  pk: 40
+  fields: {name: Can add api route, content_type: 14, codename: add_apiroute}
+- model: auth.permission
+  pk: 41
+  fields: {name: Can change api route, content_type: 14, codename: change_apiroute}
+- model: auth.permission
+  pk: 42
+  fields: {name: Can delete api route, content_type: 14, codename: delete_apiroute}
+- model: auth.permission
+  pk: 43
+  fields: {name: Can add role, content_type: 15, codename: add_role}
+- model: auth.permission
+  pk: 44
+  fields: {name: Can change role, content_type: 15, codename: change_role}
+- model: auth.permission
+  pk: 45
+  fields: {name: Can delete role, content_type: 15, codename: delete_role}
+- model: auth.permission
+  pk: 46
+  fields: {name: Can add operator, content_type: 16, codename: add_operator}
+- model: auth.permission
+  pk: 47
+  fields: {name: Can change operator, content_type: 16, codename: change_operator}
+- model: auth.permission
+  pk: 48
+  fields: {name: Can delete operator, content_type: 16, codename: delete_operator}
+- model: auth.permission
+  pk: 49
+  fields: {name: Can add email filter, content_type: 17, codename: add_emailfilter}
+- model: auth.permission
+  pk: 50
+  fields: {name: Can change email filter, content_type: 17, codename: change_emailfilter}
+- model: auth.permission
+  pk: 51
+  fields: {name: Can delete email filter, content_type: 17, codename: delete_emailfilter}
+- model: auth.permission
+  pk: 52
+  fields: {name: Can add email filter tag, content_type: 18, codename: add_emailfiltertag}
+- model: auth.permission
+  pk: 53
+  fields: {name: Can change email filter tag, content_type: 18, codename: change_emailfiltertag}
+- model: auth.permission
+  pk: 54
+  fields: {name: Can delete email filter tag, content_type: 18, codename: delete_emailfiltertag}
+- model: auth.permission
+  pk: 55
+  fields: {name: Can add resolution, content_type: 19, codename: add_resolution}
+- model: auth.permission
+  pk: 56
+  fields: {name: Can change resolution, content_type: 19, codename: change_resolution}
+- model: auth.permission
+  pk: 57
+  fields: {name: Can delete resolution, content_type: 19, codename: delete_resolution}
+- model: auth.permission
+  pk: 58
+  fields: {name: Can add attached document, content_type: 20, codename: add_attacheddocument}
+- model: auth.permission
+  pk: 59
+  fields: {name: Can change attached document, content_type: 20, codename: change_attacheddocument}
+- model: auth.permission
+  pk: 60
+  fields: {name: Can delete attached document, content_type: 20, codename: delete_attacheddocument}
+- model: auth.permission
+  pk: 61
+  fields: {name: Can add comment, content_type: 21, codename: add_comment}
+- model: auth.permission
+  pk: 62
+  fields: {name: Can change comment, content_type: 21, codename: change_comment}
+- model: auth.permission
+  pk: 63
+  fields: {name: Can delete comment, content_type: 21, codename: delete_comment}
+- model: auth.permission
+  pk: 64
+  fields: {name: Can add profile, content_type: 22, codename: add_profile}
+- model: auth.permission
+  pk: 65
+  fields: {name: Can change profile, content_type: 22, codename: change_profile}
+- model: auth.permission
+  pk: 66
+  fields: {name: Can delete profile, content_type: 22, codename: delete_profile}
+- model: auth.permission
+  pk: 67
+  fields: {name: Can add abuse permission, content_type: 23, codename: add_abusepermission}
+- model: auth.permission
+  pk: 68
+  fields: {name: Can change abuse permission, content_type: 23, codename: change_abusepermission}
+- model: auth.permission
+  pk: 69
+  fields: {name: Can delete abuse permission, content_type: 23, codename: delete_abusepermission}
+- model: auth.permission
+  pk: 70
+  fields: {name: Can add news, content_type: 24, codename: add_news}
+- model: auth.permission
+  pk: 71
+  fields: {name: Can change news, content_type: 24, codename: change_news}
+- model: auth.permission
+  pk: 72
+  fields: {name: Can delete news, content_type: 24, codename: delete_news}
+- model: auth.permission
+  pk: 73
+  fields: {name: Can add mail template, content_type: 25, codename: add_mailtemplate}
+- model: auth.permission
+  pk: 74
+  fields: {name: Can change mail template, content_type: 25, codename: change_mailtemplate}
+- model: auth.permission
+  pk: 75
+  fields: {name: Can delete mail template, content_type: 25, codename: delete_mailtemplate}
+- model: auth.permission
+  pk: 76
+  fields: {name: Can add proof, content_type: 26, codename: add_proof}
+- model: auth.permission
+  pk: 77
+  fields: {name: Can change proof, content_type: 26, codename: change_proof}
+- model: auth.permission
+  pk: 78
+  fields: {name: Can delete proof, content_type: 26, codename: delete_proof}
+- model: auth.permission
+  pk: 79
+  fields: {name: Can add ticket action params, content_type: 27, codename: add_ticketactionparams}
+- model: auth.permission
+  pk: 80
+  fields: {name: Can change ticket action params, content_type: 27, codename: change_ticketactionparams}
+- model: auth.permission
+  pk: 81
+  fields: {name: Can delete ticket action params, content_type: 27, codename: delete_ticketactionparams}
+- model: auth.permission
+  pk: 82
+  fields: {name: Can add ticket action, content_type: 28, codename: add_ticketaction}
+- model: auth.permission
+  pk: 83
+  fields: {name: Can change ticket action, content_type: 28, codename: change_ticketaction}
+- model: auth.permission
+  pk: 84
+  fields: {name: Can delete ticket action, content_type: 28, codename: delete_ticketaction}
+- model: auth.permission
+  pk: 85
+  fields: {name: Can add ticket workflow preset config, content_type: 29, codename: add_ticketworkflowpresetconfig}
+- model: auth.permission
+  pk: 86
+  fields: {name: Can change ticket workflow preset config, content_type: 29, codename: change_ticketworkflowpresetconfig}
+- model: auth.permission
+  pk: 87
+  fields: {name: Can delete ticket workflow preset config, content_type: 29, codename: delete_ticketworkflowpresetconfig}
+- model: auth.permission
+  pk: 88
+  fields: {name: Can add ticket workflow preset, content_type: 30, codename: add_ticketworkflowpreset}
+- model: auth.permission
+  pk: 89
+  fields: {name: Can change ticket workflow preset, content_type: 30, codename: change_ticketworkflowpreset}
+- model: auth.permission
+  pk: 90
+  fields: {name: Can delete ticket workflow preset, content_type: 30, codename: delete_ticketworkflowpreset}
+- model: auth.permission
+  pk: 91
+  fields: {name: Can add item screenshot feedback, content_type: 31, codename: add_itemscreenshotfeedback}
+- model: auth.permission
+  pk: 92
+  fields: {name: Can change item screenshot feedback, content_type: 31, codename: change_itemscreenshotfeedback}
+- model: auth.permission
+  pk: 93
+  fields: {name: Can delete item screenshot feedback, content_type: 31, codename: delete_itemscreenshotfeedback}
+- model: auth.permission
+  pk: 94
+  fields: {name: Can add report threshold, content_type: 32, codename: add_reportthreshold}
+- model: auth.permission
+  pk: 95
+  fields: {name: Can change report threshold, content_type: 32, codename: change_reportthreshold}
+- model: auth.permission
+  pk: 96
+  fields: {name: Can delete report threshold, content_type: 32, codename: delete_reportthreshold}
+- model: auth.permission
+  pk: 97
+  fields: {name: Can add mass contact, content_type: 33, codename: add_masscontact}
+- model: auth.permission
+  pk: 98
+  fields: {name: Can change mass contact, content_type: 33, codename: change_masscontact}
+- model: auth.permission
+  pk: 99
+  fields: {name: Can delete mass contact, content_type: 33, codename: delete_masscontact}
+- model: auth.permission
+  pk: 100
+  fields: {name: Can add mass contact result, content_type: 34, codename: add_masscontactresult}
+- model: auth.permission
+  pk: 101
+  fields: {name: Can change mass contact result, content_type: 34, codename: change_masscontactresult}
+- model: auth.permission
+  pk: 102
+  fields: {name: Can delete mass contact result, content_type: 34, codename: delete_masscontactresult}
+- model: auth.permission
+  pk: 103
+  fields: {name: Can add starred ticket, content_type: 35, codename: add_starredticket}
+- model: auth.permission
+  pk: 104
+  fields: {name: Can change starred ticket, content_type: 35, codename: change_starredticket}
+- model: auth.permission
+  pk: 105
+  fields: {name: Can delete starred ticket, content_type: 35, codename: delete_starredticket}
+- model: auth.permission
+  pk: 106
+  fields: {name: Can add business rules, content_type: 36, codename: add_businessrules}
+- model: auth.permission
+  pk: 107
+  fields: {name: Can change business rules, content_type: 36, codename: change_businessrules}
+- model: auth.permission
+  pk: 108
+  fields: {name: Can delete business rules, content_type: 36, codename: delete_businessrules}
+- model: auth.permission
+  pk: 109
+  fields: {name: Can add business rules history, content_type: 37, codename: add_businessruleshistory}
+- model: auth.permission
+  pk: 110
+  fields: {name: Can change business rules history, content_type: 37, codename: change_businessruleshistory}
+- model: auth.permission
+  pk: 111
+  fields: {name: Can delete business rules history, content_type: 37, codename: delete_businessruleshistory}
+- model: auth.permission
+  pk: 112
+  fields: {name: Can add provider, content_type: 38, codename: add_provider}
+- model: auth.permission
+  pk: 113
+  fields: {name: Can change provider, content_type: 38, codename: change_provider}
+- model: auth.permission
+  pk: 114
+  fields: {name: Can delete provider, content_type: 38, codename: delete_provider}
+- model: auth.permission
+  pk: 115
+  fields: {name: Can add report, content_type: 39, codename: add_report}
+- model: auth.permission
+  pk: 116
+  fields: {name: Can change report, content_type: 39, codename: change_report}
+- model: auth.permission
+  pk: 117
+  fields: {name: Can delete report, content_type: 39, codename: delete_report}
+- model: auth.permission
+  pk: 118
+  fields: {name: Can add report item, content_type: 40, codename: add_reportitem}
+- model: auth.permission
+  pk: 119
+  fields: {name: Can change report item, content_type: 40, codename: change_reportitem}
+- model: auth.permission
+  pk: 120
+  fields: {name: Can delete report item, content_type: 40, codename: delete_reportitem}
+- model: auth.permission
+  pk: 121
+  fields: {name: Can add url status, content_type: 41, codename: add_urlstatus}
+- model: auth.permission
+  pk: 122
+  fields: {name: Can change url status, content_type: 41, codename: change_urlstatus}
+- model: auth.permission
+  pk: 123
+  fields: {name: Can delete url status, content_type: 41, codename: delete_urlstatus}
+- model: auth.permission
+  pk: 124
+  fields: {name: Can add service, content_type: 42, codename: add_service}
+- model: auth.permission
+  pk: 125
+  fields: {name: Can change service, content_type: 42, codename: change_service}
+- model: auth.permission
+  pk: 126
+  fields: {name: Can delete service, content_type: 42, codename: delete_service}
+- model: auth.permission
+  pk: 127
+  fields: {name: Can add tag, content_type: 43, codename: add_tag}
+- model: auth.permission
+  pk: 128
+  fields: {name: Can change tag, content_type: 43, codename: change_tag}
+- model: auth.permission
+  pk: 129
+  fields: {name: Can delete tag, content_type: 43, codename: delete_tag}
+- model: auth.permission
+  pk: 130
+  fields: {name: Can add ticket, content_type: 44, codename: add_ticket}
+- model: auth.permission
+  pk: 131
+  fields: {name: Can change ticket, content_type: 44, codename: change_ticket}
+- model: auth.permission
+  pk: 132
+  fields: {name: Can delete ticket, content_type: 44, codename: delete_ticket}
+- model: auth.permission
+  pk: 133
+  fields: {name: Can add ticket comment, content_type: 45, codename: add_ticketcomment}
+- model: auth.permission
+  pk: 134
+  fields: {name: Can change ticket comment, content_type: 45, codename: change_ticketcomment}
+- model: auth.permission
+  pk: 135
+  fields: {name: Can delete ticket comment, content_type: 45, codename: delete_ticketcomment}
+- model: auth.user
+  pk: 1
+  fields:
+    password: pbkdf2_sha256$36000$j7OYf2amokss$iVqVIFW2xnVeLD5sRuGevTHrR1l4aSAWRkud0p0yW8Q=
+    last_login: null
+    is_superuser: true
+    username: abuse.robot
+    first_name: ''
+    last_name: ''
+    email: ''
+    is_staff: true
+    is_active: true
+    date_joined: 2018-06-14 07:17:37.379116
+    groups: []
+    user_permissions: []
+- model: abuse.operator
+  pk: 1
+  fields: {user: 1, role: 1}
+- model: abuse.abusepermission
+  pk: 1
+  fields: {user: 1, category: Illegal, profile: 1}
+- model: abuse.abusepermission
+  pk: 2
+  fields: {user: 1, category: Intrusion, profile: 1}
+- model: abuse.abusepermission
+  pk: 3
+  fields: {user: 1, category: Malware, profile: 1}
+- model: abuse.abusepermission
+  pk: 4
+  fields: {user: 1, category: Network Attack, profile: 1}
+- model: abuse.abusepermission
+  pk: 5
+  fields: {user: 1, category: Other, profile: 1}
+- model: abuse.abusepermission
+  pk: 6
+  fields: {user: 1, category: Phishing, profile: 1}
+- model: abuse.abusepermission
+  pk: 7
+  fields: {user: 1, category: Spam, profile: 1}
+- model: abuse.abusepermission
+  pk: 8
+  fields: {user: 1, category: Copyright, profile: 1}

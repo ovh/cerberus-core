@@ -1,0 +1,19 @@
+config:
+    actions:
+    -   name: cdn_response_update
+        params:
+            provider: cloudflare
+    -   name: attach_external_answer
+    conditions:
+        all:
+        -   name: ticket_in_cdn_cache
+            operator: is_true
+            params:
+                provider: cloudflare
+            value: true
+        -   name: email_sender
+            operator: equal_to
+            value: abusereply@cloudflare.com
+name: cdn_response_cloudflare
+orderId: 10
+rulesType: EmailReply

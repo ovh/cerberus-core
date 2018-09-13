@@ -1,0 +1,16 @@
+Return-Path: <me123@ovh.com>
+Received: from mx.domain.tld
+	by mx.domain.tld (Dovecot) with LMTP id lLgxJbRMQVUGMQAArOwUew
+	; Wed, 29 Apr 2015 23:27:25 +0200
+Delivered-To: <abuse@ovh.net>
+Date: Wed, 29 Apr 2015 23:26:14 +0200
+From: Simon Vasseur <me123@ovh.com>
+MIME-Version: 1.0
+To: abuse@ovh.net
+Subject: Encoding test
+Content-Type: text/plain; charset=ISO-8859-1; format=flowed
+Content-Transfer-Encoding: 8bit
+
+&é"'(-è_çà)=$ù!:;,
+
+0.0.0.1 0.0.0.1 1.2.3.4 0.0.0.0.1D17F3F2963E4AC 224.5.6.7 192.168.1.1 8.8.8.8 aaaaaaa

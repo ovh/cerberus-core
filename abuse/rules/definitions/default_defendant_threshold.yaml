@@ -1,0 +1,23 @@
+config:
+    actions:
+    -   name: create_ticket
+        params:
+            attach_new: true
+            create_new: true
+    conditions:
+        all:
+        -   name: has_defendant
+            operator: is_true
+            value: true
+        -   name: is_report_trusted
+            operator: is_false
+            value: true
+        -   name: has_ticket
+            operator: is_false
+            value: true
+        -   name: report_ticket_threshold
+            operator: is_true
+            value: true
+name: default_defendant_threshold
+orderId: 102
+rulesType: Report

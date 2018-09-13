@@ -1,0 +1,118 @@
+Received: from unknown192.168.1.19 (HELO XXXXX.net) (192.168.1.19)
+ by XXX.XXX.XXX.XXX with SMTP; Mon, 13 Aug 2012 01:32:22 +0800
+X-EMDG-ORIGINAL-FROM:<abuse-report@cyscon.de>
+X-EMDG-VER:4.0.2
+Received: (anti_spam gateway 3.0); Mon, 13 Aug 2012 01:25:33 +0800
+Message-ID: <544792333.06526@XXXXX.net>
+Date: Sun, 12 Aug 2012 19:32:19 +0200
+To: abuse@XXXXXXXXXXX.com
+From: NO REPLY C-SIRT <abuse-report@cyscon.de>
+Reply-to: sitesecurity@cyscon.de
+Subject: [SIRT#0000730929] Malicious content (CYSC.DEF.GEN-6) hosted on XXX.XXX.XXX.XXX within your network!
+Message-ID: <cd1a98b93b7f829ecd6f2512a17c1ad8@localhost.localdomain>
+X-Priority: 3
+X-Mailer: PHPMailer [version 1.73]
+Auto-Submitted: auto-generated
+X-ARF: YES
+MIME-Version: 1.0
+Content-Type: multipart/mixed;
+	boundary="b1_cd1a98b93b7f829ecd6f2512a17c1ad8"
+
+
+--b1_cd1a98b93b7f829ecd6f2512a17c1ad8
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+This is an automated email alert; please do not reply to this email as re=
+plies will not be answered. To get in contact with us, use the links and =
+contact details, mentioned in the text below instead!
+
+************************************************************************
+
+TO WHOM IT MAY CONCERN:
+
+The security experts of cyscon GmbH like to ask you to remove/review the =
+below mentioned file from/on your servers. At least one of our scanners d=
+etect it, and we consider it as malicious:=20
+
+########################################################################
+# begin logs
+
+IP:		XXX.XXX.XXX.XXX
+URL:		http://www.XXXXXXX.com.cn/help.htm
+Port:		80
+Tested on:	Sun, 12 Aug 2012 19:31:33 +0200
+Result:		CYSC.DEF.GEN-6=20
+
+# end logs
+########################################################################
+
+Also, please check if your machine has been compromised and is now being =
+used by intruders in malicious activities, or if a legitimate user is eng=
+aged in activity that is probably in violation of your terms of service a=
+greement. In either case, please investigate this matter. Further details=
+ on this project & advisories may be found here: http://www.c-sirt.org/fa=
+q-section/
+
+The incident is already solved? Then just visit the following url and tri=
+gger a rescan of your file:
+http://www.c-sirt.org/incident/?incident=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+When the problem is solved the field "Solved" will be set and the color c=
+hanges to green. If this does not happen, a virus-scanner still detects m=
+alicious content.
+
+You received this message because you are listed as the contact for this =
+network (AS# ASXXXXX). This message is intended for the person responsibl=
+e for computer security at your site. If this is not the correct address,=
+ please forward this message to the appropriate party.
+
+Please note: If more than one IP address at your site is involved, or mal=
+icious code/malware is detected in more than one file, you may/will recei=
+ve more than one message, each one with different content. Additionally y=
+ou may found a X-ARF report attached to this document, with all relevant =
+details for automated complaint parsing. Learn more about X-ARF: http://w=
+ww.x-arf.org/specification.html
+
+We hope this important information regarding the security of your custome=
+rs/clients content is/was useful/helpful for you. In case of further ques=
+tions, of if you need any help in resolving this issue, please feel free =
+to contact us at <sitesecurity@cyscon.de>. We, the C-SIRT team of cyscon =
+GmbH, will assist you in any questions regarding this incident [SIRT#0000=
+730929].
+
+Thank you,
+
+--
+CYSCON-SIRT (Security Incident Reporting Team)
+
+cyscon GmbH
+Poststrasse 9 | DE-40213 Duesseldorf
+http://www.cyscon.de
+
+Registration Court: Duesseldorf, HRB 66749=20
+Management Board: Thorsten Kraft, Thomas Wolf
+
+--b1_cd1a98b93b7f829ecd6f2512a17c1ad8
+Content-Type: text/plain; charset="utf-8"; name="report.txt"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="report.txt"
+
+---
+Schema-URL: http://www.x-arf.org/schema/abuse_malware-attack_0.1.3.json
+Reported-From: abuse-report@cyscon.de
+Report-ID: SIRT#0000730929
+User-Agent: cyscon xarf-generator
+Date: Sun, 12 Aug 2012 19:31:33 +0200
+Source: 122.XXX.XXX.XXX
+Source-Type: ipv4
+Download-Link: http://www.XXXXXXX.com.cn/help.htm
+Antivirus-Result: CYSC.DEF.GEN-6
+Attachment: none
+Category: abuse
+Report-Type: malware-attack
+
+
+--b1_cd1a98b93b7f829ecd6f2512a17c1ad8--
+
+
+

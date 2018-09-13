@@ -1,0 +1,17 @@
+config:
+    actions:
+    -   name: do_nothing
+    conditions:
+        all:
+        -   name: has_defendant
+            operator: is_true
+            value: true
+        -   name: report_category
+            operator: equal_to
+            value: phishing
+        -   name: avoid_phishtocheck
+            operator: is_true
+            value: true
+name: phishing_ignore
+orderId: 23
+rulesType: Report
