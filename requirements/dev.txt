@@ -3,5 +3,4 @@
 pep8
 pylint
 pylint-django
-mock==1.3.0
 unittest-xml-reporting

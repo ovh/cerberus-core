@@ -3,209 +3,265 @@
 ## Summary ##
 
 Cerberus is a toolkit to receive, parse, process and automate abuse reports handling received by ISP or hosting providers.
-This toolkit includes an email fetcher, abuse reports parsers, a business rules engine and a ticketing system.
-
-## Try it ##
-
-### The easy way (Docker) ###
-
-To test the poc (not persistent), run (tested with version 1.9.1):
-
-    $ docker build -t cerberus .
-
-Then, you just need to run it with your abuse email inbox settings (over IMAPS):
-
-    $ docker run -e EMAIL_HOST=mx.domain.com -e EMAIL_PORT=993 -e EMAIL_LOGIN=login@domain.com -e EMAIL_PASS=pass -p 6060:6060 -t cerberus
-
-and browse `http://127.0.0.1:6060` with default login admin:admin , and voila
+This toolkit includes an email fetcher, parsers, a business rules engine and a ticketing system.
 
 ![cerberus](https://i.imgur.com/psafNaK.gif)
 
-If something goes wrong, enter the docker and check the logs in `/home/cerberus/cerberus-core/*.log`
-
-### The manual way ###
+## Setup ##
 
 This project is mainly based on **Django**, **Flask**, **RQ** and **Rq-Scheduler**. To setup cerberus-core, you'll need:
 
  * A Linux environment
  * Python 2.7+
- * Packages `python-dev` and `python-pip`
  * A PostgreSQL database (9.4.x or greater)
- * An HTTP Server for cerberus-ux (not included in this project)
  * A Redis server
- * A MX supporting IMAPS
- * A scheduler (cron, supervisor, ...)
 
-When all of these requirements are met, you can install the tool:
+When all of these requirements are met, you can checkout the sources and install Cerberus:
 
- 1. Download the zipfile or checkout the sources.
- 2. install python dependencies (`apt-get install python-dev python-pip`)
- 3. Run `pip install -r requirements/common.txt` in order to setup dependencies
-
-You should **take a look at docker directory** for further informations.
+    $ virtualenv venv
+    $ source venv/bin/activate
+    $ pip install --upgrade pip setuptools
+    $ pip install -r requirements.txt
 
 ## Running ##
+
+    $ python main.py
+
+    Usage: main.py [OPTIONS] COMMAND [ARGS]...
+    
+      Cerberus CLI
+    
+    Options:
+      --version  Show the flask version
+      --help     Show this message and exit.
+    
+    Commands:
+      
+      add-rule         Add or update a Cerberus rule from file.
+      fetch-email      Runs Cerberus email fetcher.
+      initdb           Init Cerberus database.
+      run              Runs a development server.
+      run-worker       Runs a Cerberus worker.
+      shell            Runs a shell in the app context.
+      test             Runs tests.
+      ticket-workflow  Runs Cerberus ticket workflow.
+
+First, you need to init the database
+
+    $ APP_ENV=dev APP_SETTINGS=settings-sample.yml python main.py initdb
+
+Check if database is correctly populated
+
+    $ APP_ENV=dev APP_SETTINGS=settings-sample.yml python main.py shell
+
+    In [4]: from abuse.models import Category
+    In [5]: list(Category.all().values_list('name', flat=True))
+    Out[5]:
+    [u'Copyright',
+     u'Illegal',
+     u'Intrusion',
+     u'Malware',
+     u'Network Attack',
+     u'Other',
+     u'Phishing',
+     u'Spam']
+
+To run Cerberus, you need at least to run these `main.py` commands:
+
+- `run` for the API
+- `run-worker --queues default,email` to run a worker
+- `fetch-email` to fetch abuse emails
+- `ticket-workflow` to update tickets status
+
+The whole project uses `python-rq` and `rq-scheduler`. You can see jobs status with:
+
+    $ rq-info
 
 Start the scheduler:
 
     $ rqscheduler &
 
-You can now insert theses entries in your favorite scheduler:
+## Overview ##
 
- * Schedule `rqcheduler`, `event/email_fetcher.py`, `worker/worker.py` and `uwsgi --http-socket 8080 api/uwsgi.ini` to be run as a daemon.
- * Schedule `event/workflow.py` to be run every minute.
+![alt text](doc/cerberus.png "Cerberus")
 
-The whole project use `python-rq` and `rq-scheduler`. You can see jobs status with:
+## Business rules ? (aka workflows) ##
 
-    $ rq-info
-
-## Concept ##
-
-### Plaintiff ###
-
-(Law) A a person who brings a civil action in a court (aka claimant).
-
-### Defendant ###
-
-(Law) A person or entity against whom an action or claim is brought in a court of law.
-It is one of your customer who is suspected of illegal activities on his service(s).
-
-### Service ###
-
-A Defendant has suscribed to one or more services(s) (product(s)) your company offers. It can be ADSL, hosting, email services ...
-
-### Provider ###
-
-The source of the email. It can be directly the plaintiff or an representative third party.
-
-### Report ###
-
-One Provider + one Category. If a defendant is identified, the report is linked to a defendant, a service and contains item(s).
-
-### Ticket ###
-
-One or more reports + one Category. It cans bel linked to a defendant/service, so all reports themselves linked to this defendant/service.
-
-### Item ###
-        
-Fraudulent URL/IP/FQDN found in an email.
-
-### Action ###
-
-An action on a customer's service (suspend, shutdown, breach of contract).
-
-## Business Rules ##
+A rule contains `conditions` and `actions`. If all `conditions` are met, then `actions` are executed sequentially.
 
 Cerberus business rules engine is based on [https://github.com/venmo/business-rules](https://github.com/venmo/business-rules)
-You can find business rules example in `tests/rules/`
+You can find business rules example in `abuse/rules/definitions`.
 
-## Workflow ##
+Phishing rule example:
 
-An email can generates one or more reports (if multiple defendants are identified). Just one if no defendant is identified.
-These reports can be attached to existing ticket or create one if the provider is "trusted".
-So tickets can have multiple reports/providers.
+```yaml
+config:
+    actions:
+    -   name: set_ticket_phishtocheck
+    conditions:
+        all:
+        -   name: has_defendant
+            operator: is_true
+            value: true
+        -   name: report_category
+            operator: equal_to
+            value: phishing
+        -   name: urls_down
+            operator: is_false
+            value: true
+        -   name: has_urls
+            operator: is_true
+            value: true
+name: phishing_phishtocheck
+orderId: 22 # lower number means higher priority
+rulesType: Report
+```
 
-So **not all reports are attached to tickets**. It's important, operators **process tickets, not reports**. Reports add weight to tickets.
+### Implementing your own business rules functions ###
 
-All the effective jobs are done with ticket: customer interaction (emails), action on service ...
+You can add your own business rules variables and actions. Only requirement is that a function's name need to be unique.
+For example, in `abuse.rules.variables.report`, add `myvar.py`:
 
-There's an specific/automatic workflow for **phishing** ticket/report described in `doc/source/phishing.png`.
-A "Phishing-trusted reporter" is a provider with an `apiKey` (see `abuse/models.py`).
+```python
+from ...engine.variables import boolean_rule_variable, BaseVariables
 
-You can see full cerberus models's relationship in `doc/source/models.png`.
+class MyVariables(BaseVariables):
+    """
+        This class implements My variables getters
+        for rules engine
+    """
+    def __init__(self, parsed_email, report, ticket, is_trusted=False):
+        """
+            :param `cerberus.parsers.ParsedEmail` parsed_email: The parsed email
+            :param `abuse.models.Report` report: A Cerberus report instance
+            :param `abuse.models.Ticket` ticket: A Cerberus ticket instance
+            :param bool is_trusted: if the report is trusted
+        """
+        self.report = report
+        self.ticket = ticket
 
-## Configuration ##
+    @boolean_rule_variable(label='Check if report category is Phishing')
+    def is_report_phishing(self):
+        
+        return self.report.category.lower() == 'phishing'
+```
 
-### Project structure ###
+Now you can register variables definitions in your settings:
 
- * `abuse`: Django app models description.
- * `adapters`: Abstract classes providing way to implement core functions.
- * `api`: cerberus-core API for cerberus-ux.
- * `default`: default implementation of adapters abtract classes.
- * `doc`: documentation.
- * `docker`: files needed to build docker.
- * `event`: event-based jobs to be consume by python-rq workers.
- * `factory`: the factory for adapters implementations.
- * `requirements`: pip requirements.
- * `tests`: unit tests.
- * `utils`: utils functions for worker and API.
- * `worker`: python-rq workers.
+```yaml
+RULES:
+    variables:
+        report:
+            - 'abuse.rules.variables.report.default.DefaultReportVariables'
+            - 'abuse.rules.variables.report.myvar.MyVariables'
+```
 
-### General settings ###
+## Customisation ##
 
-Default secrets are defined as VARENV. To configure the tool, you have to export following environment variables:
+### Implementing your own Services ###
 
- * EMAIL_STORAGE_DIR: The folder where to store fetched and sent emails
- * MAGIC_SMTP_HEADER: King of tag in SMTP header defining e-mail source (see next section)
- * API_HOST: The IP address of cerberus-core API
- * API_PORT: The TCP port of cerberus-core API
- * EMAIL_HOST: IP or domain of your MX
- * EMAIL_PORT: The TCP port of your MX (IMAPS)
- * EMAIL_LOGIN: Username used to poll incoming e-mails
- * EMAIL_PASS: Password for previous username
- * REDIS_HOST: The IP address of the Redis Server
- * REDIS_PORT: The TCP port of the Redis Server
- * SECRET_KEY: The Django secret key
- * PG_NAME: The name of the PostgreSQL db
- * PG_USER: The username to use for previous db
- * PG_PASS: The password of this user
- * PG_HOST: The IP address of PostgreSQL db
- * PG_PORT: The TCP port of PostgreSQL db
+Cerberus uses many `services`. You can rewrite/override default implementation of services.
+Required services implementations are:
 
-In `config/settings.py` you can see how this different varenv are used + other settings description. **Really, you should edit this file.**
-
-### A "trusted" email ? ###
-
-As you can see, a required varenv is called MAGIC_SMTP_HEADER.
-Since everybody is able to send an email pretending being Microsoft, NSA or whatever,
-it's important to check the identity of the mail send with a well-kept secret.
-The easier way to do so is to assign a single e-mail address per organization you keep secret.
-
-Using the MX features, the mail must be validated and tagged with the previous MAGIC_SMTP_HEADER.
-We recommend to keep this header name secret too. No matter the value of this header, if it's present, the email is trusted.
-
-### Network IPs ###
-
-When you're done, with general config, the tool is almost ready to be run. You now have to tell the IPs your network is made of.
-Everything you have to do is opening the file utils/ips.py and add your CIDRs (only one per line).
-
-### Implementing your own core functions ###
-
-You'll maybe see in the file `config/settings.py`, there is a way to provide your implementation(s).
-By default, a very basic implementation is provided for each adapter. (see abstract documentation)
-
-Required adapters implementations are:
-
- * adapters.services.storage.abstract.StorageServiceBase
- * adapters.dao.customer.abstract.CustomerDaoBase
- * adapters.services.phishing.abstract.PhishingServiceBase
- * adapters.services.mailer.abstract.MailerServiceBase
- * adapters.services.action.impl.ActionServiceBase
+ * abuse.services.action.ActionServiceBase
+ * abuse.services.crm.base.CRMServiceBase
+ * abuse.services.email.base.EmailServiceBase
+ * abuse.services.phishing.base.PhishingServiceBase
+ * abuse.services.storage.base.StorageServiceBase
 
 Optional, but usefull, are:
 
- * adapters.services.kpi.abstract.KPIServiceBase
- * adapters.services.search.abstract.SearchServiceBase
- * adapters.dao.reputation.impl.ReputationDaoBase
+ * abuse.services.kpi.base.KPIServiceBase
+ * abuse.services.reputation.base.ReputationServiceBase
+ * abuse.services.search.base.SearchServiceBase
 
-You can code your own service(s) by implementing `adapters.services.*.abstract.*` and your own DAO by implementing `adapters.dao.*.abstract.*.`
-Then, tell cerberus-core to use this implementations by editing the property CUSTOM_IMPLEMENTATIONS.
+Then, tell Cerberus to use this implementation by editing IMPLEMENTATIONS in your settings file.
 
-You can find implementation and expected return value in `default.adapters`.
+```yaml
+IMPLEMENTATIONS:
+    EmailServiceBase:
+        class: 'abuse.services.email.myemailservice.MyEmailService'
+```
 
-### Add features ###
+Services are called through a singleton for each service. For example:
 
-You can easily add event in `event/` and there associated functions in `worker/`
-You can add template for provider in `worker/parsing/templates`. If your template is well formatted, it will be added to parser regexp.
+```python
+from abuse.services.email import EmailService
 
-## API ##
+emails = EmailService.get_emails(ticket)
+```
 
-Once everything is running, you can start using the API. By default, it's listening on port 8080. Full endpoints description are available in documentation
+will now execute your own `get_emails` implementation.
 
-**Be careful, this is not a RESTFul API.** The main goal of this API is to interface DB with [https://github.com/ovh/cerberus-ux](https://github.com/ovh/cerberus-ux) project.
+### Implementing your own async tasks ###
 
-## Documentation ##
+For example if you insert `rq` jobs from external API, Kafka messages ...
 
-You can build the full documentation with:
+Simply put source files in `abuse.tasks`.
 
-    $ sphinx-build -b html doc/source doc/build
+	$ tree abuse/tasks/
+		abuse/tasks/
+		├── __init__.py
+		├── action.py
+		├── defendant.py
+		├── helpers.py
+		├── masscontact.py
+		├── **mytasks.py**
+		├── phishing.py
+		├── report.py
+		└── ticket.py
+
+## Project structure ##
+
+ * `abuse/api`: Cerberus API for cerberus-ux.
+ * `abuse/controllers`: API controllers.
+ * `abuse/commands`: Cerberus main commands (run server, workers ...).
+ * `abuse/models`: Django app models description.
+ * `abuse/parsers`: email parsing engine and templates.
+ * `abuse/rules`: business rules engine and rules definitions.
+ * `abuse/services`: services used by Cerberus core functions.
+ * `abuse/tasks`: tasks handled by python-rq workers.
+ * `abuse/utils`: some utils functions.
+
+## Definitions ##
+
+- Plaintiff
+
+(Legal) A person who brings a civil action in a court (aka claimant).
+
+- Defendant
+
+(Legal) A person or entity against whom an action or claim is brought in a court of law.
+It is one of your customer who is suspected of illegal activities on his service(s).
+
+- Service
+
+A Defendant has suscribed to one or more services(s) (product(s)) your company offers. It can be ADSL, hosting, email services ...
+
+- Provider
+
+The source of the email. It can be directly the plaintiff or an representative third party.
+
+- Report
+
+One Provider + one Category. If a defendant is identified, the report is linked to a defendant, a service and contains item(s).
+
+An email can generates one or more reports (if multiple defendants are identified). These reports can be attached to existing ticket, create one or just do nothing (depending on rules you have defined). So tickets can have multiple reports/providers.
+
+So **not all reports are attached to tickets**. It's important, operators **process tickets, not reports**.
+
+All the effective jobs are done with ticket: customer interaction (emails), action on service ...
+
+- Ticket
+
+One or more reports + one Category. It cans bel linked to a defendant/service, so all reports themselves linked to this defendant/service.
+
+- Item
+        
+Fraudulent URL/IP/FQDN found in an email.
+
+## Tests ##
+
+Common tests:
+
+    $APP_ENV=test APP_SETTINGS=abuse/tests/settings-test.yml python main.py test --pattern="test_*"

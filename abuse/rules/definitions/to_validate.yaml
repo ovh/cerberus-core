@@ -1,0 +1,19 @@
+config:
+    actions:
+    -   name: set_report_status
+        params:
+            status: ToValidate
+    conditions:
+        all:
+        -   name: has_defendant
+            operator: is_false
+            value: true
+        -   name: is_report_trusted
+            operator: is_true
+            value: true
+        -   name: autoarchive
+            operator: is_false
+            value: true
+name: to_validate
+orderId: 4
+rulesType: Report

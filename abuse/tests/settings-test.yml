@@ -1,0 +1,87 @@
+DJANGO:
+    DEBUG: true
+    SECRET_KEY: 'test'
+    DATABASES:
+        default:
+            ENGINE: 'django.db.backends.sqlite3'
+            NAME: ':memory:'
+            TEST:
+                name: ':memory:'
+    TIME_ZONE: 'Europe/Paris'
+    TEMPLATES:
+        - BACKEND: 'django.template.backends.django.DjangoTemplates'
+    MIDDLEWARE_CLASSES:
+        - 'django.middleware.common.CommonMiddleware'
+        - 'django.contrib.sessions.middleware.SessionMiddleware'
+        - 'django.contrib.auth.middleware.AuthenticationMiddleware'
+    
+    INSTALLED_APPS:
+        - 'django.contrib.auth'
+        - 'django.contrib.contenttypes'
+        - 'django.contrib.sessions'
+        - 'abuse'
+
+MANAGED_NETWORKS:
+    - '0.0.0.0/0'
+
+RULES:
+    actions:
+        emailreply:
+            - 'abuse.rules.actions.emailreply.default.DefaultEmailReplyActions'
+        cdnrequest:
+            - 'abuse.rules.actions.cdnrequest.default.DefaultCDNRequestActions'
+        report:
+            - 'abuse.rules.actions.report.default.DefaultReportActions'
+    variables:
+        emailreply:
+            - 'abuse.rules.variables.emailreply.default.DefaultEmailReplyVariables'
+        cdnrequest:
+            - 'abuse.rules.variables.cdnrequest.default.DefaultCDNRequestVariables'
+        report:
+            - 'abuse.rules.variables.report.default.DefaultReportVariables'
+
+IMPLEMENTATIONS:
+    ActionServiceBase: 
+        class: 'abuse.services.action.default.DefaultActionService'
+        config:
+    CRMServiceBase:
+        class: 'abuse.services.crm.default.DefaultCRMService'
+        config:
+    EmailServiceBase:
+        class: 'abuse.services.email.default.DefaultMailerService'
+        config:
+            directory: '/dev/shm/cerberus_storage_test'
+    PhishingServiceBase:
+        class: 'abuse.services.phishing.default.DefaultPhishingService'
+        config:
+    StorageServiceBase:
+        class: 'abuse.services.storage.default.FilesystemStorageService'
+        config:
+            directory: '/dev/shm/cerberus_storage_test'
+
+PARSER:
+    fqdn_re: '(.*\.yourcompany\.com)'
+    networks_to_ignore:
+        - '0.0.0.0/8'
+        - '224.0.0/4'
+        - '10.0.0.0/8'
+        - '192.168.0.0/16'
+    domain_to_ignore:
+        - 'www.yourcompany.com'
+    blacklisted_providers: 
+        - 'blacklisted@provider.com'
+
+REDIS:
+    host: '127.0.0.1'
+    port: 6379
+    password: ''
+    queues:
+        default:
+            name: 'default'
+            default_timeout: 7200
+        email:
+            name: 'email'
+            default_timeout: 7200
+        kpi:
+            name: 'kpi'
+            default_timeout: 1800
