@@ -28,7 +28,7 @@ from abuse.parsers import Parser
 
 def pretransform(content):
 
-    pattern = r'discovered\s*a\s*phishing\s*attack\s*located\s*on\s*your\s*network\s*:(.|\n)*?\['
+    pattern = r"discovered\s*a\s*phishing\s*attack\s*located\s*on\s*your\s*network\s*:(.|\n)*?\["
     search = re.search(pattern, content, re.IGNORECASE & re.MULTILINE)
     if search:
         return search.group()
@@ -36,17 +36,10 @@ def pretransform(content):
 
 
 TEMPLATE = {
-    'email': '*@netcraft.com',
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:\[\s*)' + Parser.ipv4_re,
-        },
-        'urls': {
-            'pretransform': pretransform,
-            'pattern': Parser.url_re,
-        },
-        'category': {
-            'value': 'Phishing',
-        },
+    "email": "*@netcraft.com",
+    "regexp": {
+        "ips": {"pattern": r"(?:\[\s*)" + Parser.ipv4_re},
+        "urls": {"pretransform": pretransform, "pattern": Parser.url_re},
+        "category": {"value": "Phishing"},
     },
 }

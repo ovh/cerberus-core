@@ -39,38 +39,44 @@ def get_news(**kwargs):
     """ Get all news
     """
     filters = {}
-    if kwargs.get('filters'):
+    if kwargs.get("filters"):
         try:
-            filters = json.loads(unquote(unquote(kwargs['filters'])))
+            filters = json.loads(unquote(unquote(kwargs["filters"])))
         except (ValueError, SyntaxError, TypeError) as ex:
             raise BadRequest(str(ex))
 
     try:
-        limit = int(filters['paginate']['resultsPerPage'])
-        offset = int(filters['paginate']['currentPage'])
+        limit = int(filters["paginate"]["resultsPerPage"])
+        offset = int(filters["paginate"]["currentPage"])
     except (KeyError, ValueError):
         limit = 10
         offset = 1
 
     try:
         nb_record_filtered = News.count()
-        news_list = News.filter().order_by(
-            '-date'
-        ).values(*[f.name for f in News._meta.fields])
-        news_list = news_list[(offset - 1) * limit:limit * offset]
+        news_list = (
+            News.filter().order_by("-date").values(*[f.name for f in News._meta.fields])
+        )
+        news_list = news_list[(offset - 1) * limit : limit * offset]
         len(news_list)  # Force django to evaluate query now
-    except (AttributeError, KeyError, FieldError,
-            SyntaxError, TypeError, ValueError) as ex:
+    except (
+        AttributeError,
+        KeyError,
+        FieldError,
+        SyntaxError,
+        TypeError,
+        ValueError,
+    ) as ex:
         raise BadRequest(str(ex))
 
     for news in news_list:
-        if news.get('author', None):
-            news['author'] = User.objects.get(id=news['author']).username
-        if news.get('date', None):
-            news['date'] = time.mktime(news['date'].timetuple())
+        if news.get("author", None):
+            news["author"] = User.objects.get(id=news["author"]).username
+        if news.get("date", None):
+            news["date"] = time.mktime(news["date"].timetuple())
 
-    resp = {'news': list(news_list)}
-    resp['newsCount'] = nb_record_filtered
+    resp = {"news": list(news_list)}
+    resp["newsCount"] = nb_record_filtered
 
     return resp
 
@@ -80,14 +86,14 @@ def show(news_id):
     """
     try:
         news = News.filter(id=news_id).values(*[f.name for f in News._meta.fields])[0]
-        if news.get('author', None):
-            news['author'] = User.objects.get(id=news['author']).username
-        if news.get('date', None):
-            news['date'] = time.mktime(news['date'].timetuple())
+        if news.get("author", None):
+            news["author"] = User.objects.get(id=news["author"]).username
+        if news.get("date", None):
+            news["date"] = time.mktime(news["date"].timetuple())
     except (IndexError, ValueError):
-        return BadRequest('Not a valid news id')
+        return BadRequest("Not a valid news id")
     except ObjectDoesNotExist:
-        return NotFound('Author not found')
+        return NotFound("Author not found")
 
     return news
 
@@ -96,13 +102,13 @@ def create(body, user):
     """ Create news
     """
     try:
-        body.pop('author', None)
-        body['author'] = user
+        body.pop("author", None)
+        body["author"] = user
         news, created = News.get_or_create(**body)
     except (KeyError, FieldError, IntegrityError):
-        raise BadRequest('Invalid fields in body')
+        raise BadRequest("Invalid fields in body")
     if not created:
-        raise BadRequest('News already exists')
+        raise BadRequest("News already exists")
     return show(news.id)
 
 
@@ -115,13 +121,15 @@ def update(news_id, body, user):
         else:
             news = News.get(id=news_id, author__id=user.id)
     except (ObjectDoesNotExist, ValueError):
-        return NotFound('News not found')
+        return NotFound("News not found")
     try:
-        body = {k: v for k, v in body.iteritems() if k not in ['author', 'date', 'tags']}
+        body = {
+            k: v for k, v in body.iteritems() if k not in ["author", "date", "tags"]
+        }
         News.filter(pk=news.pk).update(**body)
         news = News.get(pk=news.pk)
     except (KeyError, FieldError, IntegrityError):
-        raise BadRequest('Invalid fields in body')
+        raise BadRequest("Invalid fields in body")
     return model_to_dict(news)
 
 
@@ -131,9 +139,9 @@ def destroy(news_id):
     try:
         news = News.get(id=news_id)
     except (ObjectDoesNotExist, ValueError):
-        return NotFound('News not found')
+        return NotFound("News not found")
     try:
         news.delete()
-        return {'message': 'News successfully removed'}
+        return {"message": "News successfully removed"}
     except ProtectedError:
-        raise Forbidden('News still referenced in reports/tickets')
+        raise Forbidden("News still referenced in reports/tickets")

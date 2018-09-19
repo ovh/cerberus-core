@@ -27,29 +27,25 @@ from flask import Blueprint, g, request
 from ..decorators import admin_required
 from ..controllers import news as NewsController
 
-news_views = Blueprint(
-    'news_views',
-    __name__,
-    url_prefix='/news'
-)
+news_views = Blueprint("news_views", __name__, url_prefix="/news")
 
 
-@news_views.route('', methods=['GET'])
+@news_views.route("", methods=["GET"])
 def get_all_news():
     """
         Get news
     """
-    return NewsController.get_news(filters=request.args.get('filters'))
+    return NewsController.get_news(filters=request.args.get("filters"))
 
 
-@news_views.route('/<news>', methods=['GET'])
+@news_views.route("/<news>", methods=["GET"])
 def get_news(news=None):
     """ Get given news
     """
     return NewsController.show(news)
 
 
-@news_views.route('', methods=['POST'])
+@news_views.route("", methods=["POST"])
 def create_news():
     """ Post a news
     """
@@ -57,7 +53,7 @@ def create_news():
     return NewsController.create(body, g.user)
 
 
-@news_views.route('/<news>', methods=['PUT'])
+@news_views.route("/<news>", methods=["PUT"])
 def update_news(news=None):
     """ Update given news
     """
@@ -65,7 +61,7 @@ def update_news(news=None):
     return NewsController.update(news, body, g.user)
 
 
-@news_views.route('/<news>', methods=['DELETE'])
+@news_views.route("/<news>", methods=["DELETE"])
 @admin_required
 def delete_news(news=None):
     """ Delete given news

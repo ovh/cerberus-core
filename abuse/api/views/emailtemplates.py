@@ -30,23 +30,19 @@ from ..controllers import templates as TemplatesController
 
 
 email_templates_views = Blueprint(
-    'email_templates_views',
-    __name__,
-    url_prefix='/emailTemplates'
+    "email_templates_views", __name__, url_prefix="/emailTemplates"
 )
 
 
-@email_templates_views.route('', methods=['GET'])
+@email_templates_views.route("", methods=["GET"])
 @Cache.cached(timeout=43200)
 def get_all_templates():
     """ Get all Abuse mail templates
     """
-    return TemplatesController.get_templates(
-        filters=request.args.get('filters')
-    )
+    return TemplatesController.get_templates(filters=request.args.get("filters"))
 
 
-@email_templates_views.route('/<template>', methods=['GET'])
+@email_templates_views.route("/<template>", methods=["GET"])
 @Cache.cached(timeout=43200)
 def get_template(template=None):
     """ Get a given email template
@@ -54,9 +50,9 @@ def get_template(template=None):
     return TemplatesController.show(template)
 
 
-@email_templates_views.route('', methods=['POST'])
+@email_templates_views.route("", methods=["POST"])
 @admin_required
-@Cache.invalidate(routes=['/api/emailTemplates'])
+@Cache.invalidate(routes=["/api/emailTemplates"])
 def create_templates():
     """ Add an email template
     """
@@ -64,20 +60,20 @@ def create_templates():
     return TemplatesController.create(body)
 
 
-@email_templates_views.route('/<template>', methods=['PUT', 'DELETE'])
+@email_templates_views.route("/<template>", methods=["PUT", "DELETE"])
 @admin_required
-@Cache.invalidate(routes=['/api/emailTemplates'])
+@Cache.invalidate(routes=["/api/emailTemplates"])
 def update_template(template=None):
     """ Update an email template
     """
-    if request.method == 'PUT':
+    if request.method == "PUT":
         body = request.get_json()
         return TemplatesController.update(template, body)
 
     return TemplatesController.destroy(template)
 
 
-@email_templates_views.route('/languages', methods=['GET'])
+@email_templates_views.route("/languages", methods=["GET"])
 @Cache.cached(timeout=43200)
 def get_supported_languages():
     """ Get application supported languages
@@ -85,7 +81,7 @@ def get_supported_languages():
     return TemplatesController.get_supported_languages()
 
 
-@email_templates_views.route('/recipientsType', methods=['GET'])
+@email_templates_views.route("/recipientsType", methods=["GET"])
 @Cache.cached(timeout=43200)
 def get_recipients_type():
     """ Get application supported languages

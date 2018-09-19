@@ -36,7 +36,7 @@ def get_ip_rbl_reputation(ip_addr):
     try:
         validate_ipv4_address(ip_addr)
     except ValidationError:
-        raise BadRequest('Not a valid IPV4')
+        raise BadRequest("Not a valid IPV4")
 
     results = []
 
@@ -56,7 +56,7 @@ def get_ip_internal_reputation(ip_addr):
     try:
         validate_ipv4_address(ip_addr)
     except ValidationError:
-        raise BadRequest('Not a valid IPV4')
+        raise BadRequest("Not a valid IPV4")
 
     results = []
 
@@ -76,7 +76,7 @@ def get_ip_external_reputation(ip_addr):
     try:
         validate_ipv4_address(ip_addr)
     except ValidationError:
-        raise BadRequest('Not a valid IPV4')
+        raise BadRequest("Not a valid IPV4")
 
     results = []
 
@@ -96,16 +96,13 @@ def get_ip_external_detail(ip_addr, source):
     try:
         validate_ipv4_address(ip_addr)
     except ValidationError:
-        raise BadRequest('Not a valid IPV4')
+        raise BadRequest("Not a valid IPV4")
 
     results = []
 
     if ReputationService.is_implemented():
         try:
-            results = ReputationService.get_ip_external_details(
-                ip_addr,
-                source
-            )
+            results = ReputationService.get_ip_external_details(ip_addr, source)
         except ReputationServiceException:
             pass
 
@@ -120,7 +117,7 @@ def get_url_external_reputation(url):
         validate = URLValidator()
         validate(url)
     except (ValueError, ValidationError):
-        raise BadRequest('Not a valid URL')
+        raise BadRequest("Not a valid URL")
 
     results = []
 
@@ -140,7 +137,7 @@ def get_ip_tools(ip_addr):
     try:
         validate_ipv4_address(ip_addr)
     except ValidationError:
-        raise BadRequest('Not a valid IPV4')
+        raise BadRequest("Not a valid IPV4")
 
     results = []
 

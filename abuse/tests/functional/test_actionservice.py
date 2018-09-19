@@ -35,11 +35,10 @@ class TestDefaultActionImpl(CerberusTest):
     """
         Unit tests for action service
     """
+
     def setUp(self):
         self._ticket = Ticket.objects.create(
-            publicId='AAAAAAAAAA',
-            category_id='Spam',
-            creationDate=datetime.now(),
+            publicId="AAAAAAAAAA", category_id="Spam", creationDate=datetime.now()
         )
 
     def test_apply_action_on_service(self):
@@ -49,9 +48,15 @@ class TestDefaultActionImpl(CerberusTest):
         result = ActionService.apply_action_on_service(
             self._ticket, ServiceAction.objects.last()
         )
-        self.assertEqual('ok', result.status)
-        self.assertRaises(ActionServiceException, lambda: ActionService.apply_action_on_service(self._ticket, 9999))
-        self.assertRaises(ActionServiceException, lambda: ActionService.apply_action_on_service(123456, 9999))
+        self.assertEqual("ok", result.status)
+        self.assertRaises(
+            ActionServiceException,
+            lambda: ActionService.apply_action_on_service(self._ticket, 9999),
+        )
+        self.assertRaises(
+            ActionServiceException,
+            lambda: ActionService.apply_action_on_service(123456, 9999),
+        )
 
     def test_list_actions_for_ticket(self):
         """
@@ -59,4 +64,4 @@ class TestDefaultActionImpl(CerberusTest):
         """
         actions = ActionService.list_actions_for_ticket(self._ticket)
         self.assertEqual(1, len(actions))
-        self.assertEqual('VPS', actions[0].module)
+        self.assertEqual("VPS", actions[0].module)

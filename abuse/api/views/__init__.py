@@ -23,5 +23,5 @@ views_to_register = (
     reputation_views,
     tag_views,
     ticket_views,
-    threshold_views
+    threshold_views,
 )

@@ -7,12 +7,14 @@
 import inspect
 
 from .utils import fn_name_to_pretty_label, validate_parameters
-from .operators import (BaseType,
-                        NumericType,
-                        StringType,
-                        BooleanType,
-                        SelectType,
-                        SelectMultipleType)
+from .operators import (
+    BaseType,
+    NumericType,
+    StringType,
+    BooleanType,
+    SelectType,
+    SelectMultipleType,
+)
 
 
 class BaseVariables(object):
@@ -20,6 +22,7 @@ class BaseVariables(object):
         Classe that hold a collection of variables to use with the rules
         engine should inherit from this.
     """
+
     @classmethod
     def get_all_variables(cls):
 
@@ -27,14 +30,16 @@ class BaseVariables(object):
         variables = []
 
         for meth in methods:
-            if getattr(meth[1], 'is_rule_variable', False):
-                variables.append({
-                    'name': meth[0],
-                    'label': meth[1].label,
-                    'field_type': meth[1].field_type.name,
-                    'options': meth[1].options,
-                    'params': meth[1].params
-                })
+            if getattr(meth[1], "is_rule_variable", False):
+                variables.append(
+                    {
+                        "name": meth[0],
+                        "label": meth[1].label,
+                        "field_type": meth[1].field_type.name,
+                        "options": meth[1].options,
+                        "params": meth[1].params,
+                    }
+                )
         return variables
 
 
@@ -49,14 +54,16 @@ def rule_variable(field_type, label=None, options=None, params=None):
         if isinstance(params, dict):
             params_ = []
             for name, field_type_ in params.items():
-                params_.append(dict(
-                    label=fn_name_to_pretty_label(name),
-                    name=name,
-                    fieldType=field_type_)
+                params_.append(
+                    dict(
+                        label=fn_name_to_pretty_label(name),
+                        name=name,
+                        fieldType=field_type_,
+                    )
                 )
         validate_parameters(func, params_)
         if not (type(field_type) == type and issubclass(field_type, BaseType)):
-            err_msg = '{0} is not instance of BaseType in rule_variable field_type'
+            err_msg = "{0} is not instance of BaseType in rule_variable field_type"
             raise AssertionError(err_msg.format(field_type))
 
         func.field_type = field_type
@@ -65,6 +72,7 @@ def rule_variable(field_type, label=None, options=None, params=None):
         func.options = options
         func.params = params_
         return func
+
     return wrapper
 
 
@@ -85,4 +93,6 @@ def select_rule_variable(label=None, options=None, params=None):
 
 
 def select_multiple_rule_variable(label=None, options=None, params=None):
-    return rule_variable(SelectMultipleType, label=label, options=options, params=params)
+    return rule_variable(
+        SelectMultipleType, label=label, options=options, params=params
+    )

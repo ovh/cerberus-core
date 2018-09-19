@@ -39,14 +39,14 @@ from ..tasks import enqueue
 
 
 CHARSETS = (
-    'iso-8859-1',
-    'iso-8859-15',
-    'utf-8',
-    'ascii',
-    'utf-16',
-    'windows-1252',
-    'cp850',
-    'iso-8859-11'
+    "iso-8859-1",
+    "iso-8859-15",
+    "utf-8",
+    "ascii",
+    "utf-16",
+    "windows-1252",
+    "cp850",
+    "iso-8859-11",
 )
 
 
@@ -57,14 +57,16 @@ def push_email(uid, messages):
     """
     email = messages.get(uid)
     filename = hashlib.sha256(email).hexdigest()
-    click.echo('[email-fetcher] new mail - UID %s - HASH %s' % (uid, filename))
+    click.echo("[email-fetcher] new mail - UID %s - HASH %s" % (uid, filename))
 
     for chset in CHARSETS:
         try:
-            email = email.decode(chset).encode('utf-8')
+            email = email.decode(chset).encode("utf-8")
             break
         except UnicodeError:
-            click.echo('[email-fetcher] error while decoding email with charset %s' % chset)
+            click.echo(
+                "[email-fetcher] error while decoding email with charset %s" % chset
+            )
 
     _push_to_storage_service(filename, email)
     _push_task_to_worker(filename, email)
@@ -79,13 +81,13 @@ def _push_to_storage_service(filename, email):
     """
     try:
         StorageService.read(filename)
-        click.echo('[email-fetcher] email %s already in Storage Service' % filename)
+        click.echo("[email-fetcher] email %s already in Storage Service" % filename)
         return
     except StorageServiceException:
         pass
 
     StorageService.write(filename, email)
-    click.echo('[email-fetcher] email %s pushed to Storage Service' % filename)
+    click.echo("[email-fetcher] email %s pushed to Storage Service" % filename)
 
 
 def _push_task_to_worker(filename, email):
@@ -95,18 +97,19 @@ def _push_task_to_worker(filename, email):
         :param str email: The content of the email
     """
     enqueue(
-        'report.create_from_email',
-        queue='email',
+        "report.create_from_email",
+        queue="email",
         email_content=email,
         filename=filename,
     )
-    click.echo('[email-fetcher] task for email %s successfully created' % filename)
+    click.echo("[email-fetcher] task for email %s successfully created" % filename)
 
 
 class Worker(Thread):
     """
         Thread executing tasks from a given tasks queue
     """
+
     def __init__(self, tasks):
         Thread.__init__(self)
         self.tasks = tasks
@@ -119,7 +122,7 @@ class Worker(Thread):
             try:
                 func(*args, **kargs)
             except Exception as ex:
-                click.echo('[email-fetcher] error in email worker: %s' % str(ex))
+                click.echo("[email-fetcher] error in email worker: %s" % str(ex))
             finally:
                 self.tasks.task_done()
 
@@ -128,6 +131,7 @@ class ThreadPool(object):
     """
         Pool of threads consuming tasks from a queue
     """
+
     def __init__(self, num_threads):
         self.tasks = Queue(num_threads)
         for _ in range(num_threads):
@@ -156,6 +160,7 @@ class ThreadPool(object):
 class EmailFetcher(object):
     """ Main daemon, waiting for incoming email
     """
+
     def __init__(self, host, port, user, password):
 
         from flask import current_app
@@ -168,7 +173,7 @@ class EmailFetcher(object):
             Infinite loop fetching email , lauching < 10 threads pushing email
             to storage service and worker
         """
-        click.echo('[email-fetcher] fetching started.')
+        click.echo("[email-fetcher] fetching started.")
         pool = ThreadPool(5)
 
         while True:
@@ -185,7 +190,7 @@ class EmailFetcher(object):
 
             for uid in uids:
                 if uid not in messages:
-                    self._imap_conn.uid('store', uid, '+FLAGS', r'(\Deleted)')
+                    self._imap_conn.uid("store", uid, "+FLAGS", r"(\Deleted)")
 
             self._imap_conn.expunge()
             sleep(1)
@@ -194,31 +199,31 @@ class EmailFetcher(object):
         """
             Connect to mailbox using IMAP
         """
-        click.echo('[email-fetcher] connecting to %s inbox ...' % user)
+        click.echo("[email-fetcher] connecting to %s inbox ..." % user)
         conn = IMAP4_SSL(host, port)
         conn.login(user, passwd)
-        conn.select('INBOX')
-        click.echo('[email-fetcher] connected.')
+        conn.select("INBOX")
+        click.echo("[email-fetcher] connected.")
         return conn
 
     def _get_messages(self):
         """ Get all new emails
         """
         response = {}
-        _, data = self._imap_conn.uid('search', None, 'ALL')
+        _, data = self._imap_conn.uid("search", None, "ALL")
         messages = data[0].split()
 
-        click.echo('[email-fetcher] still %d emails to fetch' % len(messages))
+        click.echo("[email-fetcher] still %d emails to fetch" % len(messages))
 
         for message_uid in messages[:50]:
-            _, data = self._imap_conn.uid('fetch', message_uid, '(RFC822)')
+            _, data = self._imap_conn.uid("fetch", message_uid, "(RFC822)")
             body = data[0][1]
             response[message_uid] = body
 
         return response
 
 
-@click.command('fetch-email', short_help='Runs Cerberus email fetcher.')
+@click.command("fetch-email", short_help="Runs Cerberus email fetcher.")
 @with_appcontext
 def fetch_email():
     """
@@ -226,5 +231,5 @@ def fetch_email():
     """
     from flask import current_app
 
-    fetcher = EmailFetcher(**current_app.config['EMAIL_FETCHER'])
+    fetcher = EmailFetcher(**current_app.config["EMAIL_FETCHER"])
     fetcher.fetch()

@@ -34,10 +34,12 @@ class CerberusApp(Flask):
 
     response_class = CustomResponse
     request_class = ExtendedRequest
-    _config = load_config(os.getenv('APP_SETTINGS', None), os.getenv('APP_ENV', 'default'))
+    _config = load_config(
+        os.getenv("APP_SETTINGS", None), os.getenv("APP_ENV", "default")
+    )
 
 
-def create_app(environment='default'):
+def create_app(environment="default"):
     """
         Initialize application
     """

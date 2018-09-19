@@ -22,11 +22,17 @@
     Misc Cerberus model
 """
 
-from django.db.models import (DateTimeField, TextField, ForeignKey,
-                              ManyToManyField, IntegerField,
-                              GenericIPAddressField,
-                              BooleanField, OneToOneField,
-                              PositiveSmallIntegerField)
+from django.db.models import (
+    DateTimeField,
+    TextField,
+    ForeignKey,
+    ManyToManyField,
+    IntegerField,
+    GenericIPAddressField,
+    BooleanField,
+    OneToOneField,
+    PositiveSmallIntegerField,
+)
 from django.contrib.auth.models import User
 from jsonfield import JSONField
 
@@ -38,6 +44,7 @@ class ServiceAction(CerberusModel):
     """
         An action on a customer's service (suspend, shutdown ...)
     """
+
     name = TruncatedCharField(null=False, max_length=1024)
     module = TruncatedCharField(null=False, max_length=32)
     level = TruncatedCharField(null=False, max_length=8)
@@ -47,10 +54,11 @@ class ServiceActionJob(CerberusModel):
     """
         `abuse.models.ServiceAction` execution state
     """
+
     action = ForeignKey(ServiceAction, null=False)
     asynchronousJobId = TruncatedCharField(null=True, max_length=128)
     actionTodoId = IntegerField(null=True)
-    status = TruncatedCharField(null=False, max_length=32, default='pending')
+    status = TruncatedCharField(null=False, max_length=32, default="pending")
     comment = TruncatedCharField(null=True, max_length=256)
     creationDate = DateTimeField(null=False)
     executionDate = DateTimeField(null=True)
@@ -61,12 +69,9 @@ class Category(CerberusModel):
     """
         The category of a ticket/report
     """
+
     name = TruncatedCharField(primary_key=True, max_length=32)
-    label = TruncatedCharField(
-        unique=True,
-        null=False,
-        blank=True,
-        max_length=255)
+    label = TruncatedCharField(unique=True, null=False, blank=True, max_length=255)
     description = TruncatedCharField(null=False, blank=True, max_length=255)
 
 
@@ -74,12 +79,13 @@ class ApiRoute(CerberusModel):
     """
         List all available API routes
     """
+
     HTTP_METHOD = (
-        ('GET', 'GET'),
-        ('POST', 'POST'),
-        ('PUT', 'PUT'),
-        ('PATCH', 'PATCH'),
-        ('DELETE', 'DELETE'),
+        ("GET", "GET"),
+        ("POST", "POST"),
+        ("PUT", "PUT"),
+        ("PATCH", "PATCH"),
+        ("DELETE", "DELETE"),
     )
     method = TruncatedCharField(max_length=32, null=False, choices=HTTP_METHOD)
     endpoint = TruncatedCharField(null=False, max_length=512)
@@ -90,9 +96,10 @@ class Role(CerberusModel):
         A `abuse.models.Role` defines a set
         of allowed `abuse.models.ApiRoute`
     """
+
     codename = TruncatedCharField(null=False, max_length=256)
     name = TruncatedCharField(null=False, max_length=256)
-    allowedRoutes = ManyToManyField(ApiRoute, db_column='endpoints')
+    allowedRoutes = ManyToManyField(ApiRoute, db_column="endpoints")
     modelsAuthorizations = JSONField()
 
 
@@ -101,6 +108,7 @@ class Operator(CerberusModel):
         Cerberus `abuse.models.User` + `abuse.models.Role`
         = `abuse.models.Operator`
     """
+
     user = OneToOneField(User, null=False)
     role = ForeignKey(Role, null=False)
 
@@ -109,11 +117,12 @@ class EmailFilter(CerberusModel):
     """
         Specify filters for incoming emails
     """
+
     FILTER_SCOPE = (
-        ('Provider', 'Provider'),
-        ('Recipients', 'Recipients'),
-        ('Subject', 'Subject'),
-        ('Body', 'Body'),
+        ("Provider", "Provider"),
+        ("Recipients", "Recipients"),
+        ("Subject", "Subject"),
+        ("Body", "Body"),
     )
     scope = TruncatedCharField(max_length=32, null=False, choices=FILTER_SCOPE)
     value = TruncatedCharField(max_length=1024, null=False)
@@ -123,9 +132,10 @@ class EmailFilterTag(CerberusModel):
     """
         `abuse.models.EmailFilter` / `abuse.models.Tag` association
     """
+
     name = TruncatedCharField(max_length=1024, null=False)
     filters = ManyToManyField(EmailFilter, null=False)
-    tags = ManyToManyField('Tag', null=False)
+    tags = ManyToManyField("Tag", null=False)
 
     @classmethod
     def get_tags_for_email(cls, provider, recipients, subject, body):
@@ -137,10 +147,10 @@ class EmailFilterTag(CerberusModel):
             return tags
 
         data = {
-            'provider': provider.email,
-            'recipients': ' '.join(recipients).lower() if recipients else '',
-            'subject': subject.lower(),
-            'body': body.lower(),
+            "provider": provider.email,
+            "recipients": " ".join(recipients).lower() if recipients else "",
+            "subject": subject.lower(),
+            "body": body.lower(),
         }
 
         for eft in cls.all():
@@ -162,6 +172,7 @@ class Resolution(CerberusModel):
     """
         Ticket resolution
     """
+
     codename = TruncatedCharField(null=False, max_length=1024)
 
 
@@ -169,6 +180,7 @@ class AttachedDocument(CerberusModel):
     """
         Attached document for a `abuse.models.Report`
     """
+
     name = TruncatedCharField(null=True, max_length=255)
     filename = TruncatedCharField(null=False, max_length=1023)
     filetype = TruncatedCharField(null=False, max_length=1023)
@@ -178,6 +190,7 @@ class Comment(CerberusModel):
     """
         Generic comment model
     """
+
     user = ForeignKey(User, null=False)
     comment = TruncatedCharField(null=False, max_length=65535)
     date = DateTimeField(auto_now=True, null=False)
@@ -187,14 +200,16 @@ class Profile(CerberusModel):
     """
         Cerberus operator profile
     """
+
     name = TruncatedCharField(null=False, max_length=255)
-    actions = ManyToManyField('ServiceAction', null=True)
+    actions = ManyToManyField("ServiceAction", null=True)
 
 
 class AbusePermission(CerberusModel):
     """
         Permission for an Cerberus user
     """
+
     user = ForeignKey(User, null=False)
     category = ForeignKey(Category, null=False)
     profile = ForeignKey(Profile, null=True)
@@ -204,10 +219,11 @@ class News(CerberusModel):
     """
         Cerberus news model
     """
+
     author = ForeignKey(User, null=False)
     title = TruncatedCharField(null=False, max_length=1023)
     content = TruncatedCharField(null=False, max_length=65535)
-    tags = ManyToManyField('Tag', null=True)
+    tags = ManyToManyField("Tag", null=True)
     date = DateTimeField(auto_now=True, null=False)
 
 
@@ -215,40 +231,34 @@ class MailTemplate(CerberusModel):
     """
         Cerebrus `abuse.models.Ticket` emails are based on template
     """
-    TEMPLATE_LANG = (
-        ('FR', 'FR'),
-        ('EN', 'EN'),
-        ('CA', 'CA'),
-    )
+
+    TEMPLATE_LANG = (("FR", "FR"), ("EN", "EN"), ("CA", "CA"))
 
     RECIPIENT_TYPE = (
-        ('Defendant', 'Defendant'),
-        ('Plaintiff', 'Plaintiff'),
-        ('Other', 'Other'),
-        ('MassContact', 'MassContact'),
+        ("Defendant", "Defendant"),
+        ("Plaintiff", "Plaintiff"),
+        ("Other", "Other"),
+        ("MassContact", "MassContact"),
     )
 
     codename = TruncatedCharField(max_length=32)
     name = TruncatedCharField(null=False, max_length=255)
     lang = TruncatedCharField(
-        max_length=2,
-        null=False,
-        choices=TEMPLATE_LANG,
-        default='EN')
+        max_length=2, null=False, choices=TEMPLATE_LANG, default="EN"
+    )
     subject = TruncatedCharField(null=False, max_length=1023)
     body = TextField(null=False)
     recipientType = TruncatedCharField(
-        max_length=32,
-        null=False,
-        choices=RECIPIENT_TYPE,
-        default='Defendant')
+        max_length=32, null=False, choices=RECIPIENT_TYPE, default="Defendant"
+    )
 
 
 class Proof(CerberusModel):
     """
        Proof are elements validating the infrigment
     """
-    ticket = ForeignKey('Ticket', null=False, related_name='proof')
+
+    ticket = ForeignKey("Ticket", null=False, related_name="proof")
     content = TextField(null=False)
 
 
@@ -256,6 +266,7 @@ class TicketActionParams(CerberusModel):
     """
         Params for `abuse.models.TicketAction`
     """
+
     codename = TruncatedCharField(null=False, max_length=1024)
     value = IntegerField(null=False)
 
@@ -266,6 +277,7 @@ class TicketAction(CerberusModel):
 
         Usefull for Cerberus UX "interact" modal
     """
+
     codename = TruncatedCharField(null=False, max_length=1024)
 
 
@@ -274,6 +286,7 @@ class TicketWorkflowPresetConfig(CerberusModel):
         `abuse.models.TicketAction`/`abuse.models.TicketActionParams`
         association
     """
+
     action = ForeignKey(TicketAction, null=False)
     params = ManyToManyField(TicketActionParams, null=True)
 
@@ -282,6 +295,7 @@ class TicketWorkflowPreset(CerberusModel):
     """
         Preset for Cerberus UX "interact" modal
     """
+
     codename = TruncatedCharField(null=False, max_length=256)
     name = TruncatedCharField(max_length=256)
     templates = ManyToManyField(MailTemplate, null=True)
@@ -296,7 +310,8 @@ class ItemScreenshotFeedback(CerberusModel):
         Check if `abuse.models.Defendant` views or not
         the screenshot of a Phishing item
     """
-    item = ForeignKey('ReportItem', null=False, related_name='feedback')
+
+    item = ForeignKey("ReportItem", null=False, related_name="feedback")
     token = TruncatedCharField(null=False, max_length=256)
     isViewed = BooleanField(null=False, default=False)
 
@@ -307,6 +322,7 @@ class ReportThreshold(CerberusModel):
         `threshold` new reports created during `interval` (days)
         for same (category/defendant/service)
     """
+
     category = ForeignKey(Category, null=False)
     threshold = IntegerField(null=False)
     interval = IntegerField(null=False)
@@ -316,6 +332,7 @@ class MassContact(CerberusModel):
     """
         Store details of different "mass contact" campaign.
     """
+
     campaignName = TruncatedCharField(max_length=256, null=False)
     category = ForeignKey(Category, null=False)
     user = ForeignKey(User, null=False)
@@ -327,22 +344,17 @@ class MassContactResult(CerberusModel):
     """
         Store result of a "mass contact" campaign.
     """
-    MASSCONTACT_STATE = (
-        ('Done', 'Done'),
-        ('Pending', 'Pending'),
-    )
+
+    MASSCONTACT_STATE = (("Done", "Done"), ("Pending", "Pending"))
 
     campaign = ForeignKey(MassContact, null=False)
     state = TruncatedCharField(
-        max_length=32,
-        null=False,
-        choices=MASSCONTACT_STATE,
-        default='Pending')
+        max_length=32, null=False, choices=MASSCONTACT_STATE, default="Pending"
+    )
     # Defendant found, report created
     matchingCount = IntegerField(null=False, default=0)
     # No defendant found
-    notMatchingCount = IntegerField(
-        null=False, default=0)
+    notMatchingCount = IntegerField(null=False, default=0)
     # job failed
     failedCount = IntegerField(null=False, default=0)
 
@@ -351,8 +363,9 @@ class StarredTicket(CerberusModel):
     """
         Association of `abuse.models.User` and `abuse.models.Ticket`
     """
-    user = ForeignKey(User, null=False, related_name='starredTickets')
-    ticket = ForeignKey('Ticket', null=False, related_name='starredBy')
+
+    user = ForeignKey(User, null=False, related_name="starredTickets")
+    ticket = ForeignKey("Ticket", null=False, related_name="starredBy")
 
     class Meta:
         unique_together = ("ticket", "user")
@@ -362,16 +375,16 @@ class BusinessRules(CerberusModel):
     """
         Defines automation on a `abuse.models.Report`
     """
+
     RULES_TYPE = (
-        ('Report', 'Report'),
-        ('EmailReply', 'EmailReply'),
-        ('CDNRequest', 'CDNRequest'),
+        ("Report", "Report"),
+        ("EmailReply", "EmailReply"),
+        ("CDNRequest", "CDNRequest"),
     )
 
     name = TruncatedCharField(max_length=256, null=False)
     orderId = PositiveSmallIntegerField(null=False)
-    rulesType = TruncatedCharField(
-        max_length=32, null=False, choices=RULES_TYPE)
+    rulesType = TruncatedCharField(max_length=32, null=False, choices=RULES_TYPE)
     config = JSONField()
 
 
@@ -379,9 +392,10 @@ class BusinessRulesHistory(CerberusModel):
     """
         `abuse.models.BusinessRules` execution history
     """
+
     businessRules = ForeignKey(BusinessRules, null=False)
-    defendant = ForeignKey('Defendant', null=True)
-    service = ForeignKey('Service', null=True)
-    report = ForeignKey('Report', null=True)
-    ticket = ForeignKey('Ticket', null=True)
+    defendant = ForeignKey("Defendant", null=True)
+    service = ForeignKey("Service", null=True)
+    report = ForeignKey("Report", null=True)
+    ticket = ForeignKey("Ticket", null=True)
     date = DateTimeField(auto_now=True)

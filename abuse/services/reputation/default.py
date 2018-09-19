@@ -3,7 +3,6 @@ from .base import ReputationServiceBase
 
 
 class DefaultDummyService(ReputationServiceBase):
-
     def __init__(self, config, logger=None):
         pass
 

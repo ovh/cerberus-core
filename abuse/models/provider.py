@@ -1,6 +1,10 @@
 
-from django.db.models import (ForeignKey, BooleanField,
-                              ManyToManyField, ObjectDoesNotExist)
+from django.db.models import (
+    ForeignKey,
+    BooleanField,
+    ManyToManyField,
+    ObjectDoesNotExist,
+)
 
 from .base import CerberusModel
 from .helpers import TruncatedCharField
@@ -10,25 +14,23 @@ class Provider(CerberusModel):
     """
         A source of reports
     """
+
     PROVIDER_PRIORITY = (
-        ('Low', 'Low'),
-        ('Normal', 'Normal'),
-        ('High', 'High'),
-        ('Critical', 'Critical'),
+        ("Low", "Low"),
+        ("Normal", "Normal"),
+        ("High", "High"),
+        ("Critical", "Critical"),
     )
     email = TruncatedCharField(primary_key=True, max_length=255)
     name = TruncatedCharField(null=True, max_length=255)
     trusted = BooleanField(null=False, default=False)
     parseable = BooleanField(null=False, default=False)
-    defaultCategory = ForeignKey('Category', null=True)
+    defaultCategory = ForeignKey("Category", null=True)
     apiKey = TruncatedCharField(null=True, max_length=255)
     priority = TruncatedCharField(
-        max_length=32,
-        null=False,
-        choices=PROVIDER_PRIORITY,
-        default='Normal'
+        max_length=32, null=False, choices=PROVIDER_PRIORITY, default="Normal"
     )
-    tags = ManyToManyField('Tag', null=True)
+    tags = ManyToManyField("Tag", null=True)
 
     @classmethod
     def get_or_create_provider(cls, email):

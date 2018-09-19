@@ -28,14 +28,10 @@ from ..cache import Cache
 from ..decorators import admin_required
 from ..controllers import threshold as ThresholdController
 
-threshold_views = Blueprint(
-    'threshold_views',
-    __name__,
-    url_prefix='/admin/threshold'
-)
+threshold_views = Blueprint("threshold_views", __name__, url_prefix="/admin/threshold")
 
 
-@threshold_views.route('', methods=['GET'])
+@threshold_views.route("", methods=["GET"])
 @admin_required
 @Cache.cached(timeout=43200)
 def get_all_threshold():
@@ -44,7 +40,7 @@ def get_all_threshold():
     return ThresholdController.get_all()
 
 
-@threshold_views.route('/<threshold>', methods=['GET'])
+@threshold_views.route("/<threshold>", methods=["GET"])
 @admin_required
 def get_threshold(threshold=None):
     """ Get given threshold
@@ -52,9 +48,9 @@ def get_threshold(threshold=None):
     return ThresholdController.show(threshold)
 
 
-@threshold_views.route('', methods=['POST'])
+@threshold_views.route("", methods=["POST"])
 @admin_required
-@Cache.invalidate(routes=['/api/admin/threshold'])
+@Cache.invalidate(routes=["/api/admin/threshold"])
 def create_threshold():
     """ Post a new threshold
     """
@@ -62,9 +58,9 @@ def create_threshold():
     return ThresholdController.create(body)
 
 
-@threshold_views.route('/<threshold>', methods=['PUT'])
+@threshold_views.route("/<threshold>", methods=["PUT"])
 @admin_required
-@Cache.invalidate(routes=['/api/admin/threshold'])
+@Cache.invalidate(routes=["/api/admin/threshold"])
 def update_threshold(threshold=None):
     """ Update given threshold
     """
@@ -72,9 +68,9 @@ def update_threshold(threshold=None):
     return ThresholdController.update(threshold, body)
 
 
-@threshold_views.route('/<threshold>', methods=['DELETE'])
+@threshold_views.route("/<threshold>", methods=["DELETE"])
 @admin_required
-@Cache.invalidate(routes=['/api/admin/threshold'])
+@Cache.invalidate(routes=["/api/admin/threshold"])
 def delete_threshold(threshold=None):
     """ Delete given threshold
     """

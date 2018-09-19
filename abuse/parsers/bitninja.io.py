@@ -24,14 +24,9 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'incident-report@bitninja.io',
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:Your\s*server\s*)' + Parser.ipv4_re,
-        },
-        'category': {
-            'pattern': r'((.|\n|\r|\t)*)',
-            'transform': True
-        },
+    "email": "incident-report@bitninja.io",
+    "regexp": {
+        "ips": {"pattern": r"(?:Your\s*server\s*)" + Parser.ipv4_re},
+        "category": {"pattern": r"((.|\n|\r|\t)*)", "transform": True},
     },
 }

@@ -24,13 +24,9 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'noreply@stopforumspam.com',
-    'regexp': {
-        'ips': {
-            'pattern': r'IP Number\s*' + Parser.ipv4_re,
-        },
-        'category': {
-            'value': 'Spam',
-        },
+    "email": "noreply@stopforumspam.com",
+    "regexp": {
+        "ips": {"pattern": r"IP Number\s*" + Parser.ipv4_re},
+        "category": {"value": "Spam"},
     },
 }

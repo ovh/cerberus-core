@@ -6,7 +6,6 @@ from ..engine.actions import BaseActions
 
 
 class Actions(BaseActions):
-
     @classmethod
     def set_up(cls, config):
 
@@ -14,21 +13,19 @@ class Actions(BaseActions):
 
         for clss in config:
 
-            module, _cls = clss.rsplit('.', 1)
+            module, _cls = clss.rsplit(".", 1)
             module = import_module(module)
             _cls = getattr(module, _cls)
 
-            if inspect.getmro(_cls)[-2].__name__ != 'BaseActions':
+            if inspect.getmro(_cls)[-2].__name__ != "BaseActions":
                 raise AssertionError(
-                    'class {} does not inherit {}'.format(_cls, 'BaseActions')
+                    "class {} does not inherit {}".format(_cls, "BaseActions")
                 )
 
             for name, _ in inspect.getmembers(_cls, predicate=inspect.ismethod):
-                if not name.startswith('_') and name != 'get_all_actions':
+                if not name.startswith("_") and name != "get_all_actions":
                     if name in cls.methods:
-                        raise AttributeError(
-                            "Conflicting '{}' actions".format(name)
-                        )
+                        raise AttributeError("Conflicting '{}' actions".format(name))
                     cls.methods.add(name)
 
             cls.classes.append(_cls)

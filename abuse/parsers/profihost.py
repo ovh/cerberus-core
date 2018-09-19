@@ -24,15 +24,10 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'noc@profihost.ag',
-    'fallback': False,
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:Host\s*of\s*attacker\s*:\s*)' + Parser.ipv4_re,
-        },
-        'category': {
-            'pattern': r'((.|\n|\r|\t)*)',
-            'transform': True
-        },
+    "email": "noc@profihost.ag",
+    "fallback": False,
+    "regexp": {
+        "ips": {"pattern": r"(?:Host\s*of\s*attacker\s*:\s*)" + Parser.ipv4_re},
+        "category": {"pattern": r"((.|\n|\r|\t)*)", "transform": True},
     },
 }

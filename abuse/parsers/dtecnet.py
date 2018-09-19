@@ -24,13 +24,9 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'no-reply@dtecnet.com',
-    'regexp': {
-        'urls': {
-            'pattern': r'INFRINGING LINKS\s*:\s*' + Parser.url_re,
-        },
-        'category': {
-            'value': 'Copyright',
-        },
+    "email": "no-reply@dtecnet.com",
+    "regexp": {
+        "urls": {"pattern": r"INFRINGING LINKS\s*:\s*" + Parser.url_re},
+        "category": {"value": "Copyright"},
     },
 }

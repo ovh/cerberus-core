@@ -9,6 +9,7 @@ class Service(CerberusModel):
     """
         `abuse.models.Defendant`'s service (product) description
     """
+
     name = TruncatedCharField(null=False, max_length=2048)
     domain = TruncatedCharField(null=True, max_length=2048)
     componentType = TruncatedCharField(null=True, max_length=256)
@@ -28,5 +29,5 @@ class Service(CerberusModel):
         try:
             service, _ = cls.get_or_create(**valid_infos)
         except MultipleObjectsReturned:
-            service = cls.filter(name=valid_infos['name'])[0]
+            service = cls.filter(name=valid_infos["name"])[0]
         return service

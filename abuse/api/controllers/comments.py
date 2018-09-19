@@ -29,41 +29,40 @@ from django.db.models import ObjectDoesNotExist
 from django.forms.models import model_to_dict
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
-from ...models import (Comment, DefendantComment, Ticket,
-                       History, TicketComment, User)
+from ...models import Comment, DefendantComment, Ticket, History, TicketComment, User
 
 
 def check_comment(func):
     """ Check if comment is valid
     """
+
     @wraps(func)
     def check(*args, **kwargs):
         try:
-            comment = Comment.get(id=kwargs['comment_id'])
+            comment = Comment.get(id=kwargs["comment_id"])
         except (ObjectDoesNotExist, ValueError):
-            raise NotFound('Comment not found')
+            raise NotFound("Comment not found")
 
-        if comment.user_id != kwargs['user_id']:
-            raise Forbidden('Comment not owned by user')
+        if comment.user_id != kwargs["user_id"]:
+            raise Forbidden("Comment not owned by user")
 
-        if kwargs.get('ticket_id'):
+        if kwargs.get("ticket_id"):
             existing = TicketComment.filter(
-                ticket=kwargs['ticket_id'],
-                comment=kwargs['comment_id']
+                ticket=kwargs["ticket_id"], comment=kwargs["comment_id"]
             ).exists()
             if not existing:
-                raise BadRequest('Comment not associated to specified ticket')
+                raise BadRequest("Comment not associated to specified ticket")
 
-        if kwargs.get('defendant_id'):
+        if kwargs.get("defendant_id"):
             existing = DefendantComment.filter(
-                defendant=kwargs['defendant_id'],
-                comment=kwargs['comment_id']
+                defendant=kwargs["defendant_id"], comment=kwargs["comment_id"]
             ).exists()
             if not existing:
-                raise BadRequest('Comment not associated to defendant ticket')
+                raise BadRequest("Comment not associated to defendant ticket")
 
         # OK, it's valid
         return func(*args, **kwargs)
+
     return check
 
 
@@ -73,15 +72,13 @@ def show(comment_id):
     try:
         comment = Comment.get(id=comment_id)
     except (ObjectDoesNotExist, ValueError):
-        raise NotFound('Comment not found')
+        raise NotFound("Comment not found")
 
     comment_dict = model_to_dict(comment)
-    comment_dict['date'] = mktime(comment.date.timetuple())
+    comment_dict["date"] = mktime(comment.date.timetuple())
 
-    if comment_dict.get('user'):
-        comment_dict['user'] = User.objects.get(
-            id=comment_dict['user']
-        ).username
+    if comment_dict.get("user"):
+        comment_dict["user"] = User.objects.get(id=comment_dict["user"]).username
 
     return comment_dict
 
@@ -90,9 +87,9 @@ def create(body, ticket_id=None, defendant_id=None, user_id=None):
     """ Create a comment
     """
     try:
-        content = body.pop('comment')
+        content = body.pop("comment")
     except KeyError:
-        raise BadRequest('Missing comment field in body')
+        raise BadRequest("Missing comment field in body")
 
     comment = Comment.create(comment=content, user_id=user_id)
 
@@ -100,16 +97,9 @@ def create(body, ticket_id=None, defendant_id=None, user_id=None):
         TicketComment.create(ticket_id=ticket_id, comment_id=comment.id)
         user = User.objects.get(id=user_id)
         ticket = Ticket.get(id=ticket_id)
-        History.log_ticket_action(
-            ticket=ticket,
-            action='add_comment',
-            user=user
-        )
+        History.log_ticket_action(ticket=ticket, action="add_comment", user=user)
     elif defendant_id:
-        DefendantComment.create(
-            defendant_id=defendant_id,
-            comment_id=comment.id
-        )
+        DefendantComment.create(defendant_id=defendant_id, comment_id=comment.id)
 
     return show(comment.id)
 
@@ -120,21 +110,17 @@ def update(body, comment_id=None, ticket_id=None, user_id=None):
     """
     try:
         comment = Comment.get(id=comment_id)
-        content = body.pop('comment')
+        content = body.pop("comment")
         comment.comment = content
         comment.save()
 
         if ticket_id:
             user = User.objects.get(id=user_id)
             ticket = Ticket.get(id=ticket_id)
-            History.log_ticket_action(
-                ticket=ticket,
-                action='update_comment',
-                user=user
-            )
+            History.log_ticket_action(ticket=ticket, action="update_comment", user=user)
 
     except KeyError:
-        raise BadRequest('Missing comment field in body')
+        raise BadRequest("Missing comment field in body")
 
     return show(comment_id)
 
@@ -144,23 +130,13 @@ def delete(comment_id=None, ticket_id=None, defendant_id=None, user_id=None):
     """ Delete a comment
     """
     if ticket_id:
-        TicketComment.filter(
-            ticket=ticket_id,
-            comment=comment_id
-        ).delete()
+        TicketComment.filter(ticket=ticket_id, comment=comment_id).delete()
         Comment.filter(id=comment_id).delete()
         user = User.objects.get(id=user_id)
         ticket = Ticket.get(id=ticket_id)
-        History.log_ticket_action(
-            ticket=ticket,
-            action='delete_comment',
-            user=user
-        )
+        History.log_ticket_action(ticket=ticket, action="delete_comment", user=user)
     elif defendant_id:
-        DefendantComment.filter(
-            defendant=defendant_id,
-            comment=comment_id
-        ).delete()
+        DefendantComment.filter(defendant=defendant_id, comment=comment_id).delete()
         Comment.filter(id=comment_id).delete()
 
-    return {'message': 'Comment successfully deleted'}
+    return {"message": "Comment successfully deleted"}

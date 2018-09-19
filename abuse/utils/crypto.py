@@ -34,6 +34,7 @@ class CryptoException(Exception):
     """
         CryptoException
     """
+
     def __init__(self, message):
         super(CryptoException, self).__init__(message)
 
@@ -42,6 +43,7 @@ class CryptoHandler(object):
     """
         Symmetric crypto for api token
     """
+
     _salt = None
     _kdf = None
     _key = None
@@ -57,7 +59,7 @@ class CryptoHandler(object):
             length=32,
             salt=cls._salt,
             iterations=100000,
-            backend=default_backend()
+            backend=default_backend(),
         )
         cls._key = base64.urlsafe_b64encode(cls._kdf.derive(_secret))
         cls._fernet = Fernet(cls._key)
@@ -71,7 +73,7 @@ class CryptoHandler(object):
             encrypted = cls._fernet.encrypt(data)
             return encrypted
         except (InvalidSignature, InvalidToken):
-            raise CryptoException('unable to encrypt data')
+            raise CryptoException("unable to encrypt data")
 
     @classmethod
     def decrypt(cls, data):
@@ -82,4 +84,4 @@ class CryptoHandler(object):
             encrypted = cls._fernet.decrypt(data)
             return encrypted
         except (InvalidSignature, InvalidToken):
-            raise CryptoException('unable to decrypt data')
+            raise CryptoException("unable to decrypt data")

@@ -34,12 +34,12 @@ from django.core.management import call_command
 from .. import create_app
 
 
-@click.command('initdb', short_help='Init Cerberus database.')
-@click.option('--settings')
+@click.command("initdb", short_help="Init Cerberus database.")
+@click.option("--settings")
 def initdb(settings):
 
-    config_file = settings or os.getenv('APP_SETTINGS')
-    environment = os.getenv('APP_ENV', 'dev')
+    config_file = settings or os.getenv("APP_SETTINGS")
+    environment = os.getenv("APP_ENV", "dev")
 
     config = read_config(config_file)
 
@@ -47,15 +47,14 @@ def initdb(settings):
     from django.conf import settings
 
     if not settings.configured:
-        settings.configure(**config['DJANGO'])
+        settings.configure(**config["DJANGO"])
         django.setup()
 
     call_command(
-        *('migrate', '--run-syncdb'), verbosity=0,
-        interactive=False, out='/dev/null'
+        *("migrate", "--run-syncdb"), verbosity=0, interactive=False, out="/dev/null"
     )
 
-    call_command(*('loaddata', 'abuse/tests/fixtures.yaml'))
+    call_command(*("loaddata", "abuse/tests/fixtures.yaml"))
 
     create_app(environment=environment)
 
@@ -63,11 +62,11 @@ def initdb(settings):
 def read_config(config_file):
     # Locate the config file to use
     if not os.path.isfile(config_file):
-        print('Missing configuration file')
+        print("Missing configuration file")
         return {}
 
     # Open and read the config file
-    with codecs.open(config_file, 'r', 'utf8') as file_handler:
+    with codecs.open(config_file, "r", "utf8") as file_handler:
         conf = yaml.load(file_handler)
     if conf is None:
         conf = {}

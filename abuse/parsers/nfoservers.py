@@ -24,14 +24,9 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'ddos-response@nfoservers.com',
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:running on IP address\s*)' + Parser.ipv4_re,
-        },
-        'category': {
-            'pattern': r'((.|\n|\r|\t)*)',
-            'transform': True
-        },
+    "email": "ddos-response@nfoservers.com",
+    "regexp": {
+        "ips": {"pattern": r"(?:running on IP address\s*)" + Parser.ipv4_re},
+        "category": {"pattern": r"((.|\n|\r|\t)*)", "transform": True},
     },
 }

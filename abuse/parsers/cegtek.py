@@ -24,13 +24,9 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'dmca@cegtek.com',
-    'regexp': {
-        'ips': {
-            'pattern': r'Unauthorized IP Address\s*:\s*' + Parser.ipv4_re,
-        },
-        'category': {
-            'value': 'Copyright',
-        },
+    "email": "dmca@cegtek.com",
+    "regexp": {
+        "ips": {"pattern": r"Unauthorized IP Address\s*:\s*" + Parser.ipv4_re},
+        "category": {"value": "Copyright"},
     },
 }

@@ -1,50 +1,63 @@
 
 from time import sleep
 
-from requests.exceptions import (ChunkedEncodingError, ConnectionError,
-                                 HTTPError, Timeout)
+from requests.exceptions import (
+    ChunkedEncodingError,
+    ConnectionError,
+    HTTPError,
+    Timeout,
+)
 from simplejson import JSONDecodeError
 
 
 def get(url, **kwargs):
 
-    return _wrapper(url, method='GET', **kwargs)
+    return _wrapper(url, method="GET", **kwargs)
 
 
 def post(url, **kwargs):
 
-    return _wrapper(url, method='POST', **kwargs)
+    return _wrapper(url, method="POST", **kwargs)
 
 
 def put(url, **kwargs):
 
-    return _wrapper(url, method='PUT', **kwargs)
+    return _wrapper(url, method="PUT", **kwargs)
 
 
 class RequestException(Exception):
     """
         RequestException
     """
+
     def __init__(self, message, code=None, response=None):
         super(RequestException, self).__init__(message)
         self.code = code
         self.response = response
 
 
-def _wrapper(url, method='GET', auth=None, params=None,
-             as_dict=True, headers=None, timeout=30,
-             requests_lib='requests', **kwargs):
+def _wrapper(
+    url,
+    method="GET",
+    auth=None,
+    params=None,
+    as_dict=True,
+    headers=None,
+    timeout=30,
+    requests_lib="requests",
+    **kwargs
+):
     """
         Python-requests wrapper
     """
     response = None
     func_params = {
-        'headers': headers,
-        'auth': auth,
-        'params': params,
-        'data': params,
-        'verify': True,
-        'timeout': timeout,
+        "headers": headers,
+        "auth": auth,
+        "params": params,
+        "data": params,
+        "verify": True,
+        "timeout": timeout,
     }
     func_params.update(**kwargs)
 
@@ -53,10 +66,10 @@ def _wrapper(url, method='GET', auth=None, params=None,
 
     for retry in range(max_tries):
         try:
-            if method == 'GET':
-                func_params.pop('data', None)
+            if method == "GET":
+                func_params.pop("data", None)
             else:
-                func_params.pop('params', None)
+                func_params.pop("params", None)
 
             func = getattr(__import__(requests_lib), method.lower())
             response = func(url, **func_params)
@@ -68,15 +81,14 @@ def _wrapper(url, method='GET', auth=None, params=None,
             if 500 <= int(ex.response.status_code) <= 599:
                 if retry == max_tries - 1:
                     raise RequestException(
-                        _get_exception(response, ex),
-                        ex.response.status_code
+                        _get_exception(response, ex), ex.response.status_code
                     )
                 sleep(2)
             else:
                 raise RequestException(
                     _get_exception(response, ex),
                     ex.response.status_code,
-                    response=response
+                    response=response,
                 )
         except Timeout as ex:
             if retry == max_tries - 1:
@@ -93,7 +105,7 @@ def _get_exception(response, exception):
     """
     try:
         data = response.json()
-        message = data['message']
+        message = data["message"]
     except:
         message = str(exception)
 

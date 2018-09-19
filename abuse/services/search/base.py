@@ -31,6 +31,7 @@ class SearchServiceException(Exception):
 
         .. py:class:: SearchServiceException
     """
+
     def __init__(self, message):
         super(SearchServiceException, self).__init__(message)
 

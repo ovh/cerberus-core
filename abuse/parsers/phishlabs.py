@@ -26,26 +26,22 @@ from abuse.parsers import Parser
 
 def pretransform(content):
 
-    content = content.replace('hXXps ', 'https://')
-    content = content.replace('hXXp ', 'http://')
-    content = content.replace(' [dot] ', '.')
-    content = content.replace('[dot]', '.')
+    content = content.replace("hXXps ", "https://")
+    content = content.replace("hXXp ", "http://")
+    content = content.replace(" [dot] ", ".")
+    content = content.replace("[dot]", ".")
     return content
 
 
 TEMPLATE = {
-    'email': 'soc@phishlabs.com',
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:Associated\s*IP\s*Address\s*:\s*)' + Parser.ipv4_re,
+    "email": "soc@phishlabs.com",
+    "regexp": {
+        "ips": {"pattern": r"(?:Associated\s*IP\s*Address\s*:\s*)" + Parser.ipv4_re},
+        "urls": {
+            "pretransform": pretransform,
+            "pattern": r"(?:The\s*following\s*URLs\s*are\s*some\s*components\s*of\s*this\s*phishing\s*attack\s*:\s*)"
+            + Parser.url_re,
         },
-        'urls': {
-            'pretransform': pretransform,
-            'pattern': r'(?:The\s*following\s*URLs\s*are\s*some\s*components\s*of\s*this\s*phishing\s*attack\s*:\s*)' + Parser.url_re,
-        },
-        'category': {
-            'pattern': r'((.|\n|\r|\t)*)',
-            'transform': True
-        },
+        "category": {"pattern": r"((.|\n|\r|\t)*)", "transform": True},
     },
 }

@@ -24,18 +24,16 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'cert-soc@lexsi.com',
-    'fallback': False,
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:(?:Adresse\s*IP|IP address\(es\))\s*:\s*)' + Parser.ipv4_re,
+    "email": "cert-soc@lexsi.com",
+    "fallback": False,
+    "regexp": {
+        "ips": {
+            "pattern": r"(?:(?:Adresse\s*IP|IP address\(es\))\s*:\s*)" + Parser.ipv4_re
         },
-        'urls': {
-            'pattern': r'(?:contenus\s*manifestement\s*frauduleux\s*sur\s*|Site\s*concern.*\s*:\s*|at the following URL\s*:\s*)' + Parser.url_re,
+        "urls": {
+            "pattern": r"(?:contenus\s*manifestement\s*frauduleux\s*sur\s*|Site\s*concern.*\s*:\s*|at the following URL\s*:\s*)"
+            + Parser.url_re
         },
-        'category': {
-            'pattern': r'((.|\n|\r|\t)*)',
-            'transform': True
-        },
+        "category": {"pattern": r"((.|\n|\r|\t)*)", "transform": True},
     },
 }

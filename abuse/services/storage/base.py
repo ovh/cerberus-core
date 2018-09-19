@@ -31,6 +31,7 @@ class StorageServiceException(Exception):
 
         .. py:class:: StorageServiceException
     """
+
     def __init__(self, message):
         super(StorageServiceException, self).__init__(message)
 

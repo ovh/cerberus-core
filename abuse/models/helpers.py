@@ -7,11 +7,11 @@ class TruncatedCharField(models.CharField):
     """
         Hack for legacy Charfield. Use Textfield is a better solution
     """
-    def get_prep_value(self, value):
 
-        def unicode_truncate(data, length, encoding='utf-8'):
+    def get_prep_value(self, value):
+        def unicode_truncate(data, length, encoding="utf-8"):
             encoded = data.encode(encoding)[:length]
-            return encoded.decode(encoding, 'ignore')
+            return encoded.decode(encoding, "ignore")
 
         value = super(TruncatedCharField, self).get_prep_value(value)
         if value:

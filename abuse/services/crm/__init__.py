@@ -2,8 +2,7 @@
 from voluptuous import Any, Schema
 
 from .base import DefendantClass, CRMServiceException, ServiceClass
-from ..helpers import (get_implementation_class,
-                       validate_implementation_response)
+from ..helpers import get_implementation_class, validate_implementation_response
 
 assert CRMServiceException
 
@@ -11,50 +10,52 @@ assert CRMServiceException
 class CRMService(object):
 
     instance = None
-    base_class_name = 'CRMServiceBase'
+    base_class_name = "CRMServiceBase"
 
     schemas = {
-        'get_services_from_items': Schema([
-            {
-                'defendant': DefendantClass,
-                'service': ServiceClass,
-                'items': {
-                    'ips': set,
-                    'urls': set,
-                    'fqdn': set,
-                },
-            }
-        ], required=True),
-        'get_customer_infos': Schema(DefendantClass, required=True),
-        'get_service_infos': Schema(ServiceClass, required=True),
-        'get_customer_services': Schema([
-            {
-                'zone': Any(str, unicode),
-                'services': [{
-                    'componentType': Any(str, unicode),
-                    'creationDate': int,
-                    'expirationDate': int,
-                    'name': Any(str, unicode),
-                    'reference': Any(str, unicode),
-                    'state': Any(str, unicode),
-                }]
-            }
-        ], required=True)
+        "get_services_from_items": Schema(
+            [
+                {
+                    "defendant": DefendantClass,
+                    "service": ServiceClass,
+                    "items": {"ips": set, "urls": set, "fqdn": set},
+                }
+            ],
+            required=True,
+        ),
+        "get_customer_infos": Schema(DefendantClass, required=True),
+        "get_service_infos": Schema(ServiceClass, required=True),
+        "get_customer_services": Schema(
+            [
+                {
+                    "zone": Any(str, unicode),
+                    "services": [
+                        {
+                            "componentType": Any(str, unicode),
+                            "creationDate": int,
+                            "expirationDate": int,
+                            "name": Any(str, unicode),
+                            "reference": Any(str, unicode),
+                            "state": Any(str, unicode),
+                        }
+                    ],
+                }
+            ],
+            required=True,
+        ),
     }
 
     @classmethod
     def set_up(cls, app):
 
-        if app.config['IMPLEMENTATIONS'].get(cls.base_class_name):
-            impl = app.config['IMPLEMENTATIONS'][cls.base_class_name]['class']
+        if app.config["IMPLEMENTATIONS"].get(cls.base_class_name):
+            impl = app.config["IMPLEMENTATIONS"][cls.base_class_name]["class"]
             impl = get_implementation_class(cls.base_class_name, impl)
             cls.instance = impl(
-                app.config['IMPLEMENTATIONS'][cls.base_class_name]['config'],
-                logger=app.logger
+                app.config["IMPLEMENTATIONS"][cls.base_class_name]["config"],
+                logger=app.logger,
             )
-            app.logger.debug(
-                '{} successfully initialized'.format(cls.base_class_name)
-            )
+            app.logger.debug("{} successfully initialized".format(cls.base_class_name))
 
     @classmethod
     def is_implemented(cls):

@@ -24,18 +24,11 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'x-arf',
-    'fallback': True,
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:Source\s*:\s*)' + Parser.ipv4_re,
-        },
-        'urls': {
-            'pattern': r'(?:(?:Source|Download-Link)\s*:\s*)' + Parser.url_re,
-        },
-        'category': {
-            'pattern': r'(?:Report-Type\s*:\s*)(.*)',
-            'transform': True
-        },
+    "email": "x-arf",
+    "fallback": True,
+    "regexp": {
+        "ips": {"pattern": r"(?:Source\s*:\s*)" + Parser.ipv4_re},
+        "urls": {"pattern": r"(?:(?:Source|Download-Link)\s*:\s*)" + Parser.url_re},
+        "category": {"pattern": r"(?:Report-Type\s*:\s*)(.*)", "transform": True},
     },
 }

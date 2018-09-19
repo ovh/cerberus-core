@@ -34,8 +34,14 @@ from ..tasks import enqueue
 from ..utils import text
 
 
-def send_email(ticket, emails, template_codename, lang='EN',
-               acknowledged_report_id=None, inject_proof=False):
+def send_email(
+    ticket,
+    emails,
+    template_codename,
+    lang="EN",
+    acknowledged_report_id=None,
+    inject_proof=False,
+):
     """
         Wrapper to send email
     """
@@ -44,10 +50,7 @@ def send_email(ticket, emails, template_codename, lang='EN',
         temp_proofs = _get_temp_proofs(ticket)
 
     prefetched_email = _get_prefetched_email(
-        ticket,
-        template_codename,
-        lang,
-        acknowledged_report_id
+        ticket, template_codename, lang, acknowledged_report_id
     )
 
     for email in emails:
@@ -62,27 +65,19 @@ def send_email(ticket, emails, template_codename, lang='EN',
             _email,
             prefetched_email.subject,
             prefetched_email.body,
-            prefetched_email.category
+            prefetched_email.category,
         )
-        History.log_ticket_action(
-            ticket=ticket,
-            action='send_email',
-            email=_email
-        )
+        History.log_ticket_action(ticket=ticket, action="send_email", email=_email)
 
     if inject_proof and temp_proofs:
         for proof in temp_proofs:
             Proof.filter(id=proof.id).delete()
 
 
-def _get_prefetched_email(ticket, template_codename, lang,
-                          acknowledged_report_id=None):
+def _get_prefetched_email(ticket, template_codename, lang, acknowledged_report_id=None):
 
     return EmailService.prefetch_email_from_template(
-        ticket,
-        template_codename,
-        lang=lang,
-        acknowledged_report=acknowledged_report_id,
+        ticket, template_codename, lang=lang, acknowledged_report=acknowledged_report_id
     )
 
 
@@ -95,18 +90,15 @@ def create_ticket(report, denied_by=None, attach_new=False):
         report.category,
         report.service,
         priority=report.provider.priority,
-        attach_new=attach_new
+        attach_new=attach_new,
     )
 
     History.log_ticket_action(
-        ticket=ticket,
-        action='attach_report',
-        new_ticket=True,
-        report=report
+        ticket=ticket, action="attach_report", new_ticket=True, report=report
     )
 
     report.ticket = ticket
-    report.status = 'Attached'
+    report.status = "Attached"
     report.save()
 
     ticket.set_higher_priority()
@@ -114,10 +106,7 @@ def create_ticket(report, denied_by=None, attach_new=False):
     if denied_by:
         user = User.objects.get(id=denied_by)
         History.log_ticket_action(
-            ticket=ticket,
-            action='deny_phishtocheck',
-            user=user,
-            report=report
+            ticket=ticket, action="deny_phishtocheck", user=user, report=report
         )
 
     return ticket
@@ -131,24 +120,14 @@ def close_ticket(ticket, resolution_codename=None, user=None):
     ticket.resolution = resolution
     ticket.save()
 
-    ticket.set_status(
-        'Closed',
-        user=user,
-        resolution_codename=resolution_codename
-    )
+    ticket.set_status("Closed", user=user, resolution_codename=resolution_codename)
 
-    ticket.reportTicket.all().update(
-        status='Archived'
-    )
+    ticket.reportTicket.all().update(status="Archived")
 
     if ticket.mailerId:
         EmailService.close_thread(ticket)
 
-    enqueue(
-        'ticket.cancel_pending_jobs',
-        ticket_id=ticket.id,
-        status='closed'
-    )
+    enqueue("ticket.cancel_pending_jobs", ticket_id=ticket.id, status="closed")
 
 
 def _get_temp_proofs(ticket, only_urls=False):
@@ -158,25 +137,20 @@ def _get_temp_proofs(ticket, only_urls=False):
     temp_proofs = []
     for report in ticket.reportTicket.all():
         if only_urls:
-            items = report.reportItemRelatedReport.filter(itemType='URL')
-            content = '\n'.join([item.rawItem for item in items])
+            items = report.reportItemRelatedReport.filter(itemType="URL")
+            content = "\n".join([item.rawItem for item in items])
         else:
-            content = 'From: %s\nDate: %s\nSubject: %s\n\n%s\n'
+            content = "From: %s\nDate: %s\nSubject: %s\n\n%s\n"
             content = content % (
                 report.provider.email,
                 report.receivedDate.strftime("%d/%m/%y %H:%M"),
                 report.subject,
-                text.dehtmlify(report.body)
+                text.dehtmlify(report.body),
             )
         # Remove potentially sensitive email addresses
         for email in re.findall(Parser.email_re, content):
-            content = content.replace(email, 'email-removed@provider.com')
-        temp_proofs.append(
-            Proof.create(
-                content=content,
-                ticket=report.ticket,
-            )
-        )
+            content = content.replace(email, "email-removed@provider.com")
+        temp_proofs.append(Proof.create(content=content, ticket=report.ticket))
     return temp_proofs
 
 

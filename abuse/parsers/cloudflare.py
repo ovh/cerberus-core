@@ -24,17 +24,13 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'abuse@cloudflare.com',
-    'regexp': {
-        'urls': {
-            'pattern': r'Reported\s*URLs\s*:\s*\n*' + Parser.url_re,
+    "email": "abuse@cloudflare.com",
+    "regexp": {
+        "urls": {"pattern": r"Reported\s*URLs\s*:\s*\n*" + Parser.url_re},
+        "ips": {
+            "pattern": r"The\s*actual\s*IP\s*address\s*hosting\s*(?:.*)\s*is\s*|The\s*actual\s*host\s*for\s*(?:.*)\s*is\s*"
+            + Parser.ipv4_re
         },
-        'ips': {
-            'pattern': r'The\s*actual\s*IP\s*address\s*hosting\s*(?:.*)\s*is\s*|The\s*actual\s*host\s*for\s*(?:.*)\s*is\s*' + Parser.ipv4_re,
-        },
-        'category': {
-            'pattern': r'((.|\n|\r|\t)*)',
-            'transform': True
-        },
+        "category": {"pattern": r"((.|\n|\r|\t)*)", "transform": True},
     },
 }

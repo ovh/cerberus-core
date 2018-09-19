@@ -30,6 +30,7 @@ class TicketSchedulingAlgorithmBase(object):
         Abstract class defining `abuse.models.Ticket`
         scheduling algorithm base
     """
+
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
@@ -42,7 +43,9 @@ class TicketSchedulingAlgorithmBase(object):
             :rtype: int
         """
         cls = self.__class__.__name__
-        raise NotImplementedError("'%s' object does not implement the method 'count'" % (cls))
+        raise NotImplementedError(
+            "'%s' object does not implement the method 'count'" % (cls)
+        )
 
     @abc.abstractmethod
     def get_tickets(self, user=None, **kwargs):
@@ -55,4 +58,6 @@ class TicketSchedulingAlgorithmBase(object):
             :rtype: tuple
         """
         cls = self.__class__.__name__
-        raise NotImplementedError("'%s' object does not implement the method 'get_tickets'" % (cls))
+        raise NotImplementedError(
+            "'%s' object does not implement the method 'get_tickets'" % (cls)
+        )

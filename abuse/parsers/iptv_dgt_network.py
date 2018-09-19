@@ -31,19 +31,17 @@ def pretransform(content):
 
 
 TEMPLATE = {
-    'fallback': False,
-    'email': 'iptvviolations@dgt-network.com',
-    'regexp': {
-        'ips': {
-            'pretransform': pretransform,
-            'pattern': r'(?:Violation\s*IP\s*:\s*\*\*\s*)' + Parser.ipv4_re,
+    "fallback": False,
+    "email": "iptvviolations@dgt-network.com",
+    "regexp": {
+        "ips": {
+            "pretransform": pretransform,
+            "pattern": r"(?:Violation\s*IP\s*:\s*\*\*\s*)" + Parser.ipv4_re,
         },
-        'urls': {
-            'pretransform': pretransform,
-            'pattern': r'(?:Violation\s*URL\s*:\s*\*\*\s*)' + Parser.url_re
+        "urls": {
+            "pretransform": pretransform,
+            "pattern": r"(?:Violation\s*URL\s*:\s*\*\*\s*)" + Parser.url_re,
         },
-        'category': {
-            'value': 'Copyright'
-        },
+        "category": {"value": "Copyright"},
     },
 }

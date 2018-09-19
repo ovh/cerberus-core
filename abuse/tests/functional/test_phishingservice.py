@@ -30,18 +30,22 @@ class TestDefaultPhishingImpl(CerberusTest):
     """
         Unit tests for phishing service
     """
+
     def test_ping_url(self):
         """
             Test ping_url
         """
-        ping_response = PhishingService.ping_url('http://www.example.com/phishing')
+        ping_response = PhishingService.ping_url("http://www.example.com/phishing")
         self.assertEqual(0, ping_response.score)
-        self.assertEqual('200', ping_response.http_code)
+        self.assertEqual("200", ping_response.http_code)
 
     def test_get_screenshots(self):
         """
             Test get_screenshots
         """
-        screenshots = PhishingService.get_screenshots('http://www.example.com/phishing')
+        screenshots = PhishingService.get_screenshots("http://www.example.com/phishing")
         self.assertEqual(1, len(screenshots))
-        self.assertEqual('https://www.ovh.com/fr/news/logos/with-baseline/logo-ovh-avec-150DPI.png', screenshots[0]['location'])
+        self.assertEqual(
+            "https://www.ovh.com/fr/news/logos/with-baseline/logo-ovh-avec-150DPI.png",
+            screenshots[0]["location"],
+        )

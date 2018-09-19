@@ -28,14 +28,14 @@ import inspect
 from collections import namedtuple
 
 PingResponse = namedtuple(
-    'Ping',
+    "Ping",
     [
-        'score',  # from 0 (up) to 100 (down)
-        'http_code',
-        'direct_status',
-        'proxied_status',
-        'is_phishing'
-    ]
+        "score",  # from 0 (up) to 100 (down)
+        "http_code",
+        "direct_status",
+        "proxied_status",
+        "is_phishing",
+    ],
 )
 
 
@@ -46,6 +46,7 @@ class PhishingServiceException(Exception):
 
         .. py:class:: PhishingServiceException
     """
+
     def __init__(self, message):
         super(PhishingServiceException, self).__init__(message)
 
@@ -63,6 +64,7 @@ class PhishingServiceBase(object):
 
         ..py:exception:: PhishingServiceException
     """
+
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod

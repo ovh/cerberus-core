@@ -34,8 +34,8 @@ from ..models import BusinessRules
 from ..rules import verify_rule
 
 
-@click.command('add-rule', short_help='Add or update a Cerberus rule from file.')
-@click.option('rule_location', '--rule')
+@click.command("add-rule", short_help="Add or update a Cerberus rule from file.")
+@click.option("rule_location", "--rule")
 @with_appcontext
 def update_rule(rule_location):
 
@@ -44,22 +44,24 @@ def update_rule(rule_location):
         click.echo('[update-rule] Error while fetching rule "{}"'.format(rule_location))
         sys.exit(1)
 
-    name, rules_type = rule['name'], rule['rulesType']
+    name, rules_type = rule["name"], rule["rulesType"]
 
     click.confirm(
-        'You are about to add/update rule "{}" of type "{}"\nContinue?'.format(name, rules_type),
-        abort=True
+        'You are about to add/update rule "{}" of type "{}"\nContinue?'.format(
+            name, rules_type
+        ),
+        abort=True,
     )
 
     br = BusinessRules.filter(name=name, rulesType=rules_type).last()
     if br:
-        br.orderId = rule['orderId']
-        br.config = rule['config']
+        br.orderId = rule["orderId"]
+        br.config = rule["config"]
         br.save()
     else:
         BusinessRules.create(**rule)
 
-    click.echo('[update-rule] Rule updated')
+    click.echo("[update-rule] Rule updated")
 
 
 def get_rule(rule_location):
@@ -68,11 +70,11 @@ def get_rule(rule_location):
         try:
             rule = yaml.load(fd.read())
         except yaml.parser.ParserError:
-            click.echo('[update-rule] Malformed yaml file')
+            click.echo("[update-rule] Malformed yaml file")
             return
 
-    if not all([rule.get(k) for k in ('config', 'name', 'orderId', 'rulesType')]):
-        click.echo('[update-rule] Missing keys in rule')
+    if not all([rule.get(k) for k in ("config", "name", "orderId", "rulesType")]):
+        click.echo("[update-rule] Missing keys in rule")
         return
 
     verify_rule(rule)

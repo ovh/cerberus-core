@@ -4,5 +4,5 @@ from .limitedOpen import LimitedOpenSchedulingAlgorithm
 
 TicketSchedulingAlgorithms = {
     GlobalSchedulingAlgorithm.__name__: GlobalSchedulingAlgorithm(),
-    LimitedOpenSchedulingAlgorithm.__name__: LimitedOpenSchedulingAlgorithm()
+    LimitedOpenSchedulingAlgorithm.__name__: LimitedOpenSchedulingAlgorithm(),
 }

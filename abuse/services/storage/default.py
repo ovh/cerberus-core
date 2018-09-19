@@ -40,7 +40,7 @@ class FilesystemStorageService(StorageServiceBase):
             :param str context: Root directory where files are stored
             :raises `cerberus.services.storage.base.StorageServiceException`
         """
-        context = config['directory']
+        context = config["directory"]
         self._root_dir = context
 
         # Check path exists else create it
@@ -62,10 +62,10 @@ class FilesystemStorageService(StorageServiceBase):
         target = os.path.join(self._root_dir, filename)
 
         if not os.path.exists(target):
-            raise StorageServiceException('File does not exist.')
+            raise StorageServiceException("File does not exist.")
 
         try:
-            with open(target, 'r') as fd:
+            with open(target, "r") as fd:
                 return fd.read()
         except Exception as ex:
             raise StorageServiceException(ex)
@@ -88,7 +88,7 @@ class FilesystemStorageService(StorageServiceBase):
             if dirname and not os.path.exists(dirname):
                 os.makedirs(dirname)
 
-            with open(target, 'wb') as fd:
+            with open(target, "wb") as fd:
                 fd.write(data)
 
             return True

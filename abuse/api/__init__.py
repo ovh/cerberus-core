@@ -31,12 +31,12 @@ class CustomResponse(Response):  # pylint: disable=too-many-ancestors
     """
         This class wraps FlasK/Werkzeug Response to handle Json
     """
+
     @classmethod
     def force_type(cls, rv, environ=None):
         if isinstance(rv, (dict, list)):
             rv = Response(
-                json.dumps(cls._format_response(rv)),
-                content_type='application/json'
+                json.dumps(cls._format_response(rv)), content_type="application/json"
             )
         return super(CustomResponse, cls).force_type(rv, environ)
 
@@ -78,7 +78,7 @@ class CustomResponse(Response):  # pylint: disable=too-many-ancestors
     @classmethod
     def _to_camel_case(cls, string):
         """Give the camelCase representation of a snake_case string."""
-        return re.sub(r'_(\w)', lambda x: x.group(1).upper(), string)
+        return re.sub(r"_(\w)", lambda x: x.group(1).upper(), string)
 
 
 class ExtendedRequest(Request):

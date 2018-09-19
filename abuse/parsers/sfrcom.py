@@ -24,13 +24,12 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'notification-phishing@sfr.com',
-    'regexp': {
-        'urls': {
-            'pattern': r'(?:Our customers are the target of a phishing campaign, through 1 website hosted by your\s*services\s*:\s*)' + Parser.url_re,
+    "email": "notification-phishing@sfr.com",
+    "regexp": {
+        "urls": {
+            "pattern": r"(?:Our customers are the target of a phishing campaign, through 1 website hosted by your\s*services\s*:\s*)"
+            + Parser.url_re
         },
-        'category': {
-            'value': 'Phishing',
-        },
+        "category": {"value": "Phishing"},
     },
 }

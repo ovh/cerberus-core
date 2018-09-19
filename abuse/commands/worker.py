@@ -30,17 +30,18 @@ from redis import Redis
 from rq import Connection, Queue, Worker
 
 
-@click.command('run-worker', short_help='Runs a Cerberus worker.')
-@click.option('queues', '--queues')
+@click.command("run-worker", short_help="Runs a Cerberus worker.")
+@click.option("queues", "--queues")
 @with_appcontext
 def run_worker(queues):
 
     from flask import current_app
-    config = current_app.config['REDIS']
 
-    _queues = queues.split(',')
+    config = current_app.config["REDIS"]
 
-    with Connection(Redis(config['host'], config['port'])):
+    _queues = queues.split(",")
+
+    with Connection(Redis(config["host"], config["port"])):
 
         qs = map(Queue, _queues) or [Queue()]
         worker = Worker(qs)

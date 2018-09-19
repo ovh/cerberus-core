@@ -9,15 +9,21 @@ from datetime import datetime, timedelta
 
 from django.db.models import Q
 
-from ...engine.fields import (FIELD_NO_INPUT, FIELD_NUMERIC,
-                              FIELD_TEXT)
-from ...engine.variables import (numeric_rule_variable,
-                                 boolean_rule_variable,
-                                 select_multiple_rule_variable,
-                                 string_rule_variable,
-                                 BaseVariables)
-from ....models import (BusinessRulesHistory, EmailFilterTag,
-                        Report, Ticket, ReportThreshold)
+from ...engine.fields import FIELD_NO_INPUT, FIELD_NUMERIC, FIELD_TEXT
+from ...engine.variables import (
+    numeric_rule_variable,
+    boolean_rule_variable,
+    select_multiple_rule_variable,
+    string_rule_variable,
+    BaseVariables,
+)
+from ....models import (
+    BusinessRulesHistory,
+    EmailFilterTag,
+    Report,
+    Ticket,
+    ReportThreshold,
+)
 from ....services import CRMService, PhishingService
 from ....services.phishing import PhishingServiceException
 
@@ -38,6 +44,7 @@ class DefaultReportVariables(BaseVariables):
         This class implements Report variables getters
         for rules engine
     """
+
     def __init__(self, parsed_email, report, ticket, is_trusted=False):
         """
             :param `cerberus.parsers.ParsedEmail` parsed_email: The parsed email
@@ -59,10 +66,7 @@ class DefaultReportVariables(BaseVariables):
         self.report = report
         self.ticket = ticket
         self.attibutes_tags = EmailFilterTag.get_tags_for_email(
-            report.provider,
-            self.recipients,
-            report.subject,
-            report.body
+            report.provider, self.recipients, report.subject, report.body
         )
 
     @boolean_rule_variable()
@@ -115,25 +119,20 @@ class DefaultReportVariables(BaseVariables):
     def has_fqdn(self):
         """
         """
-        return self.report.reportItemRelatedReport.filter(
-            itemType='FQDN'
-        ).exists()
+        return self.report.reportItemRelatedReport.filter(itemType="FQDN").exists()
 
     @boolean_rule_variable()
     def has_urls(self):
         """
         """
-        return self.report.reportItemRelatedReport.filter(
-            itemType='URL'
-        ).exists()
+        return self.report.reportItemRelatedReport.filter(itemType="URL").exists()
 
     @boolean_rule_variable()
     def avoid_phishtocheck(self):
         """
         """
         for tag in self.attibutes_tags:
-            if (tag.tagType == 'Provider' and
-                    tag.name == 'distrust:2:no_phishtocheck'):
+            if tag.tagType == "Provider" and tag.name == "distrust:2:no_phishtocheck":
                 return True
         return False
 
@@ -142,22 +141,23 @@ class DefaultReportVariables(BaseVariables):
         """
         """
         for tag in self.attibutes_tags:
-            if (tag.tagType == 'Provider' and
-                    tag.name == 'distrust:0:autoarchive'):
+            if tag.tagType == "Provider" and tag.name == "distrust:0:autoarchive":
                 return True
         return False
 
-    @boolean_rule_variable(params=[
-        {'fieldType': FIELD_NO_INPUT, 'name': 'try_screenshot'},
-        {'fieldType': FIELD_NUMERIC, 'name': 'down_threshold'}
-    ])
+    @boolean_rule_variable(
+        params=[
+            {"fieldType": FIELD_NO_INPUT, "name": "try_screenshot"},
+            {"fieldType": FIELD_NUMERIC, "name": "down_threshold"},
+        ]
+    )
     def urls_down(self, try_screenshot=True, down_threshold=75):
         """
         """
         if not self.has_urls():
             return False
 
-        country = 'FR'
+        country = "FR"
         if self.report.defendant:
             country = self.report.defendant.details.country
 
@@ -181,7 +181,7 @@ class DefaultReportVariables(BaseVariables):
             :return: If all items are clearly phishing items
             :rtype: bool
         """
-        country = 'FR'
+        country = "FR"
         if self.report.defendant:
             country = self.report.defendant.details.country
 
@@ -244,17 +244,14 @@ class DefaultReportVariables(BaseVariables):
         """
         """
         return Report.filter(
-            ~Q(status='Archived'),
-            defendant=self.report.defendant,
+            ~Q(status="Archived"), defendant=self.report.defendant
         ).count()
 
     @boolean_rule_variable()
     def report_ticket_threshold(self):
         """
         """
-        thres = ReportThreshold.filter(
-            category=self.report.category
-        ).last()
+        thres = ReportThreshold.filter(category=self.report.category).last()
         if not thres:
             return False
 
@@ -262,18 +259,19 @@ class DefaultReportVariables(BaseVariables):
             defendant=self.report.defendant,
             service=self.report.service,
             category=self.report.category,
-            status='New',
-            receivedDate__gte=now() - timedelta(days=thres.interval)
+            status="New",
+            receivedDate__gte=now() - timedelta(days=thres.interval),
         ).count()
         return reports_count >= thres.threshold
 
-    @numeric_rule_variable(params=[
-        {'fieldType': FIELD_NO_INPUT, 'name': 'same_service'},
-        {'fieldType': FIELD_TEXT, 'name': 'last_days'},
-        {'fieldType': FIELD_NO_INPUT, 'name': 'open_only'}
-    ])
-    def ticket_count(self, same_service=False,
-                     last_days=None, open_only=True):
+    @numeric_rule_variable(
+        params=[
+            {"fieldType": FIELD_NO_INPUT, "name": "same_service"},
+            {"fieldType": FIELD_TEXT, "name": "last_days"},
+            {"fieldType": FIELD_NO_INPUT, "name": "open_only"},
+        ]
+    )
+    def ticket_count(self, same_service=False, last_days=None, open_only=True):
         """
         """
         query = Q(defendant=self.report.defendant)
@@ -281,7 +279,7 @@ class DefaultReportVariables(BaseVariables):
             query &= ~Q(id=self.ticket.id)
 
         if open_only:
-            query &= ~Q(status='Closed')
+            query &= ~Q(status="Closed")
 
         if last_days:
             query &= Q(creationDate__gte=now() - timedelta(days=last_days))
@@ -291,13 +289,16 @@ class DefaultReportVariables(BaseVariables):
 
         return Ticket.filter(query).count()
 
-    @boolean_rule_variable(params=[
-        {'fieldType': FIELD_NO_INPUT, 'name': 'same_service'},
-        {'fieldType': FIELD_TEXT, 'name': 'last_days'},
-        {'fieldType': FIELD_TEXT, 'name': 'rule_codename'},
-    ])
-    def has_defendant_answers(self, same_service=False, last_days=None,
-                              rule_codename=None):
+    @boolean_rule_variable(
+        params=[
+            {"fieldType": FIELD_NO_INPUT, "name": "same_service"},
+            {"fieldType": FIELD_TEXT, "name": "last_days"},
+            {"fieldType": FIELD_TEXT, "name": "rule_codename"},
+        ]
+    )
+    def has_defendant_answers(
+        self, same_service=False, last_days=None, rule_codename=None
+    ):
 
         query = Q(defendant=self.report.defendant)
         if last_days:
@@ -328,28 +329,33 @@ class DefaultReportVariables(BaseVariables):
     def service_action_count(self):
         """
         """
-        return Ticket.filter(
-            defendant=self.report.defendant
-        ).values_list('jobs').count()
+        return (
+            Ticket.filter(defendant=self.report.defendant).values_list("jobs").count()
+        )
 
-    @numeric_rule_variable(params=[
-        {'fieldType': FIELD_NUMERIC, 'name': 'last_days'}
-    ])
+    @numeric_rule_variable(params=[{"fieldType": FIELD_NUMERIC, "name": "last_days"}])
     def service_action_count_last_days(self, last_days=30):
         """
         """
-        return Ticket.filter(
-            jobs__executionDate__gte=now() - timedelta(days=last_days),
-            defendant=self.report.defendant
-        ).values_list('jobs').count()
+        return (
+            Ticket.filter(
+                jobs__executionDate__gte=now() - timedelta(days=last_days),
+                defendant=self.report.defendant,
+            )
+            .values_list("jobs")
+            .count()
+        )
 
-    @numeric_rule_variable(params=[
-        {'fieldType': FIELD_TEXT, 'name': 'rule_codename'},
-        {'fieldType': FIELD_NUMERIC, 'name': 'since_last_days'},
-        {'fieldType': FIELD_NUMERIC, 'name': 'older_than_days'},
-    ])
-    def rule_applied(self, rule_codename=None,
-                     since_last_days=None, older_than_days=None):
+    @numeric_rule_variable(
+        params=[
+            {"fieldType": FIELD_TEXT, "name": "rule_codename"},
+            {"fieldType": FIELD_NUMERIC, "name": "since_last_days"},
+            {"fieldType": FIELD_NUMERIC, "name": "older_than_days"},
+        ]
+    )
+    def rule_applied(
+        self, rule_codename=None, since_last_days=None, older_than_days=None
+    ):
         """
         """
         query = Q(defendant=self.report.defendant)
@@ -366,15 +372,17 @@ class DefaultReportVariables(BaseVariables):
 
         return BusinessRulesHistory.filter(query).count()
 
-    @boolean_rule_variable(params=[
-        {'fieldType': FIELD_TEXT, 'name': 'min_date'},
-        {'fieldType': FIELD_TEXT, 'name': 'max_date'}
-    ])
+    @boolean_rule_variable(
+        params=[
+            {"fieldType": FIELD_TEXT, "name": "min_date"},
+            {"fieldType": FIELD_TEXT, "name": "max_date"},
+        ]
+    )
     def report_received_beetween(self, min_date=None, max_date=None):
         """
         """
-        min_date = datetime.strptime(min_date, '%Y-%m-%d %H:%M')
-        max_date = datetime.strptime(max_date, '%Y-%m-%d %H:%M')
+        min_date = datetime.strptime(min_date, "%Y-%m-%d %H:%M")
+        max_date = datetime.strptime(max_date, "%Y-%m-%d %H:%M")
 
         if min_date < self.report.receivedDate < max_date:
             return True
@@ -384,8 +392,7 @@ class DefaultReportVariables(BaseVariables):
     def defendant_revenue(self):
 
         return CRMService.get_customer_revenue(
-            self.report.defendant.customerId,
-            service=self.report.service.name
+            self.report.defendant.customerId, service=self.report.service.name
         )
 
     @select_multiple_rule_variable()
@@ -395,10 +402,6 @@ class DefaultReportVariables(BaseVariables):
         return [self.report.defendant.customerId.lower()]
 
 
-def ping_url(url, try_screenshot=True, country='FR'):
+def ping_url(url, try_screenshot=True, country="FR"):
 
-    return PhishingService.ping_url(
-        url,
-        country=country,
-        try_screenshot=try_screenshot
-    )
+    return PhishingService.ping_url(url, country=country, try_screenshot=try_screenshot)

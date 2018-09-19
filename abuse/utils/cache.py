@@ -40,9 +40,7 @@ class RedisHandler(object):
     def set_up(cls, config):
 
         cls.client = Redis(
-            host=config['host'],
-            port=int(config['port']),
-            password=config['password']
+            host=config["host"], port=int(config["port"]), password=config["password"]
         )
 
     @classmethod
@@ -82,13 +80,14 @@ def redis_lock(key):
 
         :param str string: The redis key to monitor
     """
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             count = 0
             while RedisHandler.client.exists(key):
                 if count > 180:
-                    raise Exception('%s seems locked' % key)
+                    raise Exception("%s seems locked" % key)
                 count += 1
                 sleep(1)
             RedisHandler.client.set(key, True)
@@ -96,7 +95,9 @@ def redis_lock(key):
                 return func(*args, **kwargs)
             finally:
                 RedisHandler.client.delete(key)
+
         return wrapper
+
     return decorator
 
 
@@ -106,9 +107,9 @@ def push_notification(data, user=None):
 
         :param dict data: The content of the notification
     """
-    notification_queue = 'cerberus:notification:{}'
+    notification_queue = "cerberus:notification:{}"
     if not user:
-        usernames = User.objects.all().values_list('username', flat=True)
+        usernames = User.objects.all().values_list("username", flat=True)
         notif_queues = [notification_queue.format(name) for name in usernames]
     else:
         notif_queues = [notification_queue.format(user.username)]
@@ -129,7 +130,7 @@ def get_user_notifications(username, limit=3):
         :rtype: list
         :return: A list of dict
     """
-    notification_queue = 'cerberus:notification:i{}'.format(username)
+    notification_queue = "cerberus:notification:i{}".format(username)
     response = []
 
     if not limit:

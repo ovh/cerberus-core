@@ -28,24 +28,20 @@ from ..cache import Cache
 from ..decorators import admin_required
 from ..controllers import tags as TagsController
 
-tag_views = Blueprint(
-    'tag_views',
-    __name__,
-    url_prefix='/tags'
-)
+tag_views = Blueprint("tag_views", __name__, url_prefix="/tags")
 
 
-@tag_views.route('', methods=['GET'])
+@tag_views.route("", methods=["GET"])
 @Cache.cached(timeout=43200)
 def get_all_tags():
     """ Returns all abuse tags
     """
-    if 'tagType' in request.args:
-        return TagsController.get_tags(tagType=request.args['tagType'])
+    if "tagType" in request.args:
+        return TagsController.get_tags(tagType=request.args["tagType"])
     return TagsController.get_tags()
 
 
-@tag_views.route('/types', methods=['GET'])
+@tag_views.route("/types", methods=["GET"])
 @Cache.cached(timeout=43200)
 def get_tag_type():
     """ Get status list for ticket or report
@@ -53,16 +49,16 @@ def get_tag_type():
     return TagsController.get_tag_type()
 
 
-@tag_views.route('/<tag>', methods=['GET'])
+@tag_views.route("/<tag>", methods=["GET"])
 def get_tag(tag=None):
     """ Return infos for a given tag
     """
     return TagsController.show(tag)
 
 
-@tag_views.route('', methods=['POST'])
+@tag_views.route("", methods=["POST"])
 @admin_required
-@Cache.invalidate(routes=['/api/tags'])
+@Cache.invalidate(routes=["/api/tags"])
 def create_tag():
     """ Create a new tags
     """
@@ -70,9 +66,9 @@ def create_tag():
     return TagsController.create(body)
 
 
-@tag_views.route('/<tag>', methods=['PUT'])
+@tag_views.route("/<tag>", methods=["PUT"])
 @admin_required
-@Cache.invalidate(routes=['/api/tags'])
+@Cache.invalidate(routes=["/api/tags"])
 def update_tag(tag=None):
     """ Update an existing tag
     """
@@ -80,9 +76,9 @@ def update_tag(tag=None):
     return TagsController.update(tag, body)
 
 
-@tag_views.route('/<tag>', methods=['DELETE'])
+@tag_views.route("/<tag>", methods=["DELETE"])
 @admin_required
-@Cache.invalidate(routes=['/api/tags'])
+@Cache.invalidate(routes=["/api/tags"])
 def delete_tag(tag=None):
     """ Delete a given tag
     """

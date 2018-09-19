@@ -38,7 +38,7 @@ def make_app(info):
     """
     from abuse import create_app
 
-    return create_app(os.getenv('APP_ENV', 'default'))
+    return create_app(os.getenv("APP_ENV", "default"))
 
 
 class UWSGIApp(object):
@@ -66,12 +66,12 @@ def app():
 # commands auto-discovery
 #
 for m in abuse.commands.__all__:
-    module = importlib.import_module('abuse.commands.%s' % m)
+    module = importlib.import_module("abuse.commands.%s" % m)
     for func_name in dir(module):
         func = module.__dict__.get(func_name)
         if type(func) == click.core.Command:
             app.add_command(func)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app()

@@ -25,6 +25,7 @@ class DefaultKPIService(KPIServiceBase):
     """
         Default dummy implementation
     """
+
     def __init__(self, config, logger=None):
         pass
 

@@ -24,18 +24,11 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'notification@spamhaus.org',
-    'fallback': False,
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:IP\/cidr\s*:\s*)' + Parser.ipv4_re,
-        },
-        'logs': {
-            'pattern': r'(?:is explained at the url\s*:\s*)' + Parser.url_re,
-        },
-        'category': {
-            'pattern': r'(?:Problem\s*:\s*)(.*)',
-            'transform': True
-        },
+    "email": "notification@spamhaus.org",
+    "fallback": False,
+    "regexp": {
+        "ips": {"pattern": r"(?:IP\/cidr\s*:\s*)" + Parser.ipv4_re},
+        "logs": {"pattern": r"(?:is explained at the url\s*:\s*)" + Parser.url_re},
+        "category": {"pattern": r"(?:Problem\s*:\s*)(.*)", "transform": True},
     },
 }
