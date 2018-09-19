@@ -35,19 +35,23 @@ from django.core.management import call_command
 from .. import create_app
 
 
-@click.command('test', short_help='Runs tests.')
-@click.option('--settings')
-@click.option('--pattern')
+@click.command("test", short_help="Runs tests.")
+@click.option("--settings")
+@click.option("--pattern")
 def run_tests(settings, pattern):
 
-    config_file = settings or os.getenv('APP_SETTINGS') or 'abuse/tests/settings-test.yml'
+    config_file = (
+        settings or os.getenv("APP_SETTINGS") or "abuse/tests/settings-test.yml"
+    )
     config = read_config(config_file)
-    pattern = pattern or 'test*.py'
+    pattern = pattern or "test*.py"
 
     try:
-        if (not config['DJANGO']['DEBUG'] or
-                not config['DJANGO']['DATABASES']['default'].get('TEST') or
-                not os.getenv('APP_ENV') == 'test'):
+        if (
+            not config["DJANGO"]["DEBUG"]
+            or not config["DJANGO"]["DATABASES"]["default"].get("TEST")
+            or not os.getenv("APP_ENV") == "test"
+        ):
             print('\n/!\ Invalid tests settings "{}"\n'.format(config_file))
             sys.exit(1)
     except KeyError:
@@ -58,28 +62,27 @@ def run_tests(settings, pattern):
     from django.conf import settings
 
     if not settings.configured:
-        settings.configure(**config['DJANGO'])
+        settings.configure(**config["DJANGO"])
         django.setup()
 
     call_command(
-        *('migrate', '--run-syncdb'), verbosity=0,
-        interactive=False, out='/dev/null'
+        *("migrate", "--run-syncdb"), verbosity=0, interactive=False, out="/dev/null"
     )
 
-    app = create_app(environment='test')
+    app = create_app(environment="test")
 
     with app.app_context():
-        call_command('test', 'abuse.tests', '--pattern', pattern, interactive=False)
+        call_command("test", "abuse.tests", "--pattern", pattern, interactive=False)
 
 
 def read_config(config_file):
     # Locate the config file to use
     if not os.path.isfile(config_file):
-        print('Missing configuration file')
+        print("Missing configuration file")
         return {}
 
     # Open and read the config file
-    with codecs.open(config_file, 'r', 'utf8') as file_handler:
+    with codecs.open(config_file, "r", "utf8") as file_handler:
         conf = yaml.load(file_handler)
     if conf is None:
         conf = {}

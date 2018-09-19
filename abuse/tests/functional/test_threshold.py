@@ -27,8 +27,7 @@ import os
 from datetime import datetime
 from mock import patch
 
-from ...models import (Report, BusinessRulesHistory,
-                       ReportThreshold, Ticket)
+from ...models import Report, BusinessRulesHistory, ReportThreshold, Ticket
 from ...tasks.report import create_from_email
 from ...tests.setup import CerberusTest
 
@@ -37,15 +36,16 @@ class TestThreshold(CerberusTest):
     """
         Unit tests for workers functions
     """
+
     def setUp(self):
 
         super(TestThreshold, self).setUp()
         self._samples = {}
 
-        for root, dirs, files in os.walk('abuse/tests/samples'):
+        for root, dirs, files in os.walk("abuse/tests/samples"):
             for name in files:
-                filename = root + '/' + name
-                f = open(filename, 'r')
+                filename = root + "/" + name
+                f = open(filename, "r")
                 self._samples[name] = f
 
     def tearDown(self):
@@ -55,38 +55,35 @@ class TestThreshold(CerberusTest):
     def test_report_threshold(self):
         """
         """
-        sample = self._samples['sample2']
+        sample = self._samples["sample2"]
         content = sample.read()
-        content = content.replace(
-            '29 Apr 2015',
-            datetime.now().strftime('%d %b %Y')
-        )
+        content = content.replace("29 Apr 2015", datetime.now().strftime("%d %b %Y"))
         ReportThreshold.objects.all().update(threshold=3, interval=86400)
 
         with patch(*self.patch_enqueue_in):
             for _ in xrange(2):
                 create_from_email(email_content=content)
                 cerberus_report = Report.objects.last()
-                self.assertEqual('New', cerberus_report.status)
+                self.assertEqual("New", cerberus_report.status)
 
         create_from_email(email_content=content)
         cerberus_report = Report.objects.last()
-        self.assertEqual('Attached', cerberus_report.status)
+        self.assertEqual("Attached", cerberus_report.status)
 
         tickets = Ticket.objects.filter(
             defendant=cerberus_report.defendant,
             category=cerberus_report.category,
-            service=cerberus_report.service
+            service=cerberus_report.service,
         ).count()
 
         self.assertEqual(1, tickets)
 
         history = BusinessRulesHistory.objects.filter(
-            businessRules__name='default_defendant_threshold'
+            businessRules__name="default_defendant_threshold"
         ).count()
         self.assertEqual(1, history)
 
         history = BusinessRulesHistory.objects.filter(
-            businessRules__name='default_defendant_not_trusted_no_ticket'
+            businessRules__name="default_defendant_not_trusted_no_ticket"
         ).count()
         self.assertEqual(2, history)

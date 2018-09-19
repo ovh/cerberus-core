@@ -30,14 +30,10 @@ from ..controllers import comments as CommentsController
 from ..controllers import defendants as DefendantsController
 
 
-defendant_views = Blueprint(
-    'defendant_views',
-    __name__,
-    url_prefix='/defendants'
-)
+defendant_views = Blueprint("defendant_views", __name__, url_prefix="/defendants")
 
 
-@defendant_views.route('/top20', methods=['GET'])
+@defendant_views.route("/top20", methods=["GET"])
 @Cache.cached(timeout=3600)
 def get_defendant_top20():
     """ Get Abuse defendants top20
@@ -45,27 +41,23 @@ def get_defendant_top20():
     return DefendantsController.get_defendant_top20()
 
 
-@defendant_views.route('/<defendant>', methods=['GET'])
+@defendant_views.route("/<defendant>", methods=["GET"])
 def get_defendant(defendant=None):
     """ Get a defendant
     """
     return DefendantsController.show(defendant)
 
 
-@defendant_views.route('/<defendant>/comments', methods=['POST'])
+@defendant_views.route("/<defendant>/comments", methods=["POST"])
 @perm_required
 def add_comment(defendant=None):
     """ Add comment to defendant
     """
     body = request.get_json()
-    return CommentsController.create(
-        body,
-        defendant_id=defendant,
-        user_id=g.user.id
-    )
+    return CommentsController.create(body, defendant_id=defendant, user_id=g.user.id)
 
 
-@defendant_views.route('/<defendant>/services', methods=['GET'])
+@defendant_views.route("/<defendant>/services", methods=["GET"])
 def get_defendant_services(defendant=None):
     """
         Get services for a given defendant
@@ -73,30 +65,21 @@ def get_defendant_services(defendant=None):
     return DefendantsController.get_defendant_services(defendant)
 
 
-@defendant_views.route(
-    '/<defendant>/comments/<comment>',
-    methods=['PUT', 'DELETE']
-)
+@defendant_views.route("/<defendant>/comments/<comment>", methods=["PUT", "DELETE"])
 @perm_required
 def update_or_delete_comment(defendant=None, comment=None):
     """ Update or delete defendant comments
     """
-    if request.method == 'PUT':
+    if request.method == "PUT":
         body = request.get_json()
-        return CommentsController.update(
-            body,
-            comment_id=comment,
-            user_id=g.user.id
-        )
+        return CommentsController.update(body, comment_id=comment, user_id=g.user.id)
 
     return CommentsController.delete(
-        comment_id=comment,
-        defendant_id=defendant,
-        user_id=g.user.id
+        comment_id=comment, defendant_id=defendant, user_id=g.user.id
     )
 
 
-@defendant_views.route('/<defendant>/tags', methods=['POST'])
+@defendant_views.route("/<defendant>/tags", methods=["POST"])
 @perm_required
 def add_defendant_tag(defendant=None):
     """ Add tag to defendant
@@ -105,7 +88,7 @@ def add_defendant_tag(defendant=None):
     return DefendantsController.add_tag(defendant, body, g.user)
 
 
-@defendant_views.route('/<defendant>/tags/<tag>', methods=['DELETE'])
+@defendant_views.route("/<defendant>/tags/<tag>", methods=["DELETE"])
 @perm_required
 def delete_defendant_tag(defendant=None, tag=None):
     """ Remove defendant tag

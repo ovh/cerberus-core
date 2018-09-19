@@ -44,18 +44,16 @@ def delay_jobs(ticket=None, delay=None, back=True):
                           with effectively elapsed time
     """
     if not delay:
-        raise AssertionError('Missing delay')
+        raise AssertionError("Missing delay")
 
     if not isinstance(ticket, Ticket):
         try:
             ticket = Ticket.get(id=ticket)
         except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-            raise AssertionError('Ticket {} not found'.format(ticket))
+            raise AssertionError("Ticket {} not found".format(ticket))
 
     # a job is here a tuple (Job instance, datetime instance)
-    pending_jobs = Queues.scheduler.get_jobs(
-        until=timedelta(days=7), with_times=True
-    )
+    pending_jobs = Queues.scheduler.get_jobs(until=timedelta(days=7), with_times=True)
 
     pending_jobs = {job[0].id: job for job in pending_jobs}
 
@@ -64,8 +62,7 @@ def delay_jobs(ticket=None, delay=None, back=True):
             current_date = pending_jobs[job.asynchronousJobId][1]
             new_date = current_date - delay if back else current_date + delay
             Queues.scheduler.change_execution_time(
-                pending_jobs[job.asynchronousJobId][0],
-                new_date
+                pending_jobs[job.asynchronousJobId][0], new_date
             )
 
 
@@ -78,48 +75,39 @@ def create_ticket_from_phishtocheck(report=None, user=None):
     """
     report = Report.get(id=report)
     user = User.objects.get(id=user)
-    ticket = Ticket.search(
-        report.defendant,
-        report.category,
-        report.service
-    )
+    ticket = Ticket.search(report.defendant, report.category, report.service)
 
     rule_config = _get_phishtocheck_rule_config()
     variables = ReportVariables(None, report, ticket, is_trusted=True)
-    actions = ReportActions(report, ticket, 'EN')
+    actions = ReportActions(report, ticket, "EN")
 
     rule_applied = run(
-        rule_config,
-        defined_variables=variables,
-        defined_actions=actions,
+        rule_config, defined_variables=variables, defined_actions=actions
     )
 
     if not rule_applied:
         raise AssertionError("Rule 'phishing_up' not applied")
 
     History.log_ticket_action(
-        ticket=report.ticket,
-        action='validate_phishtocheck',
-        user=user,
-        report=report
+        ticket=report.ticket, action="validate_phishtocheck", user=user, report=report
     )
 
 
 def _get_phishtocheck_rule_config():
 
-    rule = BusinessRules.get(name='phishing_up')
+    rule = BusinessRules.get(name="phishing_up")
     config = rule.config
 
     conditions = []
-    for cond in config['conditions']['all']:
-        if cond['name'] not in ('all_items_phishing', 'urls_down'):
+    for cond in config["conditions"]["all"]:
+        if cond["name"] not in ("all_items_phishing", "urls_down"):
             conditions.append(cond)
 
-    config['conditions']['all'] = conditions
+    config["conditions"]["all"] = conditions
     return config
 
 
-def cancel_pending_jobs(ticket_id=None, status='answered'):
+def cancel_pending_jobs(ticket_id=None, status="answered"):
     """
         Cancel all rq scheduler jobs for given `abuse.models.Ticket`
 
@@ -131,9 +119,11 @@ def cancel_pending_jobs(ticket_id=None, status='answered'):
     ticket.cancel_pending_jobs(reason=status)
 
     for job in Queues.scheduler.get_jobs():
-        if (job.func_name.startswith('abuse.tasks.') and
-                job.kwargs.get('ticket_id') and
-                job.kwargs['ticket_id'] == ticket.id):
+        if (
+            job.func_name.startswith("abuse.tasks.")
+            and job.kwargs.get("ticket_id")
+            and job.kwargs["ticket_id"] == ticket.id
+        ):
             Queues.cancel(job.id)
 
 

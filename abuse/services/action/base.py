@@ -27,7 +27,7 @@ import inspect
 
 from collections import namedtuple
 
-ActionResult = namedtuple('ActionResult', ['todo_id', 'status', 'comment'])
+ActionResult = namedtuple("ActionResult", ["todo_id", "status", "comment"])
 
 
 class ActionServiceException(Exception):
@@ -37,6 +37,7 @@ class ActionServiceException(Exception):
 
         .. py:class:: ActionServiceException
     """
+
     def __init__(self, message):
         super(ActionServiceException, self).__init__(message)
 

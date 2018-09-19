@@ -24,17 +24,10 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'abuse@clean-mx.de',
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:check the machine behind the IP\s*)' + Parser.ipv4_re,
-        },
-        'urls': {
-            'pattern': r'(?:\|.*\|.*\|.*\|.*\|.*\|)' + Parser.url_re,
-        },
-        'category': {
-            'pattern': r'((.|\n|\r|\t)*)',
-            'transform': True
-        },
+    "email": "abuse@clean-mx.de",
+    "regexp": {
+        "ips": {"pattern": r"(?:check the machine behind the IP\s*)" + Parser.ipv4_re},
+        "urls": {"pattern": r"(?:\|.*\|.*\|.*\|.*\|.*\|)" + Parser.url_re},
+        "category": {"pattern": r"((.|\n|\r|\t)*)", "transform": True},
     },
 }

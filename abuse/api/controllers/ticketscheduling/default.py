@@ -30,11 +30,22 @@ from . import common
 from .abstract import TicketSchedulingAlgorithmBase
 from ....models import Ticket
 
-FLAT_TODO_TICKET_STATUS_FILTERS = ('ActionError', 'Answered', 'Alarm', 'Reopened', 'Open')
-TODO_TICKET_STATUS_FILTERS = (['ActionError'], ['Answered'], ['Alarm', 'Reopened'], ['Open'])
-TODO_TICKET_DEFAULT_STATUS = ('ActionError', 'Answered', 'Alarm', 'Reopened', 'Open')
-TODO_TICKET_PRIORITY_FILTERS = ('High', 'Normal', 'Low')
-GLOBAL_TICKET_STATUS = ('ActionError', 'Answered', 'Alarm', 'Reopened', 'Open')
+FLAT_TODO_TICKET_STATUS_FILTERS = (
+    "ActionError",
+    "Answered",
+    "Alarm",
+    "Reopened",
+    "Open",
+)
+TODO_TICKET_STATUS_FILTERS = (
+    ["ActionError"],
+    ["Answered"],
+    ["Alarm", "Reopened"],
+    ["Open"],
+)
+TODO_TICKET_DEFAULT_STATUS = ("ActionError", "Answered", "Alarm", "Reopened", "Open")
+TODO_TICKET_PRIORITY_FILTERS = ("High", "Normal", "Low")
+GLOBAL_TICKET_STATUS = ("ActionError", "Answered", "Alarm", "Reopened", "Open")
 TICKET_FIELDS = [fld.name for fld in Ticket._meta.fields]
 
 
@@ -42,24 +53,26 @@ class GlobalSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
     """
         Class defining standard `abuse.models.Ticket` scheduling algorithm
     """
+
     __name__ = "GlobalSchedulingAlgorithm"
 
     def count(self, **kwargs):
 
-        if kwargs.get('where'):
-            where = kwargs['where']
-            return Ticket.filter(
-                where,
-                status__in=GLOBAL_TICKET_STATUS
-            ).order_by(
-                'id'
-            ).distinct().count()
+        if kwargs.get("where"):
+            where = kwargs["where"]
+            return (
+                Ticket.filter(where, status__in=GLOBAL_TICKET_STATUS)
+                .order_by("id")
+                .distinct()
+                .count()
+            )
         else:
-            return Ticket.filter(
-                status__in=GLOBAL_TICKET_STATUS
-            ).order_by(
-                'id'
-            ).distinct().count()
+            return (
+                Ticket.filter(status__in=GLOBAL_TICKET_STATUS)
+                .order_by("id")
+                .distinct()
+                .count()
+            )
 
     def get_tickets(self, user=None, **kwargs):
         """
@@ -75,23 +88,23 @@ class GlobalSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
             Special case for 'Critical', it comes before all
         """
         filters = {}
-        if kwargs.get('filters'):
-            filters = kwargs['filters']
+        if kwargs.get("filters"):
+            filters = kwargs["filters"]
 
         try:
-            limit = int(filters['paginate']['resultsPerPage'])
-            offset = int(filters['paginate']['currentPage'])
+            limit = int(filters["paginate"]["resultsPerPage"])
+            offset = int(filters["paginate"]["currentPage"])
         except KeyError:
             limit = 10
             offset = 1
 
         where = common.get_user_filters(user)
         where.extend(common.get_generic_filters(filters))
-        order_by = ['modificationDate']
+        order_by = ["modificationDate"]
 
-        if filters.get('onlyUnassigned'):
+        if filters.get("onlyUnassigned"):
             where.append(Q(treatedBy=None))
-            treated_by_filters = [{'treatedBy': None}]
+            treated_by_filters = [{"treatedBy": None}]
         else:
             treated_by_filters = common.get_treated_by_filters(user)
 
@@ -99,10 +112,11 @@ class GlobalSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
         where = list(set(where))
         where = reduce(operator.and_, where)
 
-        nb_record = Ticket.filter(
-            where,
-            status__in=TODO_TICKET_DEFAULT_STATUS
-        ).distinct().count()
+        nb_record = (
+            Ticket.filter(where, status__in=TODO_TICKET_DEFAULT_STATUS)
+            .distinct()
+            .count()
+        )
 
         res = []
         ids = set()
@@ -110,47 +124,58 @@ class GlobalSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
         # Special case for Critical
         for ticket_status in TODO_TICKET_STATUS_FILTERS:
             for filters in treated_by_filters:
-                tickets = get_specific_filtered_todo_tickets(where, ids, 'Critical',
-                                                             ticket_status, filters,
-                                                             order_by, limit, offset)
-                ids.update([t['id'] for t in tickets])
+                tickets = get_specific_filtered_todo_tickets(
+                    where,
+                    ids,
+                    "Critical",
+                    ticket_status,
+                    filters,
+                    order_by,
+                    limit,
+                    offset,
+                )
+                ids.update([t["id"] for t in tickets])
                 res.extend(tickets)
                 if len(res) > limit * offset:
-                    return res[(offset - 1) * limit:limit * offset], nb_record
+                    return res[(offset - 1) * limit : limit * offset], nb_record
 
         for ticket_status in TODO_TICKET_STATUS_FILTERS:
-            if ticket_status == ['Open']:
-                order_by.append('-reportTicket__tags__level')
+            if ticket_status == ["Open"]:
+                order_by.append("-reportTicket__tags__level")
 
             for priority in TODO_TICKET_PRIORITY_FILTERS:
                 for filters in treated_by_filters:
-                    tickets = get_specific_filtered_todo_tickets(where, ids, priority,
-                                                                 ticket_status, filters,
-                                                                 order_by, limit, offset)
-                    ids.update([t['id'] for t in tickets])
+                    tickets = get_specific_filtered_todo_tickets(
+                        where,
+                        ids,
+                        priority,
+                        ticket_status,
+                        filters,
+                        order_by,
+                        limit,
+                        offset,
+                    )
+                    ids.update([t["id"] for t in tickets])
                     res.extend(tickets)
                     if len(res) > limit * offset:
-                        return res[(offset - 1) * limit:limit * offset], nb_record
+                        return res[(offset - 1) * limit : limit * offset], nb_record
 
-        return res[(offset - 1) * limit:limit * offset], nb_record
+        return res[(offset - 1) * limit : limit * offset], nb_record
 
 
-def get_specific_filtered_todo_tickets(where, ids, priority, status,
-                                       treated_by, order_by, limit, offset):
+def get_specific_filtered_todo_tickets(
+    where, ids, priority, status, treated_by, order_by, limit, offset
+):
     """
         Returns a list of `abuse.models.Ticket`
         dict-mapping based on multiple filters
     """
-    return Ticket.filter(
-        where,
-        ~Q(id__in=ids),
-        priority=priority,
-        status__in=status,
-        **treated_by
-    ).values(
-        *TICKET_FIELDS
-    ).order_by(
-        *order_by
-    ).annotate(
-        attachedReportsCount=Count('reportTicket')
-    ).distinct()[:limit * offset]
+    return (
+        Ticket.filter(
+            where, ~Q(id__in=ids), priority=priority, status__in=status, **treated_by
+        )
+        .values(*TICKET_FIELDS)
+        .order_by(*order_by)
+        .annotate(attachedReportsCount=Count("reportTicket"))
+        .distinct()[: limit * offset]
+    )

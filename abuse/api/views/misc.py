@@ -33,11 +33,11 @@ from ..controllers import providers as ProvidersController
 from ..controllers import reportitems as ReportItemsController
 from ..controllers import tickets as TicketsController
 
-misc_views = Blueprint('misc_views', __name__)
+misc_views = Blueprint("misc_views", __name__)
 
 
-@misc_views.route('/auth', methods=['POST'])
-@validate_body({'name': unicode, 'password': unicode})
+@misc_views.route("/auth", methods=["POST"])
+@validate_body({"name": unicode, "password": unicode})
 def auth():
     """
         Check user/password and returns token if valid
@@ -50,7 +50,7 @@ def auth():
         raise Unauthorized(ret)
 
 
-@misc_views.route('/logout', methods=['POST'])
+@misc_views.route("/logout", methods=["POST"])
 def logout():
     """
         Logout user
@@ -58,31 +58,31 @@ def logout():
     return MiscController.logout(request)
 
 
-@misc_views.route('/ping', methods=['POST'])
+@misc_views.route("/ping", methods=["POST"])
 def ping():
     """
         Keep alive between UX and API
     """
-    return {'message': 'pong'}
+    return {"message": "pong"}
 
 
-@misc_views.route('/tools/curl', methods=['GET'])
+@misc_views.route("/tools/curl", methods=["GET"])
 def get_url_http_headers():
     """
         Curl-like
     """
-    return ReportItemsController.get_http_headers(request.args.get('url'))
+    return ReportItemsController.get_http_headers(request.args.get("url"))
 
 
-@misc_views.route('/tools/whois', methods=['GET'])
+@misc_views.route("/tools/whois", methods=["GET"])
 def get_whois():
     """
         Whois-like
     """
-    return ReportItemsController.get_whois(request.args.get('item'))
+    return ReportItemsController.get_whois(request.args.get("item"))
 
 
-@misc_views.route('/notifications', methods=['GET'])
+@misc_views.route("/notifications", methods=["GET"])
 def get_user_notifications():
     """
         Get user notifications
@@ -90,15 +90,15 @@ def get_user_notifications():
     return MiscController.get_notifications(g.user)
 
 
-@misc_views.route('/monitor', methods=['GET'])
+@misc_views.route("/monitor", methods=["GET"])
 def monitor():
     """ Get api Infos
     """
     MiscController.monitor()
-    return {'message': "I'm up !"}
+    return {"message": "I'm up !"}
 
 
-@misc_views.route('/profiles', methods=['GET'])
+@misc_views.route("/profiles", methods=["GET"])
 @Cache.cached(timeout=43200)
 def get_profiles():
     """ Get Abuse profiles
@@ -106,18 +106,15 @@ def get_profiles():
     return MiscController.get_profiles()
 
 
-@misc_views.route('/search', methods=['GET'])
+@misc_views.route("/search", methods=["GET"])
 def search():
     """ Search on tickets and reports
 
     """
-    return MiscController.search(
-        filters=request.args.get('filters'),
-        user=g.user
-    )
+    return MiscController.search(filters=request.args.get("filters"), user=g.user)
 
 
-@misc_views.route('/users', methods=['GET'])
+@misc_views.route("/users", methods=["GET"])
 @Cache.cached(timeout=43200)
 def get_users_infos():
     """ Get users infos
@@ -125,7 +122,7 @@ def get_users_infos():
     return MiscController.get_users_infos()
 
 
-@misc_views.route('/users/me', methods=['GET'])
+@misc_views.route("/users/me", methods=["GET"])
 @Cache.cached(timeout=43200, current_user=True)
 def get_logged_user():
     """ Get infos for logged user
@@ -133,7 +130,7 @@ def get_logged_user():
     return MiscController.get_users_infos(user=g.user.id)
 
 
-@misc_views.route('/users/<user>', methods=['GET'])
+@misc_views.route("/users/<user>", methods=["GET"])
 @admin_required
 def get_user(user=None):
     """ Get infos for a user
@@ -141,20 +138,20 @@ def get_user(user=None):
     return MiscController.get_users_infos(user=user)
 
 
-@misc_views.route('/users/<user>', methods=['PUT'])
+@misc_views.route("/users/<user>", methods=["PUT"])
 @admin_required
-@Cache.invalidate(routes=['/api/users', '/api/users/me'], clear_for_user=True)
-@validate_body({
-    Optional('id'): int,
-    Optional('email'): unicode,
-    'username': unicode,
-    'role': unicode,
-    'profiles': [{
-        'access': bool,
-        'category': unicode,
-        'profile': Any(None, unicode),
-    }]
-})
+@Cache.invalidate(routes=["/api/users", "/api/users/me"], clear_for_user=True)
+@validate_body(
+    {
+        Optional("id"): int,
+        Optional("email"): unicode,
+        "username": unicode,
+        "role": unicode,
+        "profiles": [
+            {"access": bool, "category": unicode, "profile": Any(None, unicode)}
+        ],
+    }
+)
 def update_user(user=None):
     """ Update user infos
     """
@@ -162,7 +159,7 @@ def update_user(user=None):
     return MiscController.update_user(user, body)
 
 
-@misc_views.route('/status', methods=['GET'])
+@misc_views.route("/status", methods=["GET"])
 @Cache.cached(timeout=43200)
 def get_all_status():
     """ Get all abuse status
@@ -170,7 +167,7 @@ def get_all_status():
     return MiscController.status()
 
 
-@misc_views.route('/resolutions', methods=['GET'])
+@misc_views.route("/resolutions", methods=["GET"])
 @Cache.cached(timeout=43200)
 def get_all_ticket_resolutions():
     """ Get all abuse status
@@ -178,10 +175,10 @@ def get_all_ticket_resolutions():
     return MiscController.get_ticket_resolutions()
 
 
-@misc_views.route('/resolutions', methods=['POST'])
+@misc_views.route("/resolutions", methods=["POST"])
 @admin_required
-@Cache.invalidate(routes=['/api/resolutions'])
-@validate_body({'codename': unicode})
+@Cache.invalidate(routes=["/api/resolutions"])
+@validate_body({"codename": unicode})
 def add_ticket_resolution():
     """ Get all abuse status
     """
@@ -189,13 +186,10 @@ def add_ticket_resolution():
     return MiscController.add_ticket_resolution(body)
 
 
-@misc_views.route('/resolutions/<resolution>', methods=['PUT'])
+@misc_views.route("/resolutions/<resolution>", methods=["PUT"])
 @admin_required
-@Cache.invalidate(routes=['/api/resolutions'])
-@validate_body({
-    Optional('id'): int,
-    'codename': unicode
-})
+@Cache.invalidate(routes=["/api/resolutions"])
+@validate_body({Optional("id"): int, "codename": unicode})
 def update_ticket_resolution(resolution=None):
     """ Get all abuse status
     """
@@ -203,16 +197,16 @@ def update_ticket_resolution(resolution=None):
     return MiscController.update_ticket_resolution(resolution, body)
 
 
-@misc_views.route('/resolutions/<resolution>', methods=['DELETE'])
+@misc_views.route("/resolutions/<resolution>", methods=["DELETE"])
 @admin_required
-@Cache.invalidate(routes=['/api/resolutions'])
+@Cache.invalidate(routes=["/api/resolutions"])
 def delete_ticket_resolution(resolution=None):
     """ Get all abuse status
     """
     return MiscController.delete_ticket_resolution(resolution)
 
 
-@misc_views.route('/status/<model>', methods=['GET'])
+@misc_views.route("/status/<model>", methods=["GET"])
 @Cache.cached(timeout=43200)
 def get_status(model=None):
     """ Get status list for ticket or report
@@ -220,7 +214,7 @@ def get_status(model=None):
     return MiscController.status(model=model)
 
 
-@misc_views.route('/toolbar', methods=['GET'])
+@misc_views.route("/toolbar", methods=["GET"])
 @Cache.cached(timeout=180, current_user=True)
 def get_toolbar():
     """ Get Abuse toolbar
@@ -228,7 +222,7 @@ def get_toolbar():
     return MiscController.toolbar(user=g.user)
 
 
-@misc_views.route('/dashboard', methods=['GET'])
+@misc_views.route("/dashboard", methods=["GET"])
 @Cache.cached(timeout=3600, current_user=True)
 def get_dashboard():
     """ Get Abuse dashboard
@@ -236,7 +230,7 @@ def get_dashboard():
     return MiscController.dashboard(user=g.user)
 
 
-@misc_views.route('/priorities/ticket', methods=['GET'])
+@misc_views.route("/priorities/ticket", methods=["GET"])
 @Cache.cached(timeout=43200)
 def get_ticket_priorities():
     """ Get list of ticket priorities
@@ -244,7 +238,7 @@ def get_ticket_priorities():
     return TicketsController.get_priorities()
 
 
-@misc_views.route('/priorities/provider', methods=['GET'])
+@misc_views.route("/priorities/provider", methods=["GET"])
 @Cache.cached(timeout=43200)
 def get_providers_priorities():
     """ Get list of providers priorities
@@ -252,26 +246,23 @@ def get_providers_priorities():
     return ProvidersController.get_priorities()
 
 
-@misc_views.route('/mass-contact', methods=['GET'])
+@misc_views.route("/mass-contact", methods=["GET"])
 def get_mass_contact():
     """
         List all created mass-contact campaigns
     """
-    return MiscController.get_mass_contact(
-        filters=request.args.get('filters')
-    )
+    return MiscController.get_mass_contact(filters=request.args.get("filters"))
 
 
-@misc_views.route('/mass-contact', methods=['POST'])
-@validate_body({
-    'ips': list,
-    'campaignName': unicode,
-    'category': unicode,
-    'email': {
-        'subject': unicode,
-        'body': unicode
+@misc_views.route("/mass-contact", methods=["POST"])
+@validate_body(
+    {
+        "ips": list,
+        "campaignName": unicode,
+        "category": unicode,
+        "email": {"subject": unicode, "body": unicode},
     }
-})
+)
 def post_mass_contact():
     """
     Massively contact defendants based on ip addresses list
@@ -305,7 +296,7 @@ def post_mass_contact():
     return MiscController.post_mass_contact(body, g.user)
 
 
-@misc_views.route('/roles', methods=['GET'])
+@misc_views.route("/roles", methods=["GET"])
 @Cache.cached(timeout=43200)
 def get_cerberus_roles():
     """
@@ -314,13 +305,11 @@ def get_cerberus_roles():
     return MiscController.get_roles()
 
 
-@misc_views.route('/my-tickets', methods=['GET'])
+@misc_views.route("/my-tickets", methods=["GET"])
 def get_user_tickets():
     """ Get abuse tickets for logged g.user
     """
     resp, _ = TicketsController.get_tickets(
-        filters=request.args.get('filters'),
-        treated_by=g.user.id,
-        user=g.user
+        filters=request.args.get("filters"), treated_by=g.user.id, user=g.user
     )
     return resp

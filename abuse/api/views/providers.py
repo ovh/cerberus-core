@@ -27,23 +27,17 @@ from flask import Blueprint, request
 from ..decorators import admin_required
 from ..controllers import providers as ProvidersController
 
-provider_views = Blueprint(
-    'provider_views',
-    __name__,
-    url_prefix='/providers'
-)
+provider_views = Blueprint("provider_views", __name__, url_prefix="/providers")
 
 
-@provider_views.route('', methods=['GET'])
+@provider_views.route("", methods=["GET"])
 def get_providers():
     """ Get list of providers
     """
-    return ProvidersController.get_providers(
-        filters=request.args.get('filters')
-    )
+    return ProvidersController.get_providers(filters=request.args.get("filters"))
 
 
-@provider_views.route('', methods=['POST'])
+@provider_views.route("", methods=["POST"])
 @admin_required
 def create_provider():
     """ Create a new provider
@@ -52,18 +46,18 @@ def create_provider():
     return ProvidersController.create(body)
 
 
-@provider_views.route('/<provider>', methods=['PUT', 'DELETE'])
+@provider_views.route("/<provider>", methods=["PUT", "DELETE"])
 @admin_required
 def update_provider(provider=None):
     """ Update a given provider
     """
-    if request.method == 'PUT':
+    if request.method == "PUT":
         body = request.get_json()
         return ProvidersController.update(provider, body)
     return ProvidersController.destroy(provider)
 
 
-@provider_views.route('/<provider>/tags', methods=['POST'])
+@provider_views.route("/<provider>/tags", methods=["POST"])
 @admin_required
 def add_provider_tag(provider=None):
     """ Add tag to provider
@@ -72,7 +66,7 @@ def add_provider_tag(provider=None):
     return ProvidersController.add_tag(provider, body)
 
 
-@provider_views.route('/<provider>/tags/<tag>', methods=['DELETE'])
+@provider_views.route("/<provider>/tags/<tag>", methods=["DELETE"])
 @admin_required
 def delete_provider_tag(provider=None, tag=None):
     """ Remove provider tag

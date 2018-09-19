@@ -24,13 +24,9 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'internet.enforcement@markscan.in',
-    'regexp': {
-        'urls': {
-            'pattern': r'for your reference\s*:(?:.*)' + Parser.url_re,
-        },
-        'category': {
-            'value': 'Copyright',
-        },
+    "email": "internet.enforcement@markscan.in",
+    "regexp": {
+        "urls": {"pattern": r"for your reference\s*:(?:.*)" + Parser.url_re},
+        "category": {"value": "Copyright"},
     },
 }

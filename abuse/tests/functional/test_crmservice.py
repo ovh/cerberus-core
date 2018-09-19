@@ -31,17 +31,18 @@ class TestDefaultCustomerDaoImpl(CerberusTest):
     """
         Unit tests for customer dao service
     """
+
     def test_success_get_services_from_items(self):
         """
             Test success of main DAO function, identify customer
         """
-        services = CRMService.get_services_from_items(ips=['1.2.3.4'])
+        services = CRMService.get_services_from_items(ips=["1.2.3.4"])
         self.assertEqual(1, len(services))
-        self.assertIn('service', services[0])
-        self.assertIn('defendant', services[0])
-        self.assertIn('items', services[0])
-        self.assertEqual('Doe', services[0]['defendant']['name'])
-        self.assertIn('1.2.3.4', services[0]['items']['ips'])
+        self.assertIn("service", services[0])
+        self.assertIn("defendant", services[0])
+        self.assertIn("items", services[0])
+        self.assertEqual("Doe", services[0]["defendant"]["name"])
+        self.assertIn("1.2.3.4", services[0]["items"]["ips"])
 
     def test_fail_get_services_from_items(self):
         """
@@ -49,21 +50,25 @@ class TestDefaultCustomerDaoImpl(CerberusTest):
         """
         services = CRMService.get_services_from_items()
         self.assertEqual(0, len(services))
-        services = CRMService.get_services_from_items(ips=['8.8.8.8'])
+        services = CRMService.get_services_from_items(ips=["8.8.8.8"])
         self.assertEqual(1, len(services))
 
     def test_get_customer_infos(self):
         """
             Test get_customer_infos
         """
-        defendant = CRMService.get_customer_infos('john.doe.42')
-        self.assertEqual('Doe', defendant.name)
-        self.assertRaises(CRMServiceException, lambda: CRMService.get_customer_infos('john.doe.43'))
+        defendant = CRMService.get_customer_infos("john.doe.42")
+        self.assertEqual("Doe", defendant.name)
+        self.assertRaises(
+            CRMServiceException, lambda: CRMService.get_customer_infos("john.doe.43")
+        )
 
     def test_get_service_infos(self):
         """
             Test get_service_infos
         """
-        service = CRMService.get_service_infos('123456')
-        self.assertEqual('example', service.name)
-        self.assertRaises(CRMServiceException, lambda: CRMService.get_customer_infos('654321'))
+        service = CRMService.get_service_infos("123456")
+        self.assertEqual("example", service.name)
+        self.assertRaises(
+            CRMServiceException, lambda: CRMService.get_customer_infos("654321")
+        )

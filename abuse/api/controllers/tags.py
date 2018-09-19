@@ -39,8 +39,8 @@ def get_tags(**kwargs):
     """ Get all tags
     """
     where = [Q()]
-    if 'tagType' in kwargs:
-        where.append(Q(tagType__iexact=kwargs['tagType']))
+    if "tagType" in kwargs:
+        where.append(Q(tagType__iexact=kwargs["tagType"]))
 
     where = reduce(operator.and_, where)
     tags = Tag.filter(where)
@@ -53,7 +53,7 @@ def show(tag_id):
     try:
         tag = Tag.get(id=tag_id)
     except (ObjectDoesNotExist, ValueError):
-        raise NotFound('Tag not found')
+        raise NotFound("Tag not found")
     return model_to_dict(tag)
 
 
@@ -61,17 +61,17 @@ def create(body):
     """ Create new tag
     """
     try:
-        body.pop('id', None)
-        if body.get('tagType') not in TAG_TYPE:
-            raise BadRequest('Invalid or missing tag type')
+        body.pop("id", None)
+        if body.get("tagType") not in TAG_TYPE:
+            raise BadRequest("Invalid or missing tag type")
 
-        existing = [tag.lower() for tag in Tag.all().values_list('name', flat=True)]
-        if body['name'].lower().strip() in existing:
-            raise BadRequest('Tag already exists')
-        body['codename'] = body['name'].lower().replace(' ', '_')
+        existing = [tag.lower() for tag in Tag.all().values_list("name", flat=True)]
+        if body["name"].lower().strip() in existing:
+            raise BadRequest("Tag already exists")
+        body["codename"] = body["name"].lower().replace(" ", "_")
         tag = Tag.get_or_create(**body)[0]
     except (AttributeError, KeyError, FieldError, IntegrityError, ValueError):
-        raise BadRequest('Invalid fields in body')
+        raise BadRequest("Invalid fields in body")
     return model_to_dict(tag)
 
 
@@ -81,20 +81,26 @@ def update(tag_id, body):
     try:
         tag = Tag.get(id=tag_id)
     except (ObjectDoesNotExist, ValueError):
-        raise NotFound('Tag not found')
+        raise NotFound("Tag not found")
     try:
-        body.pop('id', None)
+        body.pop("id", None)
 
-        existing = Tag.exclude(id=tag.id).values_list('name', flat=True)
+        existing = Tag.exclude(id=tag.id).values_list("name", flat=True)
         existing = [tg.lower() for tg in existing]
-        if body['name'].lower().strip() in existing:
-            raise BadRequest('Tag already exists')
+        if body["name"].lower().strip() in existing:
+            raise BadRequest("Tag already exists")
 
         Tag.filter(pk=tag.pk).update(**body)
         tag = Tag.get(pk=tag.pk)
-    except (AttributeError, KeyError, FieldError,
-            IntegrityError, ValueError, TypeError):
-        raise BadRequest('Invalid fields in body')
+    except (
+        AttributeError,
+        KeyError,
+        FieldError,
+        IntegrityError,
+        ValueError,
+        TypeError,
+    ):
+        raise BadRequest("Invalid fields in body")
     return model_to_dict(tag)
 
 
@@ -104,15 +110,15 @@ def destroy(tag_id):
     try:
         tag = Tag.get(id=tag_id)
     except (ObjectDoesNotExist, ValueError):
-        raise NotFound('Tag not found')
+        raise NotFound("Tag not found")
     try:
         tag.delete()
-        return {'message': 'Tag successfully removed'}
+        return {"message": "Tag successfully removed"}
     except ProtectedError:
-        raise Forbidden('Tag still referenced in reports/tickets')
+        raise Forbidden("Tag still referenced in reports/tickets")
 
 
 def get_tag_type():
     """ Get tag type
     """
-    return [{'label': v} for _, v in Tag.TAG_TYPE]
+    return [{"label": v} for _, v in Tag.TAG_TYPE]

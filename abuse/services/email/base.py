@@ -30,27 +30,27 @@ from collections import namedtuple
 from ...models import MailTemplate
 
 Email = namedtuple(
-    'Email',
+    "Email",
     [
-        'sender',       # str
-        'recipient',    # str
-        'created',      # str
-        'subject',      # str
-        'body',         # str
-        'category',     # Category : 'Defendant', 'Plaintiff' or 'Other'
-        'attachments'   # List of Attachments
-    ]
+        "sender",  # str
+        "recipient",  # str
+        "created",  # str
+        "subject",  # str
+        "body",  # str
+        "category",  # Category : 'Defendant', 'Plaintiff' or 'Other'
+        "attachments",  # List of Attachments
+    ],
 )
 
 PrefetchedEmail = namedtuple(
-    'PrefetchedEmail',
+    "PrefetchedEmail",
     [
-        'sender',       # str
-        'recipients',   # list
-        'subject',      # str
-        'body',         # str
-        'category',     # 'Defendant', 'Plaintiff' or 'Other'
-    ]
+        "sender",  # str
+        "recipients",  # list
+        "subject",  # str
+        "body",  # str
+        "category",  # 'Defendant', 'Plaintiff' or 'Other'
+    ],
 )
 
 EMAIL_VALID_CATEGORIES = [t[0].title() for t in MailTemplate.RECIPIENT_TYPE]
@@ -63,6 +63,7 @@ class EmailServiceException(Exception):
 
         .. py:class:: EmailServiceException
     """
+
     def __init__(self, message):
         super(EmailServiceException, self).__init__(message)
 
@@ -74,11 +75,13 @@ class EmailServiceBase(object):
         raise ..py:exception:: EmailServiceException
 
     """
+
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def send_email(self, ticket, recipient, subject, body,
-                   category, sender=None, attachments=None):
+    def send_email(
+        self, ticket, recipient, subject, body, category, sender=None, attachments=None
+    ):
         """
             Send a email.
 
@@ -136,8 +139,9 @@ class EmailServiceBase(object):
         )
 
     @abc.abstractmethod
-    def attach_external_answer(self, ticket, sender, recipient,
-                               subject, body, category, attachments=None):
+    def attach_external_answer(
+        self, ticket, sender, recipient, subject, body, category, attachments=None
+    ):
         """
             Usefull if an answer for a ticket come from
             Phone/CRM/API/CustomerUX/Other mailbox ...
@@ -159,8 +163,9 @@ class EmailServiceBase(object):
         )
 
     @abc.abstractmethod
-    def prefetch_email_from_template(self, ticket, template_codename,
-                                     lang='EN', acknowledged_report=None):
+    def prefetch_email_from_template(
+        self, ticket, template_codename, lang="EN", acknowledged_report=None
+    ):
         """
             Try to fill email template with ticket meta
 

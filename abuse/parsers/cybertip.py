@@ -24,13 +24,12 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'cybertip@cybertip.ca',
-    'regexp': {
-        'urls': {
-            'pattern': r'(?:is\s*providing\s*you\s*with\s*the\s*URL\s*:\s*\n*)' + Parser.url_re,
+    "email": "cybertip@cybertip.ca",
+    "regexp": {
+        "urls": {
+            "pattern": r"(?:is\s*providing\s*you\s*with\s*the\s*URL\s*:\s*\n*)"
+            + Parser.url_re
         },
-        'category': {
-            'value': 'Illegal'
-        },
+        "category": {"value": "Illegal"},
     },
 }

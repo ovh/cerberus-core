@@ -24,8 +24,7 @@
 """
 from django.db.models import ObjectDoesNotExist
 
-from .base import (ActionResult, ActionServiceBase,
-                   ActionServiceException)
+from .base import ActionResult, ActionServiceBase, ActionServiceException
 from ...models import ServiceAction, Ticket
 
 
@@ -33,6 +32,7 @@ class DefaultActionService(ActionServiceBase):
     """
         Default implementation of ActionServiceBase
     """
+
     def __init__(self, config, logger=None):
         pass
 
@@ -83,7 +83,7 @@ class DefaultActionService(ActionServiceBase):
                 ticket = Ticket.get(id=ticket)
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
                 raise ActionServiceException(
-                    'Ticket {} can not be found in DB'.format(ticket)
+                    "Ticket {} can not be found in DB".format(ticket)
                 )
 
         if not isinstance(action, ServiceAction):
@@ -91,10 +91,10 @@ class DefaultActionService(ActionServiceBase):
                 action = ServiceAction.get(id=action)
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
                 raise ActionServiceException(
-                    'Action {} can not be found in DB'.format(action)
+                    "Action {} can not be found in DB".format(action)
                 )
 
-        return ActionResult(todo_id='123456', status='ok', comment='ok')
+        return ActionResult(todo_id="123456", status="ok", comment="ok")
 
     def list_actions_for_ticket(self, ticket):
         """
@@ -110,7 +110,7 @@ class DefaultActionService(ActionServiceBase):
                 ticket = Ticket.get(id=ticket)
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
                 raise ActionServiceException(
-                    'Ticket {} can not be found in DB'.format(ticket)
+                    "Ticket {} can not be found in DB".format(ticket)
                 )
 
         return ServiceAction.all()

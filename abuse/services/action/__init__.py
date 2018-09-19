@@ -8,21 +8,19 @@ assert ActionServiceException
 class ActionService(object):
 
     instance = None
-    base_class_name = 'ActionServiceBase'
+    base_class_name = "ActionServiceBase"
 
     @classmethod
     def set_up(cls, app):
 
-        if app.config['IMPLEMENTATIONS'].get(cls.base_class_name):
-            impl = app.config['IMPLEMENTATIONS'][cls.base_class_name]['class']
+        if app.config["IMPLEMENTATIONS"].get(cls.base_class_name):
+            impl = app.config["IMPLEMENTATIONS"][cls.base_class_name]["class"]
             impl = get_implementation_class(cls.base_class_name, impl)
             cls.instance = impl(
-                app.config['IMPLEMENTATIONS'][cls.base_class_name]['config'],
-                logger=app.logger
+                app.config["IMPLEMENTATIONS"][cls.base_class_name]["config"],
+                logger=app.logger,
             )
-            app.logger.debug(
-                '{} successfully initialized'.format(cls.base_class_name)
-            )
+            app.logger.debug("{} successfully initialized".format(cls.base_class_name))
 
     @classmethod
     def is_implemented(cls):

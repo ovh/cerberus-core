@@ -32,6 +32,7 @@ class ReputationServiceException(Exception):
 
         .. py:class:: ReputationServiceException
     """
+
     def __init__(self, message):
         super(ReputationServiceException, self).__init__(message)
 
@@ -43,6 +44,7 @@ class ReputationServiceBase(object):
 
         ..py:exception:: ReputationServiceException
     """
+
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod

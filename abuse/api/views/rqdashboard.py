@@ -86,7 +86,7 @@ tr:nth-child(even) {
 
 
 # Add custom route
-@blueprint.route('/job/<job_id>/parsed-email', methods=['GET'])
+@blueprint.route("/job/<job_id>/parsed-email", methods=["GET"])
 def get_parsed_email(job_id):
 
     from rq.job import Job
@@ -96,7 +96,7 @@ def get_parsed_email(job_id):
     if not job:
         return {"message": "Invalid job ID"}
 
-    raw = job.kwargs.get('email_content')
+    raw = job.kwargs.get("email_content")
     if not raw:
         return {"message": "Unable to get raw email"}
 
@@ -114,5 +114,5 @@ def get_parsed_email(job_id):
         urls=parsed.urls,
         fqdn=parsed.fqdn,
         subject=parsed.subject,
-        body=dehtmlify(parsed.body)
+        body=dehtmlify(parsed.body),
     )

@@ -24,15 +24,10 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'abuse-reply@columbia.edu',
-    'fallback': False,
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:Address\s*:\s*)' + Parser.ipv4_re,
-        },
-        'category': {
-            'pattern': r'((.|\n|\r|\t)*)',
-            'transform': True
-        },
+    "email": "abuse-reply@columbia.edu",
+    "fallback": False,
+    "regexp": {
+        "ips": {"pattern": r"(?:Address\s*:\s*)" + Parser.ipv4_re},
+        "category": {"pattern": r"((.|\n|\r|\t)*)", "transform": True},
     },
 }

@@ -3,7 +3,6 @@ from .base import SearchServiceBase
 
 
 class DefaultDummyService(SearchServiceBase):
-
     def __init__(self, config, logger=None):
         pass
 

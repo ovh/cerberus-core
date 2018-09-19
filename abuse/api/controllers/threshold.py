@@ -44,24 +44,24 @@ def show(threshold_id):
         threshold = ReportThreshold.get(id=threshold_id)
         return model_to_dict(threshold)
     except ValueError:
-        raise BadRequest('Not a valid threshold id')
+        raise BadRequest("Not a valid threshold id")
     except ObjectDoesNotExist:
-        raise NotFound('Threshold not found')
+        raise NotFound("Threshold not found")
 
 
 def create(body):
     """ Create threshold
     """
     try:
-        category = Category.get(name=body['category'])
+        category = Category.get(name=body["category"])
         if ReportThreshold.filter(category=category).exists():
-            raise BadRequest('Threshold already exists for this category')
-        body['category'] = category
+            raise BadRequest("Threshold already exists for this category")
+        body["category"] = category
         threshold, created = ReportThreshold.get_or_create(**body)
     except (KeyError, FieldError, IntegrityError, ObjectDoesNotExist):
-        raise BadRequest('Missing or invalid fields in body')
+        raise BadRequest("Missing or invalid fields in body")
     if not created:
-        raise BadRequest('Threshold already exists')
+        raise BadRequest("Threshold already exists")
     return model_to_dict(threshold)
 
 
@@ -71,13 +71,13 @@ def update(threshold_id, body):
     try:
         threshold = ReportThreshold.get(id=threshold_id)
     except (ObjectDoesNotExist, ValueError):
-        raise NotFound('Threshold not found')
+        raise NotFound("Threshold not found")
     try:
-        body = {k: v for k, v in body.iteritems() if k in ['threshold', 'interval']}
+        body = {k: v for k, v in body.iteritems() if k in ["threshold", "interval"]}
         ReportThreshold.filter(pk=threshold.pk).update(**body)
         threshold = ReportThreshold.get(pk=threshold.pk)
     except (KeyError, FieldError, IntegrityError):
-        raise BadRequest('Missing or invalid fields in body')
+        raise BadRequest("Missing or invalid fields in body")
     return model_to_dict(threshold)
 
 
@@ -87,7 +87,7 @@ def destroy(threshold_id):
     try:
         threshold = ReportThreshold.get(id=threshold_id)
     except (ObjectDoesNotExist, ValueError):
-        raise NotFound('Threshold not found')
+        raise NotFound("Threshold not found")
 
     threshold.delete()
-    return {'message': 'Threshold successfully removed'}
+    return {"message": "Threshold successfully removed"}

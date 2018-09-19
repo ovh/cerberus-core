@@ -29,6 +29,7 @@ class DefaultPhishingService(PhishingServiceBase):
     """
         Default Implementation of PhishingServiceBase
     """
+
     def __init__(self, config, logger=None):
         pass
 
@@ -45,37 +46,39 @@ class DefaultPhishingService(PhishingServiceBase):
             :rtype: dict
             :raises `cerberus.services.phishing.base.PhishingServiceException`
         """
-        return PingResponse(0, '200', 'OK', 'OK', False)
+        return PingResponse(0, "200", "OK", "OK", False)
 
     def get_screenshots(self, url, limit=10):
         """
             Get screenshots for given url
         """
-        response = [{
-            'timestamp': 1452706246,
-            'location': u'https://www.ovh.com/fr/news/logos/with-baseline/logo-ovh-avec-150DPI.png',
-            'screenshotId': u'123456',
-            'phishingGrade': 0.0,
-            'phishingGradeDetails': {
-                'category': 'LEGIT',  # Can be "LEGIT" or "PHISHING"
-                'grade': 0.0,  # Same as phishingGrade
-                'comment': 'no comment',
-            },
-            'score': 0,
-            'response': {
-                'directAccess': {
-                    'statusCode': 200,
-                    'headers': u'200 OK\ncontent-length: 44\naccept-ranges: bytes\n ...',
-                    'state': u'UP',
+        response = [
+            {
+                "timestamp": 1452706246,
+                "location": u"https://www.ovh.com/fr/news/logos/with-baseline/logo-ovh-avec-150DPI.png",
+                "screenshotId": u"123456",
+                "phishingGrade": 0.0,
+                "phishingGradeDetails": {
+                    "category": "LEGIT",  # Can be "LEGIT" or "PHISHING"
+                    "grade": 0.0,  # Same as phishingGrade
+                    "comment": "no comment",
                 },
-                'proxyAccess': {
-                    'proxyAddr': u'1.2.3.4',
-                    'statusCode': 200,
-                    'headers': u'200 OK\ncontent-length: 44\naccept-ranges: bytes\n ...',
-                    'state': u'UP',
-                }
+                "score": 0,
+                "response": {
+                    "directAccess": {
+                        "statusCode": 200,
+                        "headers": u"200 OK\ncontent-length: 44\naccept-ranges: bytes\n ...",
+                        "state": u"UP",
+                    },
+                    "proxyAccess": {
+                        "proxyAddr": u"1.2.3.4",
+                        "statusCode": 200,
+                        "headers": u"200 OK\ncontent-length: 44\naccept-ranges: bytes\n ...",
+                        "state": u"UP",
+                    },
+                },
             }
-        }]
+        ]
         return response
 
     def post_feedback(self, screenshot_id, isphishing):
@@ -99,7 +102,7 @@ class DefaultPhishingService(PhishingServiceBase):
             :rtype: bool
             :raises `cerberus.services.phishing.base.PhishingServiceException`
         """
-        return {'viewed': False, 'views': []}
+        return {"viewed": False, "views": []}
 
     def block_url(self, url, report):
         """
@@ -129,8 +132,5 @@ class DefaultPhishingService(PhishingServiceBase):
             :rtype: dict
             :raises `cerberus.services.phishing.base.PhishingServiceException`
         """
-        response = {
-            'url': url,
-            'headers': '200 OK\ncontent-length: 24187',
-        }
+        response = {"url": url, "headers": "200 OK\ncontent-length: 24187"}
         return response

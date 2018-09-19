@@ -24,17 +24,17 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'takedown@entura.co.uk',
-    'fallback': False,
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:IP\s*addresses\s*:\s*\n*|OVH\s*IP\s*Address\s*)' + Parser.ipv4_re,
+    "email": "takedown@entura.co.uk",
+    "fallback": False,
+    "regexp": {
+        "ips": {
+            "pattern": r"(?:IP\s*addresses\s*:\s*\n*|OVH\s*IP\s*Address\s*)"
+            + Parser.ipv4_re
         },
-        'urls': {
-            'pattern': r'(?:that\s*point\s*to\s*infringing\s*works\s*:\s*\n*|Infringing\s*URLs\s*\/\s*Identifiers\s*:\s*\n*)' + Parser.url_re,
+        "urls": {
+            "pattern": r"(?:that\s*point\s*to\s*infringing\s*works\s*:\s*\n*|Infringing\s*URLs\s*\/\s*Identifiers\s*:\s*\n*)"
+            + Parser.url_re
         },
-        'category': {
-            'value': 'Copyright',
-        },
+        "category": {"value": "Copyright"},
     },
 }

@@ -24,16 +24,10 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'notices@ifpi.org',
-    'regexp': {
-        'REF': {
-            'pattern': r'(?:Ref\s*:\s*)(\w+)\s',
-        },
-        'urls': {
-            'pattern': r'(?:Ref\s*:\s*)' + Parser.url_re,
-        },
-        'category': {
-            'value': 'Copyright',
-        },
+    "email": "notices@ifpi.org",
+    "regexp": {
+        "REF": {"pattern": r"(?:Ref\s*:\s*)(\w+)\s"},
+        "urls": {"pattern": r"(?:Ref\s*:\s*)" + Parser.url_re},
+        "category": {"value": "Copyright"},
     },
 }

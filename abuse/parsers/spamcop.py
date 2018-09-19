@@ -24,16 +24,12 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': '*@reports.spamcop.net',
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:Email from\s*)' + Parser.ipv4_re,
+    "email": "*@reports.spamcop.net",
+    "regexp": {
+        "ips": {"pattern": r"(?:Email from\s*)" + Parser.ipv4_re},
+        "urls": {
+            "pattern": r"(?:Spamvertised\s*web\s*site\s*:\s*)" + Parser.url_re + "\\n*"
         },
-        'urls': {
-            'pattern': r'(?:Spamvertised\s*web\s*site\s*:\s*)' + Parser.url_re + '\\n*',
-        },
-        'category': {
-            'value': 'Spam',
-        },
+        "category": {"value": "Spam"},
     },
 }

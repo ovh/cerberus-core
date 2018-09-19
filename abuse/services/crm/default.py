@@ -26,43 +26,41 @@ from datetime import datetime
 
 from netaddr import IPAddress
 
-from .base import (CRMServiceBase, CRMServiceException,
-                   DefendantClass, ServiceClass)
+from .base import CRMServiceBase, CRMServiceException, DefendantClass, ServiceClass
 from ...utils import networking
 
 JOHN_DOE = {
-    'email': 'john.doe@example.com',
-    'customerId': 'john.doe.42',
-    'firstname': 'John',
-    'name': 'Doe',
-    'city': 'Paris',
-    'country': 'FR',
-    'address': '1 rue de la mer',
-    'legalForm': 'individual',
-    'zip': '75000',
-    'lang': 'FR',
-    'creationDate': datetime.fromtimestamp(1444336416),
-    'state': 'active',
+    "email": "john.doe@example.com",
+    "customerId": "john.doe.42",
+    "firstname": "John",
+    "name": "Doe",
+    "city": "Paris",
+    "country": "FR",
+    "address": "1 rue de la mer",
+    "legalForm": "individual",
+    "zip": "75000",
+    "lang": "FR",
+    "creationDate": datetime.fromtimestamp(1444336416),
+    "state": "active",
 }
 
 DEFAULT_SERVICE = {
-    'serviceId': '123456',
-    'name': 'example',
-    'domain': 'www.example.com',
-    'componentType': 'HOSTING',
-    'componentSubType': 'WEB',
-    'reference': 'hosting.pro.2016',
+    "serviceId": "123456",
+    "name": "example",
+    "domain": "www.example.com",
+    "componentType": "HOSTING",
+    "componentSubType": "WEB",
+    "reference": "hosting.pro.2016",
 }
 
-SERVICES = {
-    'john.doe.42': [DEFAULT_SERVICE]
-}
+SERVICES = {"john.doe.42": [DEFAULT_SERVICE]}
 
 
 class DefaultCRMService(CRMServiceBase):
     """
         Default, numb, implementation of CustomerDaoBase
     """
+
     def __init__(self, config, logger=None):
         pass
 
@@ -82,7 +80,7 @@ class DefaultCRMService(CRMServiceBase):
             ips = [
                 ip
                 for ip in ips
-                if networking.get_ip_network(ip) == 'managed'
+                if networking.get_ip_network(ip) == "managed"
                 and not IPAddress(ip).is_private()
             ]
             if ips:
@@ -91,16 +89,16 @@ class DefaultCRMService(CRMServiceBase):
                     DefendantClass(**JOHN_DOE),
                     ips=ips,
                     urls=[],
-                    fqdn=[]
+                    fqdn=[],
                 )
         elif urls:
-            if 'http://www.cdnproxy-protected-domain.com/testcdn' not in urls:
+            if "http://www.cdnproxy-protected-domain.com/testcdn" not in urls:
                 response = get_default_struct(
                     ServiceClass(DEFAULT_SERVICE),
                     DefendantClass(**JOHN_DOE),
                     ips=[],
                     urls=urls,
-                    fqdn=[]
+                    fqdn=[],
                 )
         elif fqdn:
             response = get_default_struct(
@@ -108,7 +106,7 @@ class DefaultCRMService(CRMServiceBase):
                 DefendantClass(**JOHN_DOE),
                 ips=[],
                 urls=[],
-                fqdn=fqdn
+                fqdn=fqdn,
             )
 
         return response
@@ -122,10 +120,10 @@ class DefaultCRMService(CRMServiceBase):
             :rtype: `cerberus.services.crm.base.DefendantClass`
             :raises `cerberus.services.crm.base.CRMServiceException`: if error
         """
-        if customer_id == JOHN_DOE['customerId']:
+        if customer_id == JOHN_DOE["customerId"]:
             return DefendantClass(**JOHN_DOE)
         else:
-            raise CRMServiceException('Customer not found')
+            raise CRMServiceException("Customer not found")
 
     def get_service_infos(self, service_id):
         """
@@ -136,10 +134,10 @@ class DefaultCRMService(CRMServiceBase):
             :rtype: `cerberus.services.crm.base.ServiceClass`
             :raises `cerberus.services.crm.base.CRMServiceException`: if error
         """
-        if service_id == DEFAULT_SERVICE['serviceId']:
+        if service_id == DEFAULT_SERVICE["serviceId"]:
             return ServiceClass(**DEFAULT_SERVICE)
         else:
-            raise CRMServiceException('Customer not found')
+            raise CRMServiceException("Customer not found")
 
     def get_customer_services(self, customer_id):
         """
@@ -164,13 +162,10 @@ class DefaultCRMService(CRMServiceBase):
             :rtype: list
             :raises `cerberus.services.crm.base.CRMServiceException`: if error
         """
-        if customer_id != JOHN_DOE['customerId']:
-            raise CRMServiceException('Customer not found')
+        if customer_id != JOHN_DOE["customerId"]:
+            raise CRMServiceException("Customer not found")
 
-        response = [{
-            'zone': 'EMEA',
-            'services': SERVICES[JOHN_DOE['customerId']]
-        }]
+        response = [{"zone": "EMEA", "services": SERVICES[JOHN_DOE["customerId"]]}]
         return response
 
     def get_customer_revenue(self, customer_id, *args, **kwargs):
@@ -182,12 +177,14 @@ def get_default_struct(service, defendant, ips=None, urls=None, fqdn=None):
     """
         Init returned struct
     """
-    return [{
-        'service': service,
-        'defendant': defendant,
-        'items': {
-            'ips': set(ips) if ips else set(),
-            'urls': set(urls) if urls else set(),
-            'fqdn': set(fqdn) if fqdn else set(),
+    return [
+        {
+            "service": service,
+            "defendant": defendant,
+            "items": {
+                "ips": set(ips) if ips else set(),
+                "urls": set(urls) if urls else set(),
+                "fqdn": set(fqdn) if fqdn else set(),
+            },
         }
-    }]
+    ]

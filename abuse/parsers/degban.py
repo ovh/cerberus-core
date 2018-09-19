@@ -24,13 +24,9 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'antipiracy@degban.com',
-    'regexp': {
-        'urls': {
-            'pattern': r'(?:(?:Link|Source)\s*:\s*)' + Parser.url_re,
-        },
-        'category': {
-            'value': 'Copyright',
-        },
+    "email": "antipiracy@degban.com",
+    "regexp": {
+        "urls": {"pattern": r"(?:(?:Link|Source)\s*:\s*)" + Parser.url_re},
+        "category": {"value": "Copyright"},
     },
 }

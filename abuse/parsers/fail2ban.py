@@ -24,14 +24,13 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'fail2ban',
-    'fallback': True,
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:We\s*have\s*detected\s*abuse\s*from\s*the\s*IP\s*address\s*|The\s*IP\s*)' + Parser.ipv4_re,
+    "email": "fail2ban",
+    "fallback": True,
+    "regexp": {
+        "ips": {
+            "pattern": r"(?:We\s*have\s*detected\s*abuse\s*from\s*the\s*IP\s*address\s*|The\s*IP\s*)"
+            + Parser.ipv4_re
         },
-        'category': {
-            'value': 'Intrusion'
-        },
+        "category": {"value": "Intrusion"},
     },
 }

@@ -35,11 +35,9 @@ def get_categories(**kwargs):
     """ Get all categories
     """
 
-    if 'user' in kwargs:
-        user = kwargs['user']
-        allowed = AbusePermission.filter(
-            user=user.id
-        ).values_list('category')
+    if "user" in kwargs:
+        user = kwargs["user"]
+        allowed = AbusePermission.filter(user=user.id).values_list("category")
         cats = Category.filter(name__in=allowed)
     else:
         cats = Category.all()
@@ -52,7 +50,7 @@ def show(cat):
     """
     result = Category.filter(name=cat)
     if not result:
-        raise NotFound('Category not found')
+        raise NotFound("Category not found")
 
     return model_to_dict(result[0])
 
@@ -63,7 +61,7 @@ def create(cat):
     try:
         category, _ = Category.get_or_create(**cat)
     except (FieldError, IntegrityError):
-        raise BadRequest('Invalid fields in body')
+        raise BadRequest("Invalid fields in body")
     return model_to_dict(category)
 
 
@@ -73,12 +71,12 @@ def update(cat, body):
     try:
         category = Category.get(name=cat)
     except (ObjectDoesNotExist, ValueError):
-        raise NotFound('Category not found')
+        raise NotFound("Category not found")
     try:
         Category.filter(pk=category.pk).update(**body)
         category = Category.get(pk=category.pk)
     except (FieldError, IntegrityError):
-        raise BadRequest('Invalid fields in body')
+        raise BadRequest("Invalid fields in body")
     return model_to_dict(category)
 
 
@@ -88,9 +86,9 @@ def destroy(cat):
     try:
         category = Category.get(name=cat)
     except (ObjectDoesNotExist, ValueError):
-        raise NotFound('Category not found')
+        raise NotFound("Category not found")
     try:
         category.delete()
-        return {'message': 'Category successfully removed'}
+        return {"message": "Category successfully removed"}
     except ProtectedError:
-        raise Forbidden('Category still referenced in reports/tickets')
+        raise Forbidden("Category still referenced in reports/tickets")

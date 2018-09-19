@@ -35,16 +35,31 @@ from django.template import Context, engines
 
 
 from . import helpers, Queues
-from ..models import (Category, Defendant, MassContactResult, Report,
-                      History, Service, Provider, ReportItem, User)
+from ..models import (
+    Category,
+    Defendant,
+    MassContactResult,
+    Report,
+    History,
+    Service,
+    Provider,
+    ReportItem,
+    User,
+)
 from ..services import CRMService, EmailService
 from ..utils import networking, pglocks
 
-django_template_engine = engines['django']
+django_template_engine = engines["django"]
 
 
-def mass_contact(ip_address=None, category=None, campaign_name=None,
-                 email_subject=None, email_body=None, user_id=None):
+def mass_contact(
+    ip_address=None,
+    category=None,
+    campaign_name=None,
+    email_subject=None,
+    email_body=None,
+    user_id=None,
+):
     """
         Try to identify customer based on `ip_address`, creates Cerberus ticket
         then send email to customer and finally close ticket.
@@ -72,10 +87,10 @@ def mass_contact(ip_address=None, category=None, campaign_name=None,
 
     # Create report/ticket
     if services:
-        logging.debug(unicode(
-            'creating report/ticket for ip address %s' % (ip_address)
-        ))
-        with pglocks.advisory_lock('cerberus_lock'):
+        logging.debug(
+            unicode("creating report/ticket for ip address %s" % (ip_address))
+        )
+        with pglocks.advisory_lock("cerberus_lock"):
             _create_contact_tickets(
                 services,
                 campaign_name,
@@ -83,50 +98,45 @@ def mass_contact(ip_address=None, category=None, campaign_name=None,
                 category,
                 email_subject,
                 email_body,
-                user
+                user,
             )
         return True
-    logging.debug(unicode(
-        'no service found for ip address %s' % (ip_address)
-    ))
+    logging.debug(unicode("no service found for ip address %s" % (ip_address)))
     return False
 
 
 @transaction.atomic
-def _create_contact_tickets(services, campaign_name, ip_address, category,
-                            email_subject, email_body, user):
+def _create_contact_tickets(
+    services, campaign_name, ip_address, category, email_subject, email_body, user
+):
 
     # Create fake report
-    report_subject = 'Campaign %s for ip %s' % (campaign_name, ip_address)
-    report_body = 'Campaign: %s\nIP Address: %s\n' % (campaign_name, ip_address)
-    filename = hashlib.sha256(report_body.encode('utf-8')).hexdigest()
+    report_subject = "Campaign %s for ip %s" % (campaign_name, ip_address)
+    report_body = "Campaign: %s\nIP Address: %s\n" % (campaign_name, ip_address)
+    filename = hashlib.sha256(report_body.encode("utf-8")).hexdigest()
     helpers.save_email(filename, report_body)
 
     for data in services:  # For identified (service, defendant, items) tuple
 
         # Create report
-        report = Report.create(**{
-            'provider': Provider.get_or_create_provider('mass_contact'),
-            'receivedDate': datetime.now(),
-            'subject': report_subject,
-            'body': report_body,
-            'category': category,
-            'filename': filename,
-            'status': 'Archived',
-            'defendant': Defendant.get_or_create_defendant(data['defendant']),
-            'service': Service.get_or_create_service(data['service']),
-        })
+        report = Report.create(
+            **{
+                "provider": Provider.get_or_create_provider("mass_contact"),
+                "receivedDate": datetime.now(),
+                "subject": report_subject,
+                "body": report_body,
+                "category": category,
+                "filename": filename,
+                "status": "Archived",
+                "defendant": Defendant.get_or_create_defendant(data["defendant"]),
+                "service": Service.get_or_create_service(data["service"]),
+            }
+        )
         History.log_new_report(report)
 
         # Create item
-        item_dict = {
-            'itemType': 'IP',
-            'report_id': report.id,
-            'rawItem': ip_address
-        }
-        item_dict.update(networking.get_reverses_for_item(
-            ip_address, nature='IP')
-        )
+        item_dict = {"itemType": "IP", "report_id": report.id, "rawItem": ip_address}
+        item_dict.update(networking.get_reverses_for_item(ip_address, nature="IP"))
         ReportItem.create(**item_dict)
 
         # Create ticket
@@ -137,33 +147,33 @@ def _create_contact_tickets(services, campaign_name, ip_address, category,
         _send_mass_contact_email(ticket, email_subject, email_body)
 
         # Close ticket/report
-        helpers.close_ticket(ticket, 'fixed_by_customer')
+        helpers.close_ticket(ticket, "fixed_by_customer")
 
 
 def _send_mass_contact_email(ticket, email_subject, email_body):
 
     template = django_template_engine.from_string(email_subject)
-    context = Context({
-        'publicId': ticket.publicId,
-        'service': ticket.service.name.replace('.', '[.]'),
-        'lang': ticket.defendant.details.lang,
-    })
+    context = Context(
+        {
+            "publicId": ticket.publicId,
+            "service": ticket.service.name.replace(".", "[.]"),
+            "lang": ticket.defendant.details.lang,
+        }
+    )
     subject = template.render(context)
 
     template = django_template_engine.from_string(email_body)
-    context = Context({
-        'publicId': ticket.publicId,
-        'service': ticket.service.name.replace('.', '[.]'),
-        'lang': ticket.defendant.details.lang,
-    })
+    context = Context(
+        {
+            "publicId": ticket.publicId,
+            "service": ticket.service.name.replace(".", "[.]"),
+            "lang": ticket.defendant.details.lang,
+        }
+    )
     body = template.render(context)
 
     EmailService.send_email(
-        ticket,
-        ticket.defendant.details.email,
-        subject,
-        body,
-        'MassContact',
+        ticket, ticket.defendant.details.email, subject, body, "MassContact"
     )
 
 
@@ -181,16 +191,16 @@ def check_mass_contact_result(result_campaign_id=None, jobs=None):
         job = Queues.default.fetch_job(job_id)
         if not job:
             continue
-        while job.status.lower() == 'queued':
+        while job.status.lower() == "queued":
             sleep(0.5)
         result.append(job.result)
 
     count = Counter(result)
-    campaign_result.state = 'Done'
+    campaign_result.state = "Done"
     campaign_result.matchingCount = count[True]
     campaign_result.notMatchingCount = count[False]
     campaign_result.failedCount = count[None]
     campaign_result.save()
-    logging.info(unicode(
-        'MassContact campaign {} finished'.format(campaign_result.campaign.id)
-    ))
+    logging.info(
+        unicode("MassContact campaign {} finished".format(campaign_result.campaign.id))
+    )

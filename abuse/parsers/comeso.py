@@ -24,17 +24,11 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'tracy@comeso.org',
-    'fallback': False,
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:IP\s*:\s*)' + Parser.ipv4_re,
-        },
-        'urls': {
-            'pattern': r'(?:URLs\s*:\s*\n*)' + Parser.url_re,
-        },
-        'category': {
-            'value': 'Copyright',
-        },
+    "email": "tracy@comeso.org",
+    "fallback": False,
+    "regexp": {
+        "ips": {"pattern": r"(?:IP\s*:\s*)" + Parser.ipv4_re},
+        "urls": {"pattern": r"(?:URLs\s*:\s*\n*)" + Parser.url_re},
+        "category": {"value": "Copyright"},
     },
 }

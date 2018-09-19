@@ -38,6 +38,7 @@ class CRMServiceException(Exception):
 
         .. py:class:: CRMServiceException
     """
+
     def __init__(self, message):
         super(CRMServiceException, self).__init__(message)
 
@@ -46,6 +47,7 @@ class CRMServiceBase(object):
     """
         Service that interact with your CRM, RDBMS, or API.
     """
+
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
@@ -262,7 +264,8 @@ class DefendantClass(dict):
     """
         Customer dynamic dict mapping (syntactic sugar)
     """
-    fields = DefendantRevision.get_fields() + ['customerId']
+
+    fields = DefendantRevision.get_fields() + ["customerId"]
 
     def __getattr__(self, name):
         if name in self:
@@ -273,7 +276,7 @@ class DefendantClass(dict):
     def __setattr__(self, name, value):
         if name in self.fields:
             try:  # Try to convert internal CRM/API/DB datetime format
-                self[name] = datetime.strptime(value, '%Y-%m-%d %X').timetuple()
+                self[name] = datetime.strptime(value, "%Y-%m-%d %X").timetuple()
                 self[name] = int(mktime(self[name]))
             except (TypeError, ValueError):
                 self[name] = value
@@ -304,6 +307,7 @@ class ServiceClass(dict):
     """
         Service dynamic dict mapping (syntactic sugar)
     """
+
     fields = Service.get_fields()
 
     def __getattr__(self, name):
@@ -315,7 +319,7 @@ class ServiceClass(dict):
     def __setattr__(self, name, value):
         if name in self.fields:
             try:  # Try to convert internal CRM/API/DB datetime format
-                self[name] = datetime.strptime(value, '%Y-%m-%d %X').timetuple()
+                self[name] = datetime.strptime(value, "%Y-%m-%d %X").timetuple()
                 self[name] = int(mktime(self[name]))
             except (TypeError, ValueError):
                 self[name] = value

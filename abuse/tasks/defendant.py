@@ -32,12 +32,10 @@ def refresh_defendant_infos(defendant_id=None):
     defendant = Defendant.get(id=defendant_id)
 
     fresh_infos = CRMService.get_customer_infos(defendant.customerId)
-    fresh_infos.pop('customerId', None)
+    fresh_infos.pop("customerId", None)
 
     if DefendantRevision.filter(**fresh_infos).count():
-        revision = DefendantRevision.filter(
-            **fresh_infos
-        ).last()
+        revision = DefendantRevision.filter(**fresh_infos).last()
     else:
         revision = DefendantRevision.create(**fresh_infos)
         DefendantHistory.create(defendant=defendant, revision=revision)

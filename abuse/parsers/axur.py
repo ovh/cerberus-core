@@ -28,7 +28,7 @@ from abuse.parsers import Parser
 
 def pretransform(content):
 
-    pattern = r'Category\s*:\s*(.*)'
+    pattern = r"Category\s*:\s*(.*)"
     search = re.search(pattern, content, re.IGNORECASE & re.MULTILINE)
     if search:
         return search.group()
@@ -36,22 +36,23 @@ def pretransform(content):
 
 
 TEMPLATE = {
-    'fallback': False,
-    'email': '*@axur.com',
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:IP\s*:\s*|IP\s*Address\s*:\s*)' + Parser.ipv4_re,
+    "fallback": False,
+    "email": "*@axur.com",
+    "regexp": {
+        "ips": {"pattern": r"(?:IP\s*:\s*|IP\s*Address\s*:\s*)" + Parser.ipv4_re},
+        "urls": {
+            "pattern": r"(?:Infringing\s*Material\s*:\s*|URL\s*:\s*|The\s*artifact\s*is\s*hosted\s*at\s*:\s*|We\s*detected\s*a\s*phishing\s*web\s*site\s*hosted\s*at\s*:\s*)"
+            + Parser.url_re
         },
-        'urls': {
-            'pattern': r'(?:Infringing\s*Material\s*:\s*|URL\s*:\s*|The\s*artifact\s*is\s*hosted\s*at\s*:\s*|We\s*detected\s*a\s*phishing\s*web\s*site\s*hosted\s*at\s*:\s*)' + Parser.url_re,
+        "fqdn": {
+            "pattern": r"(?:Host\s*:\s*|the\s*domain\s*name|It\s*has\s*come\s*to\s*our\s*attention\s*that\s*the\s*website\s*|C&C\s*)("
+            + Parser.domain_re
+            + "):*"
         },
-        'fqdn': {
-            'pattern': r'(?:Host\s*:\s*|the\s*domain\s*name|It\s*has\s*come\s*to\s*our\s*attention\s*that\s*the\s*website\s*|C&C\s*)(' + Parser.domain_re + '):*',
-        },
-        'category': {
-            'pretransform': pretransform,
-            'pattern': r'((.|\n|\r|\t)*)',
-            'transform': True
+        "category": {
+            "pretransform": pretransform,
+            "pattern": r"((.|\n|\r|\t)*)",
+            "transform": True,
         },
     },
 }

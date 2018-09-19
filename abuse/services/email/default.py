@@ -36,11 +36,16 @@ from django.db.models import ObjectDoesNotExist
 from django.template.base import TemplateEncodingError
 from django.template import engines, TemplateSyntaxError
 
-from .base import (EMAIL_VALID_CATEGORIES, Email, EmailServiceBase,
-                   EmailServiceException, PrefetchedEmail)
+from .base import (
+    EMAIL_VALID_CATEGORIES,
+    Email,
+    EmailServiceBase,
+    EmailServiceException,
+    PrefetchedEmail,
+)
 from ...models import MailTemplate, Ticket
 
-django_template_engine = engines['django']
+django_template_engine = engines["django"]
 
 html2text.ignore_images = True
 html2text.images_to_alt = True
@@ -51,6 +56,7 @@ class TemplateNeedProofError(Exception):
     """
         TemplateNeedProofError
     """
+
     def __init__(self, message):
         super(TemplateNeedProofError, self).__init__(message)
 
@@ -61,28 +67,32 @@ class DefaultMailerService(EmailServiceBase):
 
         For this example implementation, emails are not send.
     """
+
     def __init__(self, config, logger=None):
 
         try:
-            directory = config['directory']
+            directory = config["directory"]
             if not os.path.exists(directory):
                 os.makedirs(directory)
         except Exception as ex:
             raise EmailServiceException(ex)
 
-        self._db_conn = sqlite3.connect(directory + '/cerberus_emails_test.db')
+        self._db_conn = sqlite3.connect(directory + "/cerberus_emails_test.db")
         cursor = self._db_conn.cursor()
-        cursor.execute('''CREATE TABLE IF NOT EXISTS emails
-                (publicid text, sender text, recipient text, subject text, body text, category text, timestamp int)''')
+        cursor.execute(
+            """CREATE TABLE IF NOT EXISTS emails
+                (publicid text, sender text, recipient text, subject text, body text, category text, timestamp int)"""
+        )
         self._db_conn.commit()
 
         self._html_parser = html2text.HTML2Text()
         self._html_parser.body_width = 0
-        self._sender_email = 'ticket+{}.{}@example.com'
-        self._sender_re = re.compile(r'ticket\+(\w+).(\w+)@example.com', re.I)
+        self._sender_email = "ticket+{}.{}@example.com"
+        self._sender_re = re.compile(r"ticket\+(\w+).(\w+)@example.com", re.I)
 
-    def send_email(self, ticket, recipient, subject,
-                   body, category, sender=None, attachments=None):
+    def send_email(
+        self, ticket, recipient, subject, body, category, sender=None, attachments=None
+    ):
         """
             Send a email.
 
@@ -104,30 +114,22 @@ class DefaultMailerService(EmailServiceBase):
             try:
                 ticket = Ticket.get(id=ticket)
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-                raise EmailServiceException(
-                    'Ticket {} not be found'.format(ticket)
-                )
+                raise EmailServiceException("Ticket {} not be found".format(ticket))
         try:
             validate_email(recipient.strip())
         except (AttributeError, TypeError, ValueError, ValidationError):
-            raise EmailServiceException('Invalid email')
+            raise EmailServiceException("Invalid email")
 
         if category:
             category = category.title()
             if category not in EMAIL_VALID_CATEGORIES:
                 raise EmailServiceException(
-                    'Invalid email category {}'.format(category)
+                    "Invalid email category {}".format(category)
                 )
 
         sender = sender or self._sender_email.format(ticket.publicId, category)
         self._update_emails_db(
-            ticket.publicId,
-            sender,
-            recipient,
-            subject,
-            body,
-            category,
-            int(time())
+            ticket.publicId, sender, recipient, subject, body, category, int(time())
         )
 
         # You can fill this method
@@ -146,9 +148,7 @@ class DefaultMailerService(EmailServiceBase):
             try:
                 ticket = Ticket.get(id=ticket)
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-                raise EmailServiceException(
-                    'Ticket {} not be found'.format(ticket)
-                )
+                raise EmailServiceException("Ticket {} not be found".format(ticket))
 
         self._check_ticket_emails(ticket)
 
@@ -157,28 +157,33 @@ class DefaultMailerService(EmailServiceBase):
         emails = []
         try:
             query = cursor.execute(
-                'SELECT sender, recipient, subject, body, category, timestamp FROM emails WHERE publicid=?',
-                param
+                "SELECT sender, recipient, subject, body, category, timestamp FROM emails WHERE publicid=?",
+                param,
             )
             for row in query:
-                body = self._html_parser.handle(row[3].replace('<br>\n', '\n').replace('\n', '<br>\n'))
-                emails.append(Email(
-                    sender=row[0],
-                    recipient=row[1],
-                    subject=row[2],
-                    body=re.sub(r'^(\s*\n){2,}', '\n', body, flags=re.MULTILINE),
-                    category=row[4],
-                    created=row[5],
-                    attachments=[],
-                ))
+                body = self._html_parser.handle(
+                    row[3].replace("<br>\n", "\n").replace("\n", "<br>\n")
+                )
+                emails.append(
+                    Email(
+                        sender=row[0],
+                        recipient=row[1],
+                        subject=row[2],
+                        body=re.sub(r"^(\s*\n){2,}", "\n", body, flags=re.MULTILINE),
+                        category=row[4],
+                        created=row[5],
+                        attachments=[],
+                    )
+                )
         except (KeyError, ValueError) as ex:
             raise EmailServiceException(ex)
 
         emails = sorted(emails, key=lambda k: k.created)
         return emails
 
-    def attach_external_answer(self, ticket, sender, recipient, subject,
-                               body, category, attachments=None):
+    def attach_external_answer(
+        self, ticket, sender, recipient, subject, body, category, attachments=None
+    ):
         """
             Can be usefull if an answer for a ticket come
             from Phone/CRM/API/CustomerUX ...
@@ -196,26 +201,18 @@ class DefaultMailerService(EmailServiceBase):
             try:
                 ticket = Ticket.get(id=ticket)
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-                raise EmailServiceException(
-                    'Ticket {} not be found'.format(ticket)
-                )
+                raise EmailServiceException("Ticket {} not be found".format(ticket))
 
         if category:
             category = category.title()
             if category not in EMAIL_VALID_CATEGORIES:
                 raise EmailServiceException(
-                    'Invalid email category {}'.format(category)
+                    "Invalid email category {}".format(category)
                 )
 
         self._check_ticket_emails(ticket)
         self._update_emails_db(
-            ticket.publicId,
-            sender,
-            recipient,
-            subject,
-            body,
-            category,
-            int(time())
+            ticket.publicId, sender, recipient, subject, body, category, int(time())
         )
 
     def is_email_ticket_answer(self, email):
@@ -233,15 +230,14 @@ class DefaultMailerService(EmailServiceBase):
         tickets = []
         if all((email.provider, email.recipients, email.subject, email.body)):
             tickets = self._identify_ticket_from_meta(
-                email.provider,
-                email.recipients,
-                email.subject,
+                email.provider, email.recipients, email.subject
             )
         return tickets
 
     @staticmethod
-    def prefetch_email_from_template(ticket, template_codename, lang='EN',
-                                     acknowledged_report=None):
+    def prefetch_email_from_template(
+        ticket, template_codename, lang="EN", acknowledged_report=None
+    ):
         """
             Try to fill email template with ticket meta
 
@@ -259,28 +255,26 @@ class DefaultMailerService(EmailServiceBase):
             try:
                 ticket = Ticket.get(id=ticket)
             except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-                raise EmailServiceException(
-                    'Ticket {} not be found'.format(ticket)
-                )
+                raise EmailServiceException("Ticket {} not be found".format(ticket))
         try:
             mail_template = MailTemplate.get(codename=template_codename)
         except (ObjectDoesNotExist, ValueError):
             raise EmailServiceException(
-                'Email template {} not found'.format(template_codename)
+                "Email template {} not found".format(template_codename)
             )
 
         try:
             subject = generate_subject(ticket, mail_template)
             body = generate_body(ticket, mail_template)
         except (TemplateEncodingError, TemplateSyntaxError):
-            raise EmailServiceException('Error while generating template')
+            raise EmailServiceException("Error while generating template")
 
         return PrefetchedEmail(
             sender=None,
-            recipients=['test@example.com'],
+            recipients=["test@example.com"],
             subject=subject,
             body=body,
-            category=mail_template.recipientType
+            category=mail_template.recipientType,
         )
 
     def close_thread(self, ticket):
@@ -299,19 +293,19 @@ class DefaultMailerService(EmailServiceBase):
         """
         cursor = self._db_conn.cursor()
         param = (ticket.publicId,)
-        cursor.execute('SELECT COUNT(*) FROM emails WHERE publicid=?', param)
+        cursor.execute("SELECT COUNT(*) FROM emails WHERE publicid=?", param)
         if not cursor.fetchone()[0]:
-            raise EmailServiceException('No emails found for this ticket')
+            raise EmailServiceException("No emails found for this ticket")
 
-    def _update_emails_db(self, public_id, sender, recipient,
-                          subject, body, category, timestamp):
+    def _update_emails_db(
+        self, public_id, sender, recipient, subject, body, category, timestamp
+    ):
         """
             Insert emails infos in db
         """
-        data = (public_id, sender, recipient,
-                subject, body, category, timestamp)
+        data = (public_id, sender, recipient, subject, body, category, timestamp)
         cursor = self._db_conn.cursor()
-        cursor.execute('INSERT INTO emails VALUES (?,?,?,?,?,?,?)', data)
+        cursor.execute("INSERT INTO emails VALUES (?,?,?,?,?,?,?)", data)
         self._db_conn.commit()
 
     def _identify_ticket_from_meta(self, provider, recipients, subject):
@@ -331,11 +325,16 @@ class DefaultMailerService(EmailServiceBase):
                 public_id = str(search.group(1)).lower()
                 try:
                     ticket = Ticket.get(publicId__iexact=public_id)
-                    extract = recipient.split('@')[0].split('.')[1].title()
+                    extract = recipient.split("@")[0].split(".")[1].title()
                     if extract in EMAIL_VALID_CATEGORIES:
                         category = extract
-                except (AttributeError, IndexError, TypeError,
-                        ValueError, ObjectDoesNotExist):
+                except (
+                    AttributeError,
+                    IndexError,
+                    TypeError,
+                    ValueError,
+                    ObjectDoesNotExist,
+                ):
                     continue
             if all((ticket, category, recipient)):
                 tickets_infos.append((ticket, category, recipient))
@@ -354,28 +353,26 @@ def send_email_with_backend(ticket):
 
 def generate_body(ticket, mail_template):
 
-    reports = ticket.reportTicket.all().order_by('-receivedDate')[:10]
+    reports = ticket.reportTicket.all().order_by("-receivedDate")[:10]
     phishing_urls = []
     for rep in reports:
         phishing_urls.extend(rep.get_attached_urls())
 
-    proof = ticket.proof.all().values_list(
-        'content', flat=True
-    ).distinct()
+    proof = ticket.proof.all().values_list("content", flat=True).distinct()
 
     template = django_template_engine.from_string(mail_template.body)
 
-    return template.render({
-        'publicId': ticket.publicId,
-        'phishingUrls':  list(set(phishing_urls)),
-        'proof': proof,
-    })
+    return template.render(
+        {
+            "publicId": ticket.publicId,
+            "phishingUrls": list(set(phishing_urls)),
+            "proof": proof,
+        }
+    )
 
 
 def generate_subject(ticket, mail_template):
 
     template = django_template_engine.from_string(mail_template.subject)
 
-    return template.render({
-        'publicId': ticket.publicId,
-    })
+    return template.render({"publicId": ticket.publicId})

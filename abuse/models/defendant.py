@@ -1,7 +1,12 @@
 
 from django.core.exceptions import ValidationError
-from django.db.models import (BooleanField, DateTimeField, EmailField,
-                              ForeignKey, ManyToManyField)
+from django.db.models import (
+    BooleanField,
+    DateTimeField,
+    EmailField,
+    ForeignKey,
+    ManyToManyField,
+)
 
 from .base import CerberusModel
 from .helpers import TruncatedCharField
@@ -11,6 +16,7 @@ class DefendantCreationError(Exception):
     """
         Raise if there's multiple defendant with same customerId in DB
     """
+
     def __init__(self, message):
         super(DefendantCreationError, self).__init__(message)
 
@@ -19,6 +25,7 @@ class DefendantRevision(CerberusModel):
     """
         Effective detailed informations for a `abuse.models.Defendant`
     """
+
     email = EmailField(db_index=True, null=False, max_length=255)
     spareEmail = EmailField(null=True, max_length=255)
     firstname = TruncatedCharField(null=True, max_length=255)
@@ -45,9 +52,10 @@ class Defendant(CerberusModel):
         A person or entity (one of your customer) accused of something illegal
         by `abuse.models.Provider`
     """
+
     customerId = TruncatedCharField(db_index=True, null=False, max_length=255)
     details = ForeignKey(DefendantRevision, null=False)
-    tags = ManyToManyField('Tag', null=True)
+    tags = ManyToManyField("Tag", null=True)
 
     @classmethod
     def get_or_create_defendant(cls, infos):
@@ -57,7 +65,7 @@ class Defendant(CerberusModel):
         try:
             fields = DefendantRevision.get_fields()
             _infos = {k: v for k, v in infos.iteritems() if k in fields}
-            customer_id = infos.get('customerId')
+            customer_id = infos.get("customerId")
         except (AttributeError, KeyError, TypeError) as ex:
             raise DefendantCreationError(str(ex))
 
@@ -71,20 +79,16 @@ class Defendant(CerberusModel):
             defendants = Defendant.filter(customerId=customer_id)
             if len(defendants) > 1:
                 raise DefendantCreationError(
-                    'multiple defendants for customerId {}'.format(customer_id)
+                    "multiple defendants for customerId {}".format(customer_id)
                 )
             if len(defendants) == 1:
                 defendant = defendants.first()
             else:
-                defendant = cls.create(
-                    customerId=customer_id, details=revision
-                )
+                defendant = cls.create(customerId=customer_id, details=revision)
             if created:
                 defendant.details = revision
                 defendant.save()
-                DefendantHistory.create(
-                    defendant=defendant, revision=revision
-                )
+                DefendantHistory.create(defendant=defendant, revision=revision)
         except ValidationError as ex:
             raise ValidationError(str(ex))
         return defendant
@@ -95,6 +99,7 @@ class DefendantHistory(CerberusModel):
         Log `abuse.models.Defendant`/`abuse.models.DefendantRevision`
         mapping changes
     """
+
     defendant = ForeignKey(Defendant, null=False)
     revision = ForeignKey(DefendantRevision, null=False)
     date = DateTimeField(auto_now=True)
@@ -104,5 +109,6 @@ class DefendantComment(CerberusModel):
     """
         Comment on a `abuse.models.Defendant`
     """
-    defendant = ForeignKey(Defendant, null=False, related_name='comments')
-    comment = ForeignKey('Comment', null=False)
+
+    defendant = ForeignKey(Defendant, null=False, related_name="comments")
+    comment = ForeignKey("Comment", null=False)

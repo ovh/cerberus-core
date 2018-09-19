@@ -28,7 +28,7 @@ from abuse.parsers import Parser
 
 def pretransform_url(content):
 
-    pattern = r'(?:tcUrl\s*:\s*|URL_Base\s*>\s*)(.*)\?'
+    pattern = r"(?:tcUrl\s*:\s*|URL_Base\s*>\s*)(.*)\?"
     search = re.search(pattern, content, re.IGNORECASE)
     if search:
         return search.group()
@@ -36,18 +36,13 @@ def pretransform_url(content):
 
 
 TEMPLATE = {
-    'fallback': False,
-    'email': '*@friendmts.com',
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:ip\s*address\s*:\s*|IP_Address\s*>\s*)' + Parser.ipv4_re,
+    "fallback": False,
+    "email": "*@friendmts.com",
+    "regexp": {
+        "ips": {
+            "pattern": r"(?:ip\s*address\s*:\s*|IP_Address\s*>\s*)" + Parser.ipv4_re
         },
-        'urls': {
-            'pretransform': pretransform_url,
-            'pattern': Parser.url_re
-        },
-        'category': {
-            'value': 'Copyright'
-        },
+        "urls": {"pretransform": pretransform_url, "pattern": Parser.url_re},
+        "category": {"value": "Copyright"},
     },
 }

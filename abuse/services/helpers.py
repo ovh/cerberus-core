@@ -10,6 +10,7 @@ class InvalidFormatError(Exception):
 
         .. py:class:: InvalidFormatError
     """
+
     def __init__(self, message):
         super(InvalidFormatError, self).__init__(message)
 
@@ -19,6 +20,7 @@ class SchemaNotFound(Exception):
 
         .. py:class:: SchemaNotFound
     """
+
     def __init__(self, message):
         super(SchemaNotFound, self).__init__(message)
 
@@ -33,15 +35,14 @@ def validate_implementation_response(func):
                 schema(response)
             return response
         except (AttributeError, KeyError, TypeError, ValueError):
-            raise SchemaNotFound(
-                "Schema not found for '{}'".format(func.__name__)
-            )
+            raise SchemaNotFound("Schema not found for '{}'".format(func.__name__))
         except (Invalid, MultipleInvalid) as ex:
             raise InvalidFormatError(
-                'Given data is not compliant to {} schema: {}'.format(
+                "Given data is not compliant to {} schema: {}".format(
                     func.__name__, str(ex)
                 )
             )
+
     return wrapper
 
 
@@ -52,21 +53,20 @@ class WrongImplementationException(Exception):
 
         .. py:class:: WrongImplementationException
     """
+
     def __init__(self, message):
         super(WrongImplementationException, self).__init__(message)
 
 
 def get_implementation_class(base_name, impl_name):
 
-    module, cls = impl_name.rsplit('.', 1)
+    module, cls = impl_name.rsplit(".", 1)
     module = import_module(module)
     impl_class = getattr(module, cls)
 
     if getmro(impl_class)[-2].__name__ != base_name:
         raise WrongImplementationException(
-            'class {} does not inherit {}'.format(
-                impl_name, base_name
-            )
+            "class {} does not inherit {}".format(impl_name, base_name)
         )
 
     return impl_class

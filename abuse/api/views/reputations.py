@@ -27,51 +27,47 @@ from flask import Blueprint, request
 from ..decorators import validate_body
 from ..controllers import reputation as ReputationController
 
-reputation_views = Blueprint(
-    'reputation_views',
-    __name__,
-    url_prefix='/reputation'
-)
+reputation_views = Blueprint("reputation_views", __name__, url_prefix="/reputation")
 
 
-@reputation_views.route('/ip/<ip_addr>/rbl', methods=['GET'])
+@reputation_views.route("/ip/<ip_addr>/rbl", methods=["GET"])
 def get_ip_rbl_reputation(ip_addr=None):
     """ Get live rbl reputation for ip
     """
     return ReputationController.get_ip_rbl_reputation(ip_addr)
 
 
-@reputation_views.route('/ip/<ip_addr>/internal', methods=['GET'])
+@reputation_views.route("/ip/<ip_addr>/internal", methods=["GET"])
 def get_ip_internal_reputation(ip_addr=None):
     """ Get live internal reputation for ip
     """
     return ReputationController.get_ip_internal_reputation(ip_addr)
 
 
-@reputation_views.route('/ip/<ip_addr>/external', methods=['GET'])
+@reputation_views.route("/ip/<ip_addr>/external", methods=["GET"])
 def get_ip_external_reputation(ip_addr=None):
     """ Get live external reputation for ip
     """
     return ReputationController.get_ip_external_reputation(ip_addr)
 
 
-@reputation_views.route('/url/external', methods=['POST'])
-@validate_body({'url': unicode})
+@reputation_views.route("/url/external", methods=["POST"])
+@validate_body({"url": unicode})
 def get_url_external_reputation():
     """ Get live external reputation for url
     """
     body = request.get_json()
-    return ReputationController.get_url_external_reputation(body['url'])
+    return ReputationController.get_url_external_reputation(body["url"])
 
 
-@reputation_views.route('/ip/<ip_addr>/external/<source>', methods=['GET'])
+@reputation_views.route("/ip/<ip_addr>/external/<source>", methods=["GET"])
 def get_ip_external_detail(ip_addr=None, source=None):
     """ Get detail for external reputation
     """
     return ReputationController.get_ip_external_detail(ip_addr, source)
 
 
-@reputation_views.route('/ip/<ip_addr>/tool', methods=['GET'])
+@reputation_views.route("/ip/<ip_addr>/tool", methods=["GET"])
 def get_ip_tool(ip_addr=None):
     """ Get tool
     """

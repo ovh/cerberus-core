@@ -24,21 +24,12 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'default',
-    'fallback': False,
-    'regexp': {
-        'ips': {
-            'pattern': Parser.ipv4_re,
-        },
-        'fqdn': {
-            'pattern': Parser.fqdn_re,
-        },
-        'urls': {
-            'pattern': Parser.url_re,
-        },
-        'category': {
-            'pattern': r'((.|\n|\r|\t)*)',
-            'transform': True
-        },
+    "email": "default",
+    "fallback": False,
+    "regexp": {
+        "ips": {"pattern": Parser.ipv4_re},
+        "fqdn": {"pattern": Parser.fqdn_re},
+        "urls": {"pattern": Parser.url_re},
+        "category": {"pattern": r"((.|\n|\r|\t)*)", "transform": True},
     },
 }

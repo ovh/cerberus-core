@@ -30,10 +30,10 @@ from ..decorators import admin_required, validate_body
 from ..controllers import categories as CategoriesController
 
 
-category_views = Blueprint('category_views', __name__)
+category_views = Blueprint("category_views", __name__)
 
 
-@category_views.route('/categories', methods=['GET'])
+@category_views.route("/categories", methods=["GET"])
 @Cache.cached(timeout=43200)
 def get_all_categories():
     """
@@ -63,7 +63,7 @@ def get_all_categories():
     return CategoriesController.get_categories()
 
 
-@category_views.route('/categories/<category>', methods=['GET'])
+@category_views.route("/categories/<category>", methods=["GET"])
 def get_category(category=None):
     """
     Returns the description of given `category`
@@ -93,14 +93,10 @@ def get_category(category=None):
     return CategoriesController.show(category)
 
 
-@category_views.route('/categories', methods=['POST'])
+@category_views.route("/categories", methods=["POST"])
 @admin_required
-@Cache.invalidate(routes=['/api/categories'])
-@validate_body({
-    'description': unicode,
-    'name': unicode,
-    'label': unicode
-})
+@Cache.invalidate(routes=["/api/categories"])
+@validate_body({"description": unicode, "name": unicode, "label": unicode})
 def create_category():
     """
     Create a new category
@@ -116,14 +112,10 @@ def create_category():
     return CategoriesController.create(body)
 
 
-@category_views.route('/categories/<category>', methods=['PUT'])
+@category_views.route("/categories/<category>", methods=["PUT"])
 @admin_required
-@Cache.invalidate(routes=['/api/categories'])
-@validate_body({
-    'description': unicode,
-    Optional('name'): unicode,
-    'label': unicode
-})
+@Cache.invalidate(routes=["/api/categories"])
+@validate_body({"description": unicode, Optional("name"): unicode, "label": unicode})
 def update_category(category=None):
     """
     Update given `category`
@@ -153,9 +145,9 @@ def update_category(category=None):
     return CategoriesController.update(category, body)
 
 
-@category_views.route('/categories/<category>', methods=['DELETE'])
+@category_views.route("/categories/<category>", methods=["DELETE"])
 @admin_required
-@Cache.invalidate(routes=['/api/categories'])
+@Cache.invalidate(routes=["/api/categories"])
 def delete_category(category=None):
     """
     Delete given `category`
@@ -173,7 +165,7 @@ def delete_category(category=None):
     return CategoriesController.destroy(category)
 
 
-@category_views.route('/my-categories', methods=['GET'])
+@category_views.route("/my-categories", methods=["GET"])
 def get_user_categories():
     """
     Get allowed categories for logged user

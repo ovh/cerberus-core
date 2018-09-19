@@ -47,6 +47,7 @@ class EmailThreadTemplateNotFound(Exception):
     """
         EmailThreadTemplateNotFound
     """
+
     def __init__(self, message):
         super(EmailThreadTemplateNotFound, self).__init__(message)
 
@@ -55,6 +56,7 @@ class EmailThreadTemplateSyntaxError(Exception):
     """
         EmailThreadTemplateSyntaxError
     """
+
     def __init__(self, message):
         super(EmailThreadTemplateSyntaxError, self).__init__(message)
 
@@ -71,8 +73,8 @@ def dehtmlify(body):
     html.body_width = 0
 
     try:
-        body = html.handle(body.replace('\r\n', '<br/>'))
-        body = re.sub(r'^(\s*\n){2,}', '\n', body, flags=re.MULTILINE)
+        body = html.handle(body.replace("\r\n", "<br/>"))
+        body = re.sub(r"^(\s*\n){2,}", "\n", body, flags=re.MULTILINE)
     except HTMLParseError:
         pass
 
@@ -87,12 +89,11 @@ def string_to_underscore_case(string):
         :rtype: str
         :return: The converted string
     """
-    tmp = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', tmp).lower()
+    tmp = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", string)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", tmp).lower()
 
 
-def get_attachment_storage_filename(hash_string=None,
-                                    content=None, filename=None):
+def get_attachment_storage_filename(hash_string=None, content=None, filename=None):
     """
         Generate a pseudo-unique filename based on content and filename
 
@@ -105,8 +106,8 @@ def get_attachment_storage_filename(hash_string=None,
     if content:
         hash_string = hashlib.sha256(content).hexdigest()
 
-    storage_filename = hash_string + '-attach-'
-    storage_filename = storage_filename.encode('utf-8')
+    storage_filename = hash_string + "-attach-"
+    storage_filename = storage_filename.encode("utf-8")
     storage_filename = storage_filename + filename
     return storage_filename
 
@@ -122,45 +123,50 @@ def get_email_thread_content(ticket, emails):
         :return: The content and the filetype
     """
     try:
-        template = MailTemplate.objects.get(codename='email_thread')
-        is_html = '<html>' in template.body
+        template = MailTemplate.objects.get(codename="email_thread")
+        is_html = "<html>" in template.body
     except ObjectDoesNotExist:
-        raise EmailThreadTemplateNotFound('Unable to email_thread')
+        raise EmailThreadTemplateNotFound("Unable to email_thread")
 
     _emails = []
 
     for email in emails:
-        _emails.append(Email(
-            sender=email.sender,
-            subject=email.subject,
-            recipient=email.recipient,
-            body=email.body.replace('\n', '<br>') if is_html else email.body,
-            created=datetime.fromtimestamp(email.created),
-            category=None,
-            attachments=None,
-        ))
+        _emails.append(
+            Email(
+                sender=email.sender,
+                subject=email.subject,
+                recipient=email.recipient,
+                body=email.body.replace("\n", "<br>") if is_html else email.body,
+                created=datetime.fromtimestamp(email.created),
+                category=None,
+                attachments=None,
+            )
+        )
 
     domain = ticket.service.name if ticket.service else None
-    django_template_engine = engines['django']
+    django_template_engine = engines["django"]
 
     try:
         template = django_template_engine.from_string(template.body)
-        content = template.render({
-            'publicId': ticket.publicId,
-            'creationDate': ticket.creationDate,
-            'domain': domain,
-            'emails': _emails
-        })
+        content = template.render(
+            {
+                "publicId": ticket.publicId,
+                "creationDate": ticket.creationDate,
+                "domain": domain,
+                "emails": _emails,
+            }
+        )
     except (TemplateEncodingError, TemplateSyntaxError) as ex:
         raise EmailThreadTemplateSyntaxError(str(ex))
 
     try:
         import pdfkit
         from pyvirtualdisplay import Display
+
         display = Display(visible=0, size=(1366, 768))
         display.start()
         content = pdfkit.from_string(content, False)
         display.stop()
-        return content, 'application/pdf'
+        return content, "application/pdf"
     except:
-        return content.encode('utf-8'), 'text/html' if is_html else 'text/plain'
+        return content.encode("utf-8"), "text/html" if is_html else "text/plain"

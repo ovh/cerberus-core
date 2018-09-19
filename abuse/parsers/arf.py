@@ -24,21 +24,12 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'feedback-report',
-    'fallback': True,
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:Source-IP\s*:\s*)' + Parser.ipv4_re,
-        },
-        'urls': {
-            'pattern': r'(?:Reported-URI\s*:\s*)' + Parser.url_re,
-        },
-        'fqdn': {
-            'pattern': r'(?:Reported-Domain\s*:\s*)' + Parser.fqdn_re,
-        },
-        'category': {
-            'pattern': r'(?:Feedback-Type\s*:\s*)(.*)',
-            'transform': True
-        },
+    "email": "feedback-report",
+    "fallback": True,
+    "regexp": {
+        "ips": {"pattern": r"(?:Source-IP\s*:\s*)" + Parser.ipv4_re},
+        "urls": {"pattern": r"(?:Reported-URI\s*:\s*)" + Parser.url_re},
+        "fqdn": {"pattern": r"(?:Reported-Domain\s*:\s*)" + Parser.fqdn_re},
+        "category": {"pattern": r"(?:Feedback-Type\s*:\s*)(.*)", "transform": True},
     },
 }

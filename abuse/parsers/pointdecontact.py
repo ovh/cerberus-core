@@ -28,7 +28,7 @@ from abuse.parsers import Parser
 
 def pretransform(content):
 
-    pattern = r'URL.*signal.*:\s*<\/b>\s*<br>(.|\n)*?Bonjour'
+    pattern = r"URL.*signal.*:\s*<\/b>\s*<br>(.|\n)*?Bonjour"
     search = re.search(pattern, content, re.IGNORECASE & re.MULTILINE)
     if search:
         return search.group()
@@ -36,15 +36,10 @@ def pretransform(content):
 
 
 TEMPLATE = {
-    'fallback': False,
-    'email': 'contact@pointdecontact.net',
-    'regexp': {
-        'urls': {
-            'pretransform': pretransform,
-            'pattern': Parser.url_re,
-        },
-        'category': {
-            'value': 'Illegal'
-        },
+    "fallback": False,
+    "email": "contact@pointdecontact.net",
+    "regexp": {
+        "urls": {"pretransform": pretransform, "pattern": Parser.url_re},
+        "category": {"value": "Illegal"},
     },
 }

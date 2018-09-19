@@ -33,118 +33,121 @@ class TestUtils(CerberusTest):
     """
         Unit tests for utils
     """
+
     @classmethod
     def setUpClass(cls):
 
-        cls.gethostbyname_ex_return = ('mock', 'mock', ['127.0.0.1'])
-        cls.gethostbyname_return = '127.0.0.1'
-        cls.gethostbyaddr_return = 'ovh.com'
+        cls.gethostbyname_ex_return = ("mock", "mock", ["127.0.0.1"])
+        cls.gethostbyname_return = "127.0.0.1"
+        cls.gethostbyaddr_return = "ovh.com"
 
     def test_success_1_get_url_hostname(self):
 
-        url = 'https://www.ovh.com'
+        url = "https://www.ovh.com"
         hostname = networking.get_url_hostname(url)
-        self.assertEqual('www.ovh.com', hostname)
+        self.assertEqual("www.ovh.com", hostname)
 
     def test_success_2_get_url_hostname(self):
 
-        url = 'ftps://www.ovh.com/test.fr'
+        url = "ftps://www.ovh.com/test.fr"
         hostname = networking.get_url_hostname(url)
-        self.assertEqual('www.ovh.com', hostname)
+        self.assertEqual("www.ovh.com", hostname)
 
     def test_fail_get_url_hostname(self):
 
-        url = 'ftpseoiapze:/itopze/www.ovh.com/test.fr'
+        url = "ftpseoiapze:/itopze/www.ovh.com/test.fr"
         hostname = networking.get_url_hostname(url)
         self.assertEqual(None, hostname)
 
     def test_ambiguous_get_url_hostname(self):
 
-        url = 'www.ovh.com/test.fr'
+        url = "www.ovh.com/test.fr"
         hostname = networking.get_url_hostname(url)
         self.assertEqual(None, hostname)
 
-    @patch('socket.gethostbyname_ex')
+    @patch("socket.gethostbyname_ex")
     def test_success_get_ips_from_url(self, socket_mock):
 
         socket_mock.return_value = self.gethostbyname_ex_return
-        url = 'http://www.ovh.com/test'
+        url = "http://www.ovh.com/test"
         ips = networking.get_ips_from_url(url)
-        self.assertIn('127.0.0.1', ips)
+        self.assertIn("127.0.0.1", ips)
 
-    @patch('socket.gethostbyname_ex')
+    @patch("socket.gethostbyname_ex")
     def test_fail_1_get_ips_from_url(self, socket_mock):
 
         socket_mock.return_value = self.gethostbyname_ex_return
-        url = 'www.ovh.com/test'
+        url = "www.ovh.com/test"
         ips = networking.get_ips_from_url(url)
         self.assertEqual(None, ips)
 
     def test_fail_2_get_ips_from_url(self):
 
-        url = 'ovh'
+        url = "ovh"
         ips = networking.get_ips_from_url(url)
         self.assertEqual(None, ips)
 
-    @patch('socket.gethostbyname_ex')
+    @patch("socket.gethostbyname_ex")
     def test_success_get_ips_from_fqdn(self, socket_mock):
 
         socket_mock.return_value = self.gethostbyname_ex_return
-        url = 'www.ovh.com'
+        url = "www.ovh.com"
         ips = networking.get_ips_from_fqdn(url)
-        self.assertIn('127.0.0.1', ips)
+        self.assertIn("127.0.0.1", ips)
 
-    @patch('socket.gethostbyname_ex')
+    @patch("socket.gethostbyname_ex")
     def test_fail_1_get_ips_from_fqdn(self, socket_mock):
 
         socket_mock.return_value = self.gethostbyname_ex_return
-        url = 'www.ovh.com/test'
+        url = "www.ovh.com/test"
         ips = networking.get_ips_from_fqdn(url)
-        self.assertIn('127.0.0.1', ips)
+        self.assertIn("127.0.0.1", ips)
 
     def test_fail_2_get_ips_from_fqdn(self):
 
-        url = 'ovh.aze'
+        url = "ovh.aze"
         ips = networking.get_ips_from_fqdn(url)
         self.assertEqual(None, ips)
 
     def test_fail_get_reverses(self):
 
-        reverses = networking.get_reverses_for_item('ovh')
+        reverses = networking.get_reverses_for_item("ovh")
         self.assertEqual(1, len(reverses))
-        reverses = networking.get_reverses_for_item('ovh', nature='IP')
+        reverses = networking.get_reverses_for_item("ovh", nature="IP")
         self.assertEqual(1, len(reverses))
-        reverses = networking.get_reverses_for_item('ovh.aze', nature='test')
+        reverses = networking.get_reverses_for_item("ovh.aze", nature="test")
         self.assertEqual(1, len(reverses))
-        reverses = networking.get_reverses_for_item('ovh.fr', nature='IP')
+        reverses = networking.get_reverses_for_item("ovh.fr", nature="IP")
         self.assertEqual(1, len(reverses))
-        reverses = networking.get_reverses_for_item('ovh.fr', nature='URL')
+        reverses = networking.get_reverses_for_item("ovh.fr", nature="URL")
         self.assertEqual(1, len(reverses))
 
-    @patch('socket.gethostbyname')
-    @patch('socket.gethostbyaddr')
+    @patch("socket.gethostbyname")
+    @patch("socket.gethostbyaddr")
     def test_success_get_reverses(self, byname_mock, byaddr_mock):
 
         byname_mock.return_value = self.gethostbyname_return
         byaddr_mock.return_value = self.gethostbyaddr_return
-        reverses = networking.get_reverses_for_item('ovh.com', nature='FQDN')
+        reverses = networking.get_reverses_for_item("ovh.com", nature="FQDN")
         self.assertEqual(3, len(reverses))
-        self.assertIn('fqdnResolved', reverses)
-        self.assertEqual('ovh.com', reverses['fqdnResolved'])
+        self.assertIn("fqdnResolved", reverses)
+        self.assertEqual("ovh.com", reverses["fqdnResolved"])
 
     def test_dehtmlify(self):
 
         # No need to cover all html2text lib
-        content = '<html><body>test\r\ntest<img src ...../></body></html>'
+        content = "<html><body>test\r\ntest<img src ...../></body></html>"
         content = text.dehtmlify(content)
-        self.assertIn('test', content)
-        self.assertNotIn('img', content)
-        self.assertNotIn('<', content)
+        self.assertIn("test", content)
+        self.assertNotIn("img", content)
+        self.assertNotIn("<", content)
 
-    @patch('requests.get')
+    @patch("requests.get")
     def test_request_wrapper(self, mock_urlopen):
 
         mocked_response = Response()
         mocked_response.status_code = 500
         mock_urlopen.return_value = mocked_response
-        self.assertRaises(request.RequestException, lambda: request.get('https://www.ovh.com'))
+        self.assertRaises(
+            request.RequestException, lambda: request.get("https://www.ovh.com")
+        )

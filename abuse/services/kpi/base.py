@@ -32,6 +32,7 @@ class KPIServiceException(Exception):
 
         .. py:class:: KPIServiceException
     """
+
     def __init__(self, message):
         super(KPIServiceException, self).__init__(message)
 

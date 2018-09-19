@@ -33,7 +33,7 @@ from django.db.models import ObjectDoesNotExist
 from ..models import Ticket, History
 
 
-@click.command('ticket-workflow', short_help='Runs Cerberus ticket workflow.')
+@click.command("ticket-workflow", short_help="Runs Cerberus ticket workflow.")
 @with_appcontext
 def run_workflow():
 
@@ -46,33 +46,37 @@ def update_waiting():
         Update waiting answer tickets
     """
     now = int(time())
-    for ticket in Ticket.filter(status='WaitingAnswer'):
+    for ticket in Ticket.filter(status="WaitingAnswer"):
         if now > int(mktime(ticket.snoozeStart.timetuple()) + ticket.snoozeDuration):
             click.echo("[workflow] set status 'Alarm' for ticket %d" % ticket.id)
             _check_auto_unassignation(ticket)
-            ticket.set_status('Alarm')
+            ticket.set_status("Alarm")
 
 
 def _check_auto_unassignation(ticket):
 
-    history = ticket.ticketHistory.filter(
-        actionType='ChangeStatus'
-    ).order_by('-date').values_list(
-        'ticketStatus',
-        flat=True
-    )[:3]
+    history = (
+        ticket.ticketHistory.filter(actionType="ChangeStatus")
+        .order_by("-date")
+        .values_list("ticketStatus", flat=True)[:3]
+    )
 
-    status_sequence = ['WaitingAnswer', 'Alarm', 'WaitingAnswer']
+    status_sequence = ["WaitingAnswer", "Alarm", "WaitingAnswer"]
 
     try:
         models_config = ticket.treatedBy.operator.role.modelsAuthorizations
-        unassigned_on_multiple_alarm = models_config['ticket']['unassignedOnMultipleAlarm']
-        if (unassigned_on_multiple_alarm and len(history) == 3 and
-                all([status_sequence[i] == history[i] for i in xrange(3)])):
+        unassigned_on_multiple_alarm = models_config["ticket"][
+            "unassignedOnMultipleAlarm"
+        ]
+        if (
+            unassigned_on_multiple_alarm
+            and len(history) == 3
+            and all([status_sequence[i] == history[i] for i in xrange(3)])
+        ):
             History.log_ticket_action(
                 ticket=ticket,
-                action='change_treatedby',
-                previous_value=ticket.treatedBy
+                action="change_treatedby",
+                previous_value=ticket.treatedBy,
             )
             ticket.treatedBy = None
             ticket.alarm = True
@@ -86,10 +90,13 @@ def update_paused():
         Update paused tickets
     """
     now = int(time())
-    for ticket in Ticket.filter(status='Paused'):
+    for ticket in Ticket.filter(status="Paused"):
         if now > int(mktime(ticket.pauseStart.timetuple()) + ticket.pauseDuration):
-            if (ticket.previousStatus == 'WaitingAnswer' and ticket.snoozeDuration and
-                    ticket.snoozeStart):
+            if (
+                ticket.previousStatus == "WaitingAnswer"
+                and ticket.snoozeDuration
+                and ticket.snoozeStart
+            ):
                 ticket.snoozeDuration += (datetime.now() - ticket.pauseStart).seconds
 
             ticket.pauseStart = None

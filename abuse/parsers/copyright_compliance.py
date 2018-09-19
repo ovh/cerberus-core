@@ -24,16 +24,10 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': '*@copyright-compliance.com',
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:IP Address\s*:\s*)' + Parser.ipv4_re,
-        },
-        'urls': {
-            'pattern': r'(?:URL\s*:\s*)' + Parser.url_re,
-        },
-        'category': {
-            'value': 'Copyright',
-        },
+    "email": "*@copyright-compliance.com",
+    "regexp": {
+        "ips": {"pattern": r"(?:IP Address\s*:\s*)" + Parser.ipv4_re},
+        "urls": {"pattern": r"(?:URL\s*:\s*)" + Parser.url_re},
+        "category": {"value": "Copyright"},
     },
 }

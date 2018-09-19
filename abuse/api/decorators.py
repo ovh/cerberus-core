@@ -36,38 +36,36 @@ Schemas = {}
 def admin_required(func):
     """ Check if user is admin
     """
+
     @wraps(func)
     def check_admin(*args, **kwargs):
-        if not g.user.operator.role.codename == 'admin':
-            raise Forbidden('Forbidden')
+        if not g.user.operator.role.codename == "admin":
+            raise Forbidden("Forbidden")
         return func(*args, **kwargs)
+
     return check_admin
 
 
 def perm_required(func):
     """ Check if user can do actions
     """
+
     @wraps(func)
     def check_perm(*args, **kwargs):
-        if 'report' in kwargs:
+        if "report" in kwargs:
             MiscController.check_perms(
-                method=request.method,
-                user=g.user,
-                report=kwargs['report']
+                method=request.method, user=g.user, report=kwargs["report"]
             )
-        if 'ticket' in kwargs:
+        if "ticket" in kwargs:
             MiscController.check_perms(
-                method=request.method,
-                user=g.user,
-                ticket=kwargs['ticket']
+                method=request.method, user=g.user, ticket=kwargs["ticket"]
             )
-        if 'defendant' in kwargs and request.method != 'GET':
+        if "defendant" in kwargs and request.method != "GET":
             MiscController.check_perms(
-                method=request.method,
-                user=g.user,
-                defendant=kwargs['defendant']
+                method=request.method, user=g.user, defendant=kwargs["defendant"]
             )
         return func(*args, **kwargs)
+
     return check_perm
 
 
@@ -75,6 +73,7 @@ def validate_body(schema_desc):
     """
         Validate json body
     """
+
     def real_decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -84,8 +83,10 @@ def validate_body(schema_desc):
                     Schemas[func.__name__] = Schema(schema_desc, required=True)
                 Schemas[func.__name__](body)
             except (Invalid, MultipleInvalid):
-                msg = 'Missing or invalid field(s) in body'
+                msg = "Missing or invalid field(s) in body"
                 raise BadRequest(msg)
             return func(*args, **kwargs)
+
         return wrapper
+
     return real_decorator

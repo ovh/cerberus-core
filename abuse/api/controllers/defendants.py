@@ -31,9 +31,16 @@ from django.db.models import ObjectDoesNotExist, Q
 from django.forms.models import model_to_dict
 from werkzeug.exceptions import BadRequest, InternalServerError, NotFound
 
-from ...models import (Defendant, DefendantComment,
-                       DefendantHistory, DefendantRevision,
-                       History, Report, Tag, Ticket)
+from ...models import (
+    Defendant,
+    DefendantComment,
+    DefendantHistory,
+    DefendantRevision,
+    History,
+    Report,
+    Tag,
+    Ticket,
+)
 from ...services.helpers import InvalidFormatError, SchemaNotFound
 from ...services.crm import CRMService, CRMServiceException
 from ...tasks import enqueue
@@ -46,31 +53,38 @@ def show(defendant_id):
     try:
         defendant = Defendant.get(id=defendant_id)
     except (ObjectDoesNotExist, ValueError):
-        raise NotFound('Defendant not found')
+        raise NotFound("Defendant not found")
 
     # BTW, refresh defendant infos
-    enqueue('defendant.refresh_defendant_infos', defendant_id=defendant.id)
+    enqueue("defendant.refresh_defendant_infos", defendant_id=defendant.id)
 
     # Flat details
     defendant_dict = model_to_dict(defendant)
     details = model_to_dict(defendant.details)
-    details.pop('id')  # Else override defendant id with details id ....
+    details.pop("id")  # Else override defendant id with details id ....
     defendant_dict.update(details)
 
     # Add comments
-    defendant_dict['comments'] = [{
-        'id': c.comment.id,
-        'user': c.comment.user.username,
-        'date': mktime(c.comment.date.timetuple()),
-        'comment': c.comment.comment
-    } for c in DefendantComment.filter(defendant=defendant.id).order_by('-comment__date')]
+    defendant_dict["comments"] = [
+        {
+            "id": c.comment.id,
+            "user": c.comment.user.username,
+            "date": mktime(c.comment.date.timetuple()),
+            "comment": c.comment.comment,
+        }
+        for c in DefendantComment.filter(defendant=defendant.id).order_by(
+            "-comment__date"
+        )
+    ]
 
-    if defendant_dict.get('creationDate', None):
-        defendant_dict['creationDate'] = defendant_dict['creationDate'].strftime("%d/%m/%y")
+    if defendant_dict.get("creationDate", None):
+        defendant_dict["creationDate"] = defendant_dict["creationDate"].strftime(
+            "%d/%m/%y"
+        )
 
     # Add tags
     tags = Defendant.get(id=defendant.id).tags.all()
-    defendant_dict['tags'] = [model_to_dict(tag) for tag in tags]
+    defendant_dict["tags"] = [model_to_dict(tag) for tag in tags]
 
     return defendant_dict
 
@@ -83,7 +97,7 @@ def add_tag(defendant_id, body, user):
         defendant = Defendant.get(id=defendant_id)
 
         if defendant.__class__.__name__ != tag.tagType:
-            raise BadRequest('Invalid tag for defendant')
+            raise BadRequest("Invalid tag for defendant")
 
         for defendt in Defendant.filter(customerId=defendant.customerId):
 
@@ -91,15 +105,11 @@ def add_tag(defendant_id, body, user):
             defendt.save()
             for ticket in defendt.ticketDefendant.all():
                 History.log_ticket_action(
-                    ticket=ticket,
-                    action='add_tag',
-                    user=user,
-                    tag_name=tag.name
+                    ticket=ticket, action="add_tag", user=user, tag_name=tag.name
                 )
 
-    except (KeyError, FieldError, IntegrityError,
-            ObjectDoesNotExist, ValueError):
-        raise NotFound('Defendant or tag not found')
+    except (KeyError, FieldError, IntegrityError, ObjectDoesNotExist, ValueError):
+        raise NotFound("Defendant or tag not found")
 
     return show(defendant_id)
 
@@ -117,14 +127,11 @@ def remove_tag(defendant_id, tag_id, user):
 
             for ticket in defendt.ticketDefendant.all():
                 History.log_ticket_action(
-                    ticket=ticket,
-                    action='remove_tag',
-                    user=user,
-                    tag_name=tag.name
+                    ticket=ticket, action="remove_tag", user=user, tag_name=tag.name
                 )
 
     except (ObjectDoesNotExist, FieldError, IntegrityError, ValueError):
-        raise NotFound('Defendant or tag not found')
+        raise NotFound("Defendant or tag not found")
 
     return show(defendant_id)
 
@@ -143,7 +150,7 @@ def get_or_create(customer_id=None):
     except (TypeError, ObjectDoesNotExist):
         try:
             revision_infos = CRMService.get_customer_infos(customer_id)
-            revision_infos.pop('customerId', None)
+            revision_infos.pop("customerId", None)
         except (CRMServiceException, InvalidFormatError, SchemaNotFound):
             return None
 
@@ -157,34 +164,28 @@ def get_or_create(customer_id=None):
 def get_defendant_top20():
     """ Get top 20 defendant with open tickets/reports
     """
-    ticket = Ticket.filter(
-        ~Q(defendant=None),
-        ~Q(status='Closed')
-    ).values_list(
-        'defendant__id',
-        flat=True
+    ticket = Ticket.filter(~Q(defendant=None), ~Q(status="Closed")).values_list(
+        "defendant__id", flat=True
     )
     ticket = Counter(ticket).most_common(20)
 
-    report = Report.filter(
-        ~Q(defendant=None),
-        ~Q(status='Archived')
-    ).values_list(
-        'defendant__id',
-        flat=True
+    report = Report.filter(~Q(defendant=None), ~Q(status="Archived")).values_list(
+        "defendant__id", flat=True
     )
     report = Counter(report).most_common(20)
 
-    res = {'report': [], 'ticket': []}
+    res = {"report": [], "ticket": []}
     for kind in res:
         for defendant_id, count in locals()[kind]:
             defendant = Defendant.get(id=defendant_id)
-            res[kind].append({
-                'id': defendant.id,
-                'customerId': defendant.customerId,
-                'email': defendant.details.email,
-                'count': count
-            })
+            res[kind].append(
+                {
+                    "id": defendant.id,
+                    "customerId": defendant.customerId,
+                    "email": defendant.details.email,
+                    "count": count,
+                }
+            )
     return res
 
 

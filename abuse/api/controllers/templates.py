@@ -30,8 +30,7 @@ from django.core.exceptions import FieldError
 from django.db import IntegrityError
 from django.db.models import ObjectDoesNotExist, ProtectedError, Q
 from django.forms.models import model_to_dict
-from werkzeug.exceptions import (BadRequest, Forbidden, NotFound,
-                                 InternalServerError)
+from werkzeug.exceptions import BadRequest, Forbidden, NotFound, InternalServerError
 
 from ...models import MailTemplate, Ticket
 from ...services.email import EmailService, EmailServiceException
@@ -45,21 +44,35 @@ def get_templates(**kwargs):
     """
     filters = {}
 
-    if kwargs.get('filters'):
+    if kwargs.get("filters"):
         try:
-            filters = json.loads(unquote(unquote(kwargs['filters'])))
+            filters = json.loads(unquote(unquote(kwargs["filters"])))
         except (ValueError, SyntaxError, TypeError) as ex:
             raise BadRequest(str(ex.message))
     try:
         where = generate_request_filter(filters)
-    except (AttributeError, KeyError, IndexError, FieldError,
-            SyntaxError, TypeError, ValueError) as ex:
+    except (
+        AttributeError,
+        KeyError,
+        IndexError,
+        FieldError,
+        SyntaxError,
+        TypeError,
+        ValueError,
+    ) as ex:
         raise BadRequest(str(ex.message))
 
     try:
-        templates = MailTemplate.filter(where).order_by('name')
-    except (AttributeError, KeyError, IndexError, FieldError,
-            SyntaxError, TypeError, ValueError) as ex:
+        templates = MailTemplate.filter(where).order_by("name")
+    except (
+        AttributeError,
+        KeyError,
+        IndexError,
+        FieldError,
+        SyntaxError,
+        TypeError,
+        ValueError,
+    ) as ex:
         raise BadRequest(str(ex.message))
 
     return [model_to_dict(t) for t in templates]
@@ -69,16 +82,15 @@ def generate_request_filter(filters):
     """ Generates filters from filter query string
     """
     where = [Q()]
-    if 'where' in filters and len(filters['where']):
+    if "where" in filters and len(filters["where"]):
         try:
-            keys = set(k for k in filters['where'])
-            if 'in' in keys:
-                for i in filters['where']['in']:
+            keys = set(k for k in filters["where"])
+            if "in" in keys:
+                for i in filters["where"]["in"]:
                     for key, val in i.iteritems():
                         where.append(reduce(operator.or_, [Q(**{key: i}) for i in val]))
             where = reduce(operator.and_, where)
-        except (AttributeError, KeyError, FieldError,
-                SyntaxError, ValueError) as ex:
+        except (AttributeError, KeyError, FieldError, SyntaxError, ValueError) as ex:
             raise BadRequest(str(ex.message))
     else:
         where = reduce(operator.and_, where)
@@ -92,7 +104,7 @@ def show(template_id):
     try:
         template = MailTemplate.get(id=template_id)
     except (ObjectDoesNotExist, ValueError):
-        raise NotFound('Template not found')
+        raise NotFound("Template not found")
     return model_to_dict(template)
 
 
@@ -100,10 +112,10 @@ def create(body):
     """ Create email templates
     """
     try:
-        body['codename'] = body['name'].strip().lower().replace(' ', '_')
+        body["codename"] = body["name"].strip().lower().replace(" ", "_")
         template, _ = MailTemplate.get_or_create(**body)
     except (KeyError, FieldError, IntegrityError):
-        raise BadRequest('Invalid fields in body')
+        raise BadRequest("Invalid fields in body")
     return model_to_dict(template)
 
 
@@ -113,12 +125,12 @@ def update(template_id, body):
     try:
         template = MailTemplate.get(id=template_id)
     except (ObjectDoesNotExist, ValueError):
-        raise NotFound('Template not found')
+        raise NotFound("Template not found")
     try:
         MailTemplate.filter(pk=template.pk).update(**body)
         template = MailTemplate.get(pk=template.pk)
     except (FieldError, IntegrityError):
-        raise BadRequest('Invalid fields in body')
+        raise BadRequest("Invalid fields in body")
     return model_to_dict(template)
 
 
@@ -129,12 +141,12 @@ def destroy(template_id):
     try:
         template = MailTemplate.get(id=template_id)
     except (ObjectDoesNotExist, ValueError):
-        raise NotFound('Template not found')
+        raise NotFound("Template not found")
     try:
         template.delete()
-        return {'message': 'Email template successfully removed'}
+        return {"message": "Email template successfully removed"}
     except ProtectedError:
-        raise Forbidden('Mail template still referenced in reports/tickets')
+        raise Forbidden("Mail template still referenced in reports/tickets")
 
 
 def get_prefetch_template(ticket_id, template_id, lang=None, ack_report=None):
@@ -145,25 +157,22 @@ def get_prefetch_template(ticket_id, template_id, lang=None, ack_report=None):
         ticket = Ticket.get(id=ticket_id)
         mail_template = MailTemplate.get(id=template_id)
     except (ObjectDoesNotExist, ValueError):
-        raise NotFound('Ticket or email template not found')
+        raise NotFound("Ticket or email template not found")
 
-    if not lang and mail_template.recipientType != 'Defendant':
-        lang = 'EN'
+    if not lang and mail_template.recipientType != "Defendant":
+        lang = "EN"
 
     try:
         prefetched_email = EmailService.prefetch_email_from_template(
-            ticket,
-            mail_template.codename,
-            lang=lang,
-            acknowledged_report=ack_report,
+            ticket, mail_template.codename, lang=lang, acknowledged_report=ack_report
         )
     except EmailServiceException as ex:
         raise InternalServerError(str(ex))
 
     mail_template = model_to_dict(mail_template)
-    mail_template['to'] = prefetched_email.recipients
-    mail_template['subject'] = prefetched_email.subject
-    mail_template['body'] = prefetched_email.body
+    mail_template["to"] = prefetched_email.recipients
+    mail_template["subject"] = prefetched_email.subject
+    mail_template["body"] = prefetched_email.body
     return mail_template
 
 

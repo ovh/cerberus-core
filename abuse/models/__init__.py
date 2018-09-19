@@ -20,18 +20,37 @@
 
 from django.contrib.auth.models import User
 
-from .defendant import (Defendant, DefendantRevision,
-                        DefendantHistory, DefendantComment)
+from .defendant import Defendant, DefendantRevision, DefendantHistory, DefendantComment
 from .history import History
-from .misc import (ServiceAction, ServiceActionJob, Category, ApiRoute, Role,
-                   Operator, EmailFilter, EmailFilterTag,
-                   Resolution, AttachedDocument, Comment, Profile,
-                   AbusePermission, News, MailTemplate, Proof,
-                   TicketActionParams, TicketAction,
-                   TicketWorkflowPresetConfig, TicketWorkflowPreset,
-                   ItemScreenshotFeedback, ReportThreshold, MassContact,
-                   MassContactResult, StarredTicket, BusinessRules,
-                   BusinessRulesHistory)
+from .misc import (
+    ServiceAction,
+    ServiceActionJob,
+    Category,
+    ApiRoute,
+    Role,
+    Operator,
+    EmailFilter,
+    EmailFilterTag,
+    Resolution,
+    AttachedDocument,
+    Comment,
+    Profile,
+    AbusePermission,
+    News,
+    MailTemplate,
+    Proof,
+    TicketActionParams,
+    TicketAction,
+    TicketWorkflowPresetConfig,
+    TicketWorkflowPreset,
+    ItemScreenshotFeedback,
+    ReportThreshold,
+    MassContact,
+    MassContactResult,
+    StarredTicket,
+    BusinessRules,
+    BusinessRulesHistory,
+)
 from .provider import Provider
 from .report import Report
 from .reportitem import ReportItem

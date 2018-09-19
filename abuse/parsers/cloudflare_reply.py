@@ -24,17 +24,14 @@
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    'email': 'abusereply@cloudflare.com',
-    'regexp': {
-        'ips': {
-            'pattern': r'(?:currently\s*resolves\s*to\s*)' + Parser.ipv4_re,
+    "email": "abusereply@cloudflare.com",
+    "regexp": {
+        "ips": {"pattern": r"(?:currently\s*resolves\s*to\s*)" + Parser.ipv4_re},
+        "fqdn": {
+            "pattern": r"(?:the\s*domain\s*)("
+            + Parser.domain_re
+            + r")(?:\s*currently\s*resolves\s*to)"
         },
-        'fqdn': {
-            'pattern': r'(?:the\s*domain\s*)(' + Parser.domain_re + r')(?:\s*currently\s*resolves\s*to)',
-        },
-        'category': {
-            'pattern': r'((.|\n|\r|\t)*)',
-            'transform': True
-        },
+        "category": {"pattern": r"((.|\n|\r|\t)*)", "transform": True},
     },
 }

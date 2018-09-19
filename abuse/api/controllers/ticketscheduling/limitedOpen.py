@@ -33,8 +33,8 @@ from . import common
 from .abstract import TicketSchedulingAlgorithmBase
 from ....models import Ticket
 
-TODO_TICKET_STATUS_FILTERS = (['Open'],)
-TODO_TICKET_PRIORITY_FILTERS = ('Normal', 'Low')
+TODO_TICKET_STATUS_FILTERS = (["Open"],)
+TODO_TICKET_PRIORITY_FILTERS = ("Normal", "Low")
 TICKET_FIELDS = [fld.name for fld in Ticket._meta.fields]
 
 
@@ -42,30 +42,41 @@ class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
     """
         Class defining standard `abuse.models.Ticket` scheduling algorithm
     """
+
     __name__ = "LimitedOpenSchedulingAlgorithm"
 
     def count(self, **kwargs):
 
-        if kwargs.get('where'):
-            where = kwargs['where']
+        if kwargs.get("where"):
+            where = kwargs["where"]
             rejected = get_defendant_to_reject(where=where)
-            count = Ticket.objects.filter(
-                ~Q(defendant__in=rejected),
-                where,
-                escalated=False,
-                status='Open',
-                priority__in=TODO_TICKET_PRIORITY_FILTERS
-            ).order_by('id').distinct().count()
+            count = (
+                Ticket.objects.filter(
+                    ~Q(defendant__in=rejected),
+                    where,
+                    escalated=False,
+                    status="Open",
+                    priority__in=TODO_TICKET_PRIORITY_FILTERS,
+                )
+                .order_by("id")
+                .distinct()
+                .count()
+            )
         else:
             rejected = get_defendant_to_reject()
             where = [~Q(defendant__in=rejected)]
             where = reduce(operator.and_, where)
-            count = Ticket.objects.filter(
-                where,
-                escalated=False,
-                status='Open',
-                priority__in=TODO_TICKET_PRIORITY_FILTERS
-            ).order_by('id').distinct().count()
+            count = (
+                Ticket.objects.filter(
+                    where,
+                    escalated=False,
+                    status="Open",
+                    priority__in=TODO_TICKET_PRIORITY_FILTERS,
+                )
+                .order_by("id")
+                .distinct()
+                .count()
+            )
 
         return count
 
@@ -81,12 +92,12 @@ class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
                     By user, others then treatedBy nobody
         """
         filters = {}
-        if kwargs.get('filters'):
-            filters = kwargs['filters']
+        if kwargs.get("filters"):
+            filters = kwargs["filters"]
 
         try:
-            limit = int(filters['paginate']['resultsPerPage'])
-            offset = int(filters['paginate']['currentPage'])
+            limit = int(filters["paginate"]["resultsPerPage"])
+            offset = int(filters["paginate"]["currentPage"])
         except KeyError:
             limit = 10
             offset = 1
@@ -94,11 +105,11 @@ class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
         where = common.get_user_filters(user)
         where.extend(common.get_generic_filters(filters))
         where.append(Q(escalated=False))
-        order_by = ['modificationDate', '-reportTicket__tags__level']
+        order_by = ["modificationDate", "-reportTicket__tags__level"]
 
-        if filters.get('onlyUnassigned'):
+        if filters.get("onlyUnassigned"):
             where.append(Q(treatedBy=None))
-            treated_by_filters = [{'treatedBy': None}]
+            treated_by_filters = [{"treatedBy": None}]
         else:
             treated_by_filters = common.get_treated_by_filters(user)
 
@@ -108,11 +119,13 @@ class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
         where = list(set(where))
         where = reduce(operator.and_, where)
 
-        nb_record = Ticket.objects.filter(
-            where,
-            status='Open',
-            priority__in=TODO_TICKET_PRIORITY_FILTERS,
-        ).distinct().count()
+        nb_record = (
+            Ticket.objects.filter(
+                where, status="Open", priority__in=TODO_TICKET_PRIORITY_FILTERS
+            )
+            .distinct()
+            .count()
+        )
 
         res = []
         ids = set()
@@ -120,19 +133,27 @@ class LimitedOpenSchedulingAlgorithm(TicketSchedulingAlgorithmBase):
         for ticket_status in TODO_TICKET_STATUS_FILTERS:
             for priority in TODO_TICKET_PRIORITY_FILTERS:
                 for filters in treated_by_filters:
-                    tickets = get_specific_filtered_todo_tickets(where, ids, priority,
-                                                                 ticket_status, filters,
-                                                                 order_by, limit, offset)
-                    ids.update([t['id'] for t in tickets])
+                    tickets = get_specific_filtered_todo_tickets(
+                        where,
+                        ids,
+                        priority,
+                        ticket_status,
+                        filters,
+                        order_by,
+                        limit,
+                        offset,
+                    )
+                    ids.update([t["id"] for t in tickets])
                     res.extend(tickets)
                     if len(res) > limit * offset:
-                        return res[(offset - 1) * limit:limit * offset], nb_record
+                        return res[(offset - 1) * limit : limit * offset], nb_record
 
-        return res[(offset - 1) * limit:limit * offset], nb_record
+        return res[(offset - 1) * limit : limit * offset], nb_record
 
 
-def get_specific_filtered_todo_tickets(where, ids, priority, status,
-                                       treated_by, order_by, limit, offset):
+def get_specific_filtered_todo_tickets(
+    where, ids, priority, status, treated_by, order_by, limit, offset
+):
     """
         Returns a list of `abuse.models.Ticket`
         dict-mapping based on multiple filters
@@ -140,21 +161,21 @@ def get_specific_filtered_todo_tickets(where, ids, priority, status,
     res = []
 
     while True:
-        tickets = Ticket.objects.filter(
-            where,
-            ~Q(id__in=ids),
-            priority=priority,
-            status__in=status,
-            **treated_by
-        ).values(
-            *TICKET_FIELDS
-        ).order_by(
-            *order_by
-        ).annotate(
-            attachedReportsCount=Count('reportTicket')
-        ).distinct()[:limit * offset]
+        tickets = (
+            Ticket.objects.filter(
+                where,
+                ~Q(id__in=ids),
+                priority=priority,
+                status__in=status,
+                **treated_by
+            )
+            .values(*TICKET_FIELDS)
+            .order_by(*order_by)
+            .annotate(attachedReportsCount=Count("reportTicket"))
+            .distinct()[: limit * offset]
+        )
 
-        ids.update([t['id'] for t in tickets])
+        ids.update([t["id"] for t in tickets])
 
         for ticket in tickets:
             res.append(ticket)
@@ -173,10 +194,10 @@ def get_defendant_to_reject(where=None):
 
     defendants = Ticket.objects.filter(
         where,
-        status='Open',
+        status="Open",
         priority__in=TODO_TICKET_PRIORITY_FILTERS,
-        defendant__details__creationDate__lt=datetime.now() - timedelta(days=30)
-    ).values_list('defendant', flat=True)
+        defendant__details__creationDate__lt=datetime.now() - timedelta(days=30),
+    ).values_list("defendant", flat=True)
     rejected = set([k for k, v in Counter(defendants).iteritems() if v > 1])
 
     return rejected

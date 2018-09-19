@@ -35,6 +35,7 @@ class TestDefaultStorageImpl(CerberusTest):
     """
         Unit tests for storage default implementation
     """
+
     def test_read_write_delete(self):
         """
             Standard read / write /delete sequence that should succeed

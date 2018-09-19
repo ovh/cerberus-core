@@ -34,59 +34,91 @@ class TestDefaultMailerImpl(CerberusTest):
     """
         Unit tests for mailer service
     """
+
     def setUp(self):
 
         self._ticket = Ticket.create(
-            publicId='AAAAAAAAAA',
-            category_id='Spam',
-            creationDate=datetime.now(),
+            publicId="AAAAAAAAAA", category_id="Spam", creationDate=datetime.now()
         )
         MailTemplate.create(
-            codename='default_template',
-            name='Default template',
-            subject='Abuse dectected, Ticket #{{ publicId }}',
-            body='Abuse dectected, Ticket #{{ publicId }}',
-            recipientType='Defendant',
+            codename="default_template",
+            name="Default template",
+            subject="Abuse dectected, Ticket #{{ publicId }}",
+            body="Abuse dectected, Ticket #{{ publicId }}",
+            recipientType="Defendant",
         )
 
     def test_01_send_get_email(self):
         """
             Test send_email and get_emails
         """
-        EmailService.send_email(self._ticket, 'test@test.com', 'test', 'test', 'Defendant')
-        EmailService.send_email(self._ticket, 'test@test.com', 'test', 'test', 'Other')
+        EmailService.send_email(
+            self._ticket, "test@test.com", "test", "test", "Defendant"
+        )
+        EmailService.send_email(self._ticket, "test@test.com", "test", "test", "Other")
         emails = EmailService.get_emails(self._ticket)
         self.assertEqual(2, len(emails))
-        self.assertRaises(EmailServiceException, lambda: EmailService.send_email(self._ticket, 'test@test.com', 'test', 'test', 'InvalidCategory'))
-        self._ticket.publicId = 'ZZZZZZZZZZ'
-        self.assertRaises(EmailServiceException, lambda: EmailService.get_emails(self._ticket))
-        self.assertRaises(EmailServiceException, lambda: EmailService.send_email(self._ticket, 'test', 'test', 'test', 'Defendant'))
+        self.assertRaises(
+            EmailServiceException,
+            lambda: EmailService.send_email(
+                self._ticket, "test@test.com", "test", "test", "InvalidCategory"
+            ),
+        )
+        self._ticket.publicId = "ZZZZZZZZZZ"
+        self.assertRaises(
+            EmailServiceException, lambda: EmailService.get_emails(self._ticket)
+        )
+        self.assertRaises(
+            EmailServiceException,
+            lambda: EmailService.send_email(
+                self._ticket, "test", "test", "test", "Defendant"
+            ),
+        )
 
     def test_02_attach_external_answer(self):
         """
             Test attach_external_answer
         """
-        recipient = 'ticket+AAAAAAAAAA.defendant@example.com'
-        EmailService.send_email(self._ticket, 'test@test.com', 'test', 'test', 'Defendant')
+        recipient = "ticket+AAAAAAAAAA.defendant@example.com"
+        EmailService.send_email(
+            self._ticket, "test@test.com", "test", "test", "Defendant"
+        )
         EmailService.attach_external_answer(
             self._ticket,
-            'test123@site.com',
+            "test123@site.com",
             recipient,
-            'Re: test',
-            'Answer test',
-            'Defendant'
+            "Re: test",
+            "Answer test",
+            "Defendant",
         )
         emails = EmailService.get_emails(self._ticket)
         self.assertEqual(4, len(emails))
-        self.assertRaises(EmailServiceException, lambda: EmailService.attach_external_answer(123456, 'test', recipient, 'test', 'test', 'Defendant'))
+        self.assertRaises(
+            EmailServiceException,
+            lambda: EmailService.attach_external_answer(
+                123456, "test", recipient, "test", "test", "Defendant"
+            ),
+        )
 
     def test_prefetch_template(self):
         """
             Test prefetch_template
         """
-        prefetched_email = EmailService.prefetch_email_from_template(self._ticket, 'default_template')
+        prefetched_email = EmailService.prefetch_email_from_template(
+            self._ticket, "default_template"
+        )
         self.assertIn(self._ticket.publicId, prefetched_email.subject)
         self.assertIn(self._ticket.publicId, prefetched_email.body)
-        self.assertEqual('Defendant', prefetched_email.category)
-        self.assertRaises(EmailServiceException, lambda: EmailService.prefetch_email_from_template(123456, 'default_template'))
-        self.assertRaises(EmailServiceException, lambda: EmailService.prefetch_email_from_template(self._ticket, 'invalid_template'))
+        self.assertEqual("Defendant", prefetched_email.category)
+        self.assertRaises(
+            EmailServiceException,
+            lambda: EmailService.prefetch_email_from_template(
+                123456, "default_template"
+            ),
+        )
+        self.assertRaises(
+            EmailServiceException,
+            lambda: EmailService.prefetch_email_from_template(
+                self._ticket, "invalid_template"
+            ),
+        )

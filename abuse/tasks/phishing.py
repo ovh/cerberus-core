@@ -41,7 +41,7 @@ def close_because_all_down(report=None, denied_by=None):
         try:
             report = Report.get(id=report)
         except (AttributeError, ObjectDoesNotExist, TypeError, ValueError):
-            raise AssertionError('Report %d cannot be found in DB' % (report))
+            raise AssertionError("Report %d cannot be found in DB" % (report))
 
     if not report.ticket:
         report.ticket = helpers.create_ticket(report, denied_by)
@@ -53,18 +53,15 @@ def close_because_all_down(report=None, denied_by=None):
     helpers.send_email(
         report.ticket,
         [report.provider.email],
-        'no_more_content',
-        inject_proof=inject_proof
+        "no_more_content",
+        inject_proof=inject_proof,
     )
 
     # Close ticket
-    helpers.close_ticket(
-        report.ticket,
-        resolution_codename='no_more_content'
-    )
+    helpers.close_ticket(report.ticket, resolution_codename="no_more_content")
 
     # Add tag
-    report.ticket.add_tag('phishing:autoclosed')
+    report.ticket.add_tag("phishing:autoclosed")
 
 
 def unblock_url(url=None):
@@ -87,7 +84,4 @@ def feedback_to_phishing_service(screenshot_id=None, feedback=None):
         :param str screenshot_id: The uuid of the screenshot_id
         :param bool feedback: Yes or not it's a phishing url
     """
-    PhishingService.post_feedback(
-        screenshot_id,
-        feedback
-    )
+    PhishingService.post_feedback(screenshot_id, feedback)

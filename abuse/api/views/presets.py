@@ -28,38 +28,34 @@ from voluptuous import Any, Optional
 from ..decorators import admin_required, validate_body
 from ..controllers import presets as PresetsController
 
-preset_views = Blueprint(
-    'preset_views',
-    __name__,
-    url_prefix='/presets'
-)
+preset_views = Blueprint("preset_views", __name__, url_prefix="/presets")
 
 
-@preset_views.route('', methods=['GET'])
+@preset_views.route("", methods=["GET"])
 def get_all_presets():
     """
         Get all `abuse.models.TicketWorkflowPreset` available
     """
-    return PresetsController.get_presets(
-        g.user, filters=request.args.get('filters')
-    )
+    return PresetsController.get_presets(g.user, filters=request.args.get("filters"))
 
 
-@preset_views.route('', methods=['POST'])
+@preset_views.route("", methods=["POST"])
 @admin_required
-@validate_body({
-    'name': unicode,
-    'templates': Any(None, [int]),
-    'roles': [unicode],
-    'action': {
-        'codename': unicode,
-        'params': {
-            Optional('resolution'): int,
-            Optional('snoozeDuration'): int,
-            Optional('pauseDuration'): int,
-        }
+@validate_body(
+    {
+        "name": unicode,
+        "templates": Any(None, [int]),
+        "roles": [unicode],
+        "action": {
+            "codename": unicode,
+            "params": {
+                Optional("resolution"): int,
+                Optional("snoozeDuration"): int,
+                Optional("pauseDuration"): int,
+            },
+        },
     }
-})
+)
 def create_preset():
     """
         Create a `abuse.models.TicketWorkflowPreset`
@@ -68,7 +64,7 @@ def create_preset():
     return PresetsController.create(body)
 
 
-@preset_views.route('/<preset>', methods=['GET'])
+@preset_views.route("/<preset>", methods=["GET"])
 def get_preset(preset=None):
     """
         Get given preset info
@@ -76,27 +72,29 @@ def get_preset(preset=None):
     return PresetsController.show(g.user, preset)
 
 
-@preset_views.route('/<preset>', methods=['PUT'])
+@preset_views.route("/<preset>", methods=["PUT"])
 @admin_required
-@validate_body({
-    Optional('id'): int,
-    Optional('config'): int,
-    Optional('groupId'): Any(None, int),
-    Optional('orderId'): Any(None, int),
-    Optional('codename'): unicode,
-    'name': unicode,
-    'templates': Any(None, [int]),
-    'roles': [unicode],
-    'action': {
-        Optional('id'): int,
-        'codename': unicode,
-        'params': {
-            Optional('resolution'): int,
-            Optional('snoozeDuration'): int,
-            Optional('pauseDuration'): int,
-        }
+@validate_body(
+    {
+        Optional("id"): int,
+        Optional("config"): int,
+        Optional("groupId"): Any(None, int),
+        Optional("orderId"): Any(None, int),
+        Optional("codename"): unicode,
+        "name": unicode,
+        "templates": Any(None, [int]),
+        "roles": [unicode],
+        "action": {
+            Optional("id"): int,
+            "codename": unicode,
+            "params": {
+                Optional("resolution"): int,
+                Optional("snoozeDuration"): int,
+                Optional("pauseDuration"): int,
+            },
+        },
     }
-})
+)
 def update_preset(preset=None):
     """
         Update given preset info
@@ -105,7 +103,7 @@ def update_preset(preset=None):
     return PresetsController.update(g.user, preset, body)
 
 
-@preset_views.route('/<preset>', methods=['DELETE'])
+@preset_views.route("/<preset>", methods=["DELETE"])
 @admin_required
 def delete_preset(preset=None):
     """
@@ -114,7 +112,7 @@ def delete_preset(preset=None):
     return PresetsController.delete(g.user, preset)
 
 
-@preset_views.route('/order', methods=['PUT'])
+@preset_views.route("/order", methods=["PUT"])
 @admin_required
 def order_presets():
     """

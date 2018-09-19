@@ -15,12 +15,13 @@ class Tag(CerberusModel):
         - `abuse.models.Provider`
         - `abuse.models.News`
     """
+
     TAG_TYPE = (
-        ('Defendant', 'Defendant'),
-        ('Ticket', 'Ticket'),
-        ('Report', 'Report'),
-        ('Provider', 'Provider'),
-        ('News', 'News'),
+        ("Defendant", "Defendant"),
+        ("Ticket", "Ticket"),
+        ("Report", "Report"),
+        ("Provider", "Provider"),
+        ("News", "News"),
     )
     codename = TruncatedCharField(null=False, max_length=256, editable=False)
     name = TruncatedCharField(null=False, max_length=255)

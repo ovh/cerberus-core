@@ -20,9 +20,9 @@ class Cache(object):
             Set up Cache
         """
         cls.instance = RedisCache(
-            host=config['REDIS']['host'],
-            port=config['REDIS']['port'],
-            password=config['REDIS']['password']
+            host=config["REDIS"]["host"],
+            port=config["REDIS"]["port"],
+            password=config["REDIS"]["password"],
         )
 
     @classmethod
@@ -30,17 +30,20 @@ class Cache(object):
         """
             Return cached response, update it if timedout
         """
+
         def decorator(func):
             @wraps(func)
             def decorated_func(*args, **kwargs):
                 user = g.user.id if current_user else None
-                route = '%s,%s,%s' % (request.path, dumps(request.args), user)
+                route = "%s,%s,%s" % (request.path, dumps(request.args), user)
                 response = cls.instance.get(unicode(route))
                 if response is None:
                     response = func(*args, **kwargs)
                     cls.instance.set(route, response, timeout or cls.timeout)
                 return response
+
             return decorated_func
+
         return decorator
 
     @classmethod
@@ -55,14 +58,16 @@ class Cache(object):
             def decorated_func(*fargs, **fkwargs):
                 response = func(*fargs, **fkwargs)
                 for path in routes:
-                    route = '%s,%s,%s' % (path, dumps(args), None)
+                    route = "%s,%s,%s" % (path, dumps(args), None)
                     cls.instance.delete(unicode(route))
-                    user = fkwargs.get('user', None) if clear_for_user else None
+                    user = fkwargs.get("user", None) if clear_for_user else None
                     if user:
-                        route = '%s,%s,%s' % (path, dumps(args), user)
+                        route = "%s,%s,%s" % (path, dumps(args), user)
                         cls.instance.delete(unicode(route))
                 return response
+
             return decorated_func
+
         return decorator
 
 
@@ -70,6 +75,7 @@ class RoleCache(object):
     """
         Class caching allowed API routes for each `abuse.models.Role`
     """
+
     routes = {}
 
     @classmethod
@@ -79,9 +85,7 @@ class RoleCache(object):
         """
         for role in Role.objects.all():
             cls.routes[role.codename] = []
-            allowed_routes = role.allowedRoutes.all().values_list(
-                'method', 'endpoint'
-            )
+            allowed_routes = role.allowedRoutes.all().values_list("method", "endpoint")
             cls.routes[role.codename] = allowed_routes
 
     @classmethod
