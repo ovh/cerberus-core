@@ -32,7 +32,7 @@ def pretransform_url(content):
     search = re.search(pattern, content, re.IGNORECASE)
     if search:
         return search.group()
-    return content
+    return ""
 
 
 TEMPLATE = {

@@ -24,7 +24,7 @@ class DefaultCDNRequestActions(BaseActions):
         This class implements actions for CDN requests
     """
 
-    providers = {"cloudflare": {"email": "abusereply@cloudflare.com"}}
+    providers = {"cloudflare": {"email": "abuseteam@cloudflare.com"}}
 
     cache_expirations_days = 15
     redis_queue = "cdnrequest:{}:request"
@@ -40,7 +40,7 @@ class DefaultCDNRequestActions(BaseActions):
         """
             Make request to supported CDN providers
         """
-        ticket, expiration = self._retreive_from_cache(provider)
+        ticket, expiration = self._retrieve_from_cache(provider)
 
         # if already resolved, just attach report
         if expiration and datetime.now() < expiration:
@@ -62,7 +62,7 @@ class DefaultCDNRequestActions(BaseActions):
         )
 
     @redis_lock("cdnrequest:lock")
-    def _retreive_from_cache(self, provider):
+    def _retrieve_from_cache(self, provider):
         """
             Check if there is already a pending/resolved similar request
         """

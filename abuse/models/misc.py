@@ -385,6 +385,7 @@ class BusinessRules(CerberusModel):
     name = TruncatedCharField(max_length=256, null=False)
     orderId = PositiveSmallIntegerField(null=False)
     rulesType = TruncatedCharField(max_length=32, null=False, choices=RULES_TYPE)
+    isActive = BooleanField(null=False, default=True)
     config = JSONField()
 
 

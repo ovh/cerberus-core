@@ -47,7 +47,9 @@ def update_waiting():
     """
     now = int(time())
     for ticket in Ticket.filter(status="WaitingAnswer"):
-        if now > int(mktime(ticket.snoozeStart.timetuple()) + ticket.snoozeDuration):
+        if ticket.snoozeStart and now > int(
+            mktime(ticket.snoozeStart.timetuple()) + ticket.snoozeDuration
+        ):
             click.echo("[workflow] set status 'Alarm' for ticket %d" % ticket.id)
             _check_auto_unassignation(ticket)
             ticket.set_status("Alarm")

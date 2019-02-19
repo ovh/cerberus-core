@@ -2208,7 +2208,7 @@
   fields: {name: phishing_down, orderId: 20, rulesType: Report, config: '{"conditions":{"all":[{"operator":"equal_to","name":"report_category","value":"phishing"},{"operator":"is_true","name":"has_defendant","value":true},{"operator":"is_true","name":"urls_down","value":true},{"operator":"is_true","name":"has_urls","value":true}]},"actions":[{"name":"phishing_close_because_all_down"}]}'}
 - model: abuse.businessrules
   pk: 10
-  fields: {name: cdn_response_cloudflare, orderId: 10, rulesType: EmailReply, config: '{"conditions":{"all":[{"operator":"is_true","params":{"provider":"cloudflare"},"name":"ticket_in_cdn_cache","value":true},{"operator":"equal_to","name":"email_sender","value":"abusereply@cloudflare.com"}]},"actions":[{"params":{"provider":"cloudflare"},"name":"cdn_response_update"},{"name":"attach_external_answer"}]}'}
+  fields: {name: cdn_response_cloudflare, orderId: 10, rulesType: EmailReply, config: '{"conditions":{"all":[{"operator":"is_true","params":{"provider":"cloudflare"},"name":"ticket_in_cdn_cache","value":true},{"operator":"equal_to","name":"email_sender","value":"abuseteam@cloudflare.com"}]},"actions":[{"params":{"provider":"cloudflare"},"name":"cdn_response_update"},{"name":"attach_external_answer"}]}'}
 - model: abuse.businessrules
   pk: 11
   fields: {name: phishing_ignore, orderId: 23, rulesType: Report, config: '{"conditions":{"all":[{"operator":"is_true","name":"has_defendant","value":true},{"operator":"equal_to","name":"report_category","value":"phishing"},{"operator":"is_true","name":"avoid_phishtocheck","value":true}]},"actions":[{"name":"do_nothing"}]}'}

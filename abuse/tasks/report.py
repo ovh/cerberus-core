@@ -299,7 +299,9 @@ def _get_business_rules_config(**kwargs):
     ack_lang = kwargs.get("ack_lang") or "EN"
 
     variables = actions = None
-    rules = BusinessRules.filter(rulesType=rules_type).order_by("orderId")
+    rules = BusinessRules.filter(rulesType=rules_type, isActive=True).order_by(
+        "orderId"
+    )
 
     if rules_type == "Report":
         variables = ReportVariables(parsed_email, report, ticket, is_trusted=trusted)
@@ -365,11 +367,11 @@ def add_attachments(filename=None, attachments=None, report_ids=None, ticket_ids
     """
     reports = []
     if report_ids:
-        reports = Report.filter(ids__in=report_ids)
+        reports = Report.filter(id__in=report_ids)
 
     tickets = []
     if ticket_ids:
-        tickets = Ticket.filter(ids__in=ticket_ids)
+        tickets = Ticket.filter(id__in=ticket_ids)
 
     for attachment in attachments[:20]:  # Slice 20 to avoid denial of service
 

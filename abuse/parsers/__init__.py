@@ -320,8 +320,8 @@ class Parser(object):
 
         parsed = ParsedEmail(
             headers=email.headers,
-            subject=email.subject,
-            body=email.body,
+            subject=email.subject.strip().rstrip("\x00"),
+            body=email.body.strip().rstrip("\x00"),
             date=int(time.mktime(utc2local(email.date).timetuple())),
             provider=provider,
             recipients=self.email_re.findall(recipients),

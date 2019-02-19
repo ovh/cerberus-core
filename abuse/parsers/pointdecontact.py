@@ -28,7 +28,9 @@ from abuse.parsers import Parser
 
 def pretransform(content):
 
-    pattern = r"URL.*signal.*:\s*<\/b>\s*<br>(.|\n)*?Bonjour"
+    pattern = (
+        r"URL.*signal.*:\s*<\/b>\s*<br>(.|\n)*?Assistance\s*contre\s*les\s*contenus"
+    )
     search = re.search(pattern, content, re.IGNORECASE & re.MULTILINE)
     if search:
         return search.group()

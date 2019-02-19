@@ -9,6 +9,7 @@ from .reports import report_views
 from .reputations import reputation_views
 from .tags import tag_views
 from .tickets import ticket_views
+from .rules import rules_views
 from .thresholds import threshold_views
 
 views_to_register = (
@@ -24,4 +25,5 @@ views_to_register = (
     tag_views,
     ticket_views,
     threshold_views,
+    rules_views,
 )

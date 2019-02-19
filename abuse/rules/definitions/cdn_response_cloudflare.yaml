@@ -13,7 +13,7 @@ config:
             value: true
         -   name: email_sender
             operator: equal_to
-            value: abusereply@cloudflare.com
+            value: abuseteam@cloudflare.com
 name: cdn_response_cloudflare
 orderId: 10
 rulesType: EmailReply

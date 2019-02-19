@@ -26,7 +26,7 @@ from datetime import timedelta
 
 from django.db.models import ObjectDoesNotExist
 
-from . import Queues
+from . import Queues, cancel_ticket_tasks
 from ..models import History, Report, Ticket, User, BusinessRules
 from ..rules.actions import ReportActions
 from ..rules.engine import run
@@ -118,13 +118,7 @@ def cancel_pending_jobs(ticket_id=None, status="answered"):
 
     ticket.cancel_pending_jobs(reason=status)
 
-    for job in Queues.scheduler.get_jobs():
-        if (
-            job.func_name.startswith("abuse.tasks.")
-            and job.kwargs.get("ticket_id")
-            and job.kwargs["ticket_id"] == ticket.id
-        ):
-            Queues.cancel(job.id)
+    cancel_ticket_tasks(ticket_id)
 
 
 def close_emails_thread(ticket_id=None):

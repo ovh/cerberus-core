@@ -86,6 +86,11 @@ REDIS:
         kpi:
             name: 'kpi'
             default_timeout: 1800
+
+RQ_DASHBOARD:
+    username: 'cerberus'
+    password: 'cerberus'
+
 LOGGERS:
     stdout:
         level: info
