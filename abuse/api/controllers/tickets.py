@@ -134,7 +134,7 @@ def get_tickets(**kwargs):
     fields.append("id")
     try:
         fields = list(set(fields))
-        nb_record_filtered = Ticket.filter(where).distinct().count()
+        nb_record_filtered = Ticket.filter(where).count()
         tickets = (
             Ticket.filter(where)
             .values(*fields)

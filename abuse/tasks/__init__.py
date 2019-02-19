@@ -1,10 +1,19 @@
 
+import logging
+
 from redis import Redis
 
-from rq import Queue, get_failed_queue
+from rq import Queue, get_failed_queue, push_connection
+from rq.job import Job
+from rq.exceptions import NoSuchJobError
 from rq_scheduler import Scheduler
+from ..logs import TaskLoggerAdapter
+from ..utils.cache import RedisHandler
 
 MODULE_PATH = "abuse.tasks"
+ASYNC_TICKET_KEY = "rq_scheduler:ticket"
+
+logger = TaskLoggerAdapter(logging.getLogger("rq.worker"), dict())
 
 
 class Queues(object):
@@ -45,6 +54,14 @@ class Queues(object):
             )
         )
 
+        push_connection(
+            Redis(
+                host=config["host"],
+                port=int(config["port"]),
+                password=config["password"],
+            )
+        )
+
     @classmethod
     def enqueue(cls, func_name, queue_name="default", *args, **kwargs):
 
@@ -61,9 +78,29 @@ def is_job_scheduled(job_id):
     return job_id in Queues.scheduler
 
 
+def cancel_ticket_tasks(ticket_id):
+
+    key = "{}:{}".format(ASYNC_TICKET_KEY, ticket_id)
+
+    for job_id in RedisHandler.ldump(key):
+        try:
+            job = Job.fetch(job_id)
+            logger.info(
+                'Cancelling Job "{}", kwargs {} ({})'.format(
+                    job.func_name, job.kwargs, job_id
+                )
+            )
+        except NoSuchJobError:
+            pass
+        cancel(job_id)
+
+    RedisHandler.client.delete(key)
+
+
 def cancel(job_id):
 
     Queues.cancel(job_id)
+    logger.info("Cancelled Job {}".format(job_id))
 
 
 def enqueue(func_name, queue="default", *args, **kwargs):
@@ -75,6 +112,14 @@ def enqueue(func_name, queue="default", *args, **kwargs):
 
 def enqueue_in(timedelta, func_name, **kwargs):
 
-    return Queues.scheduler.enqueue_in(
+    async_job = Queues.scheduler.enqueue_in(
         timedelta, "{}.{}".format(MODULE_PATH, func_name), **kwargs
     )
+
+    # async jobs tasks have to be cancelled when tickets are closed
+    if kwargs.get("ticket_id"):
+        RedisHandler.rpush(
+            "{}:{}".format(ASYNC_TICKET_KEY, kwargs["ticket_id"]), async_job.id
+        )
+
+    return async_job

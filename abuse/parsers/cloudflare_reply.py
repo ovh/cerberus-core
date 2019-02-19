@@ -18,13 +18,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-    Parsing template for abusereply@cloudflare.com
+    Parsing template for abuseteam@cloudflare.com
 """
 
 from abuse.parsers import Parser
 
 TEMPLATE = {
-    "email": "abusereply@cloudflare.com",
+    "email": "abuseteam@cloudflare.com",
     "regexp": {
         "ips": {"pattern": r"(?:currently\s*resolves\s*to\s*)" + Parser.ipv4_re},
         "fqdn": {

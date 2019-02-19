@@ -28,6 +28,17 @@ import click
 from flask.cli import with_appcontext
 from redis import Redis
 from rq import Connection, Queue, Worker
+from django.db import close_old_connections
+
+
+class CustomWorker(Worker):
+    def main_work_horse(self, *args, **kwargs):
+        raise NotImplementedError("Test worker does not implement this method")
+
+    def execute_job(self, *args, **kwargs):
+        """Execute job in same thread/process, do not fork()"""
+        close_old_connections()
+        return self.perform_job(*args, **kwargs)
 
 
 @click.command("run-worker", short_help="Runs a Cerberus worker.")
@@ -44,5 +55,5 @@ def run_worker(queues):
     with Connection(Redis(config["host"], config["port"])):
 
         qs = map(Queue, _queues) or [Queue()]
-        worker = Worker(qs)
+        worker = CustomWorker(qs)
         worker.work()

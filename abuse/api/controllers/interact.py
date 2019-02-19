@@ -21,6 +21,8 @@
 from copy import deepcopy
 
 from django.db.models import ObjectDoesNotExist
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
 from . import tickets as TicketsController
@@ -87,6 +89,19 @@ def interact(ticket_id, body, user):
         raise NotFound("Ticket not found")
 
     action = body["action"]
+
+    recipients = []
+    if body.get("emails"):
+        recipients = set(
+            [recipient for params in body["emails"] for recipient in params["to"]]
+        )
+
+    # validate email(s)
+    for recipient in recipients:
+        try:
+            validate_email(recipient.strip())
+        except (AttributeError, TypeError, ValueError, ValidationError):
+            raise BadRequest('Invalid email "%s"' % recipient)
 
     try:
         _parse_interact_action(ticket, action, user)

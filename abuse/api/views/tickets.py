@@ -278,6 +278,15 @@ def get_actions(ticket=None):
     return TicketsController.get_actions_list(ticket, g.user)
 
 
+@ticket_views.route("/<ticket>/jobs", methods=["GET"])
+@perm_required
+def get_jobs(ticket=None):
+    """
+        Get actions status
+    """
+    return TicketsController.get_jobs_status(ticket)
+
+
 @ticket_views.route("/<ticket>/jobs/<job>", methods=["DELETE"])
 @perm_required
 def cancel_job(ticket=None, job=None):

@@ -118,8 +118,8 @@ def get_reports(**kwargs):
     fields.append("id")
     try:
         fields = list(set(fields))
-        nb_record_filtered = Report.filter(where).distinct().count()
-        reports = Report.filter(where).values(*fields).distinct().order_by(*sort)
+        nb_record_filtered = Report.filter(where).count()
+        reports = Report.filter(where).values(*fields).order_by(*sort)
         reports = reports[(offset - 1) * limit : limit * offset]
         len(reports)  # Force django to evaluate query now
     except (

@@ -28,15 +28,15 @@ When all of these requirements are met, you can checkout the sources and install
     $ python main.py
 
     Usage: main.py [OPTIONS] COMMAND [ARGS]...
-    
+
       Cerberus CLI
-    
+
     Options:
       --version  Show the flask version
       --help     Show this message and exit.
-    
+
     Commands:
-      
+
       add-rule         Add or update a Cerberus rule from file.
       fetch-email      Runs Cerberus email fetcher.
       initdb           Init Cerberus database.
@@ -142,7 +142,7 @@ class MyVariables(BaseVariables):
 
     @boolean_rule_variable(label='Check if report category is Phishing')
     def is_report_phishing(self):
-        
+
         return self.report.category.lower() == 'phishing'
 ```
 
@@ -257,7 +257,7 @@ All the effective jobs are done with ticket: customer interaction (emails), acti
 One or more reports + one Category. It cans bel linked to a defendant/service, so all reports themselves linked to this defendant/service.
 
 - Item
-        
+
 Fraudulent URL/IP/FQDN found in an email.
 
 ## Tests ##
